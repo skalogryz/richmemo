@@ -8,7 +8,7 @@
       <Version Value="8"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="win32\"/>
+        <OtherUnitFiles Value="win32\;carbon\"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Other>
@@ -19,7 +19,7 @@
 "/>
     <License Value="LGPL"/>
     <Version Minor="8"/>
-    <Files Count="8">
+    <Files Count="9">
       <Item1>
         <Filename Value="richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
@@ -58,6 +58,11 @@
         <Filename Value="richmemopackage.lrs"/>
         <Type Value="LRS"/>
       </Item8>
+      <Item9>
+        <Filename Value="carbon\carbonrichmemo.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="carbonrichmemo"/>
+      </Item9>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

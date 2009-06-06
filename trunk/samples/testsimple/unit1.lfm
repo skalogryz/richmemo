@@ -1,0 +1,142 @@
+object Form1: TForm1
+  Left = 332
+  Height = 592
+  Top = 117
+  Width = 752
+  Align = alNone
+  AllowDropFiles = False
+  AutoScroll = True
+  AutoSize = False
+  BorderIcons = [biSystemMenu, biMinimize, biMaximize]
+  BorderStyle = bsSizeable
+  BorderWidth = 0
+  Caption = 'Form1'
+  ClientHeight = 592
+  ClientWidth = 752
+  DefaultMonitor = dmActiveForm
+  DockSite = False
+  DragKind = dkDrag
+  DragMode = dmManual
+  Enabled = True
+  FormStyle = fsNormal
+  ParentBiDiMode = True
+  ParentFont = False
+  Position = poDesigned
+  ShowInTaskBar = stDefault
+  UseDockManager = False
+  LCLVersion = '0.9.27'
+  WindowState = wsNormal
+  object RichMemo1: TRichMemo
+    Left = 24
+    Height = 518
+    Top = 24
+    Width = 704
+    Align = alNone
+    Alignment = taLeftJustify
+    Anchors = [akTop, akLeft, akRight, akBottom]
+    BorderStyle = bsSingle
+    Color = clWindow
+    DragCursor = crDrag
+    DragKind = dkDrag
+    DragMode = dmManual
+    Enabled = True
+    HideSelection = False
+    Lines.Strings = (
+      'RichMemo1'
+    )
+    MaxLength = 0
+    ParentBidiMode = True
+    ParentColor = False
+    ParentFont = True
+    ParentShowHint = True
+    ReadOnly = False
+    ScrollBars = ssBoth
+    TabOrder = 0
+    TabStop = True
+    Visible = True
+    WantReturns = True
+    WantTabs = False
+    WordWrap = False
+  end
+  object Button1: TButton
+    Left = 24
+    Height = 25
+    Top = 548
+    Width = 152
+    Align = alNone
+    Anchors = [akLeft, akBottom]
+    AutoSize = False
+    Cancel = False
+    Caption = 'Make Bold and Red'
+    Color = clBtnFace
+    Default = False
+    DragCursor = crDrag
+    DragKind = dkDrag
+    DragMode = dmManual
+    Enabled = True
+    ParentBidiMode = True
+    ModalResult = 0
+    OnClick = Button1Click
+    ParentFont = True
+    ParentShowHint = True
+    TabOrder = 1
+    TabStop = True
+    Visible = True
+  end
+  object Button2: TButton
+    Left = 184
+    Height = 25
+    Top = 548
+    Width = 136
+    Align = alNone
+    Anchors = [akLeft, akBottom]
+    AutoSize = False
+    Cancel = False
+    Caption = 'Get Attribs'
+    Color = clBtnFace
+    Default = False
+    DragCursor = crDrag
+    DragKind = dkDrag
+    DragMode = dmManual
+    Enabled = True
+    ParentBidiMode = True
+    ModalResult = 0
+    OnClick = Button2Click
+    ParentFont = True
+    ParentShowHint = True
+    TabOrder = 2
+    TabStop = True
+    Visible = True
+  end
+  object Button3: TButton
+    Left = 328
+    Height = 25
+    Top = 548
+    Width = 168
+    Align = alNone
+    Anchors = [akLeft, akBottom]
+    AutoSize = False
+    Cancel = False
+    Caption = 'Select Font'
+    Color = clBtnFace
+    Default = False
+    DragCursor = crDrag
+    DragKind = dkDrag
+    DragMode = dmManual
+    Enabled = True
+    ParentBidiMode = True
+    ModalResult = 0
+    OnClick = Button3Click
+    ParentFont = True
+    ParentShowHint = True
+    TabOrder = 3
+    TabStop = True
+    Visible = True
+  end
+  object FontDialog1: TFontDialog
+    MinFontSize = 0
+    MaxFontSize = 0
+    left = 376
+    top = 256
+  end
+end

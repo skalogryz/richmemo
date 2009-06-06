@@ -65,7 +65,7 @@ begin
 end;
 
 initialization
-  {$I Unit1.lrs}
+  {$I unit1.lrs}
 
 end.
 

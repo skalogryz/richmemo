@@ -23,8 +23,13 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       Mask: TTextStyleMask; const Params: TFontParams); virtual;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); virtual;
+    class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
+    class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
   end;
   TWSCustomRichMemoClass = class of TWSCustomRichMemo;
+
+
+
   
 function WSRegisterCustomRichMemo: Boolean; external name 'WSRegisterCustomRichMemo';
 
@@ -47,6 +52,16 @@ end;
 class procedure TWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); 
 begin
 
+end;
+
+class function TWSCustomRichMemo.LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean;
+begin
+  Result := false;
+end;
+
+class function TWSCustomRichMemo.SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean;
+begin
+  Result := false;
 end;
 
 end.

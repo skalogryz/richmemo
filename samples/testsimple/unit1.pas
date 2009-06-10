@@ -17,11 +17,16 @@ type
     Button1: TButton;
     Button2: TButton;
     Button3: TButton;
+    Button4: TButton;
+    Button5: TButton;
     FontDialog1: TFontDialog;
+    Memo1: TMemo;
     RichMemo1: TRichMemo;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
+    procedure Button4Click(Sender: TObject);
+    procedure Button5Click(Sender: TObject);
   private
     { private declarations }
   public
@@ -61,6 +66,34 @@ begin
   if Fontdialog1.Execute then begin
     RichMemo1.SetTextAttributes(
       RichMemo1.SelStart, RichMemo1.SelLength, FontDialog1.Font);
+  end;
+end;
+
+procedure TForm1.Button4Click(Sender: TObject);
+var
+  m : TMemoryStream;
+begin
+  m := TMemoryStream.Create;
+  try
+    RichMemo1.SaveRichText(m);
+    m.Position:=0;
+    Memo1.Lines.LoadFromStream(m);
+  except
+    m.Free;
+  end;
+end;
+
+procedure TForm1.Button5Click(Sender: TObject);
+var
+  m : TMemoryStream;
+begin
+  m := TMemoryStream.Create;
+  try
+    Memo1.Lines.SaveToStream(m);
+    m.Position := 0;
+    RichMemo1.LoadRichText(m);
+  finally
+    m.free;
   end;
 end;
 

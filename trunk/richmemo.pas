@@ -9,6 +9,7 @@ uses
   RichMemoTypes, WSRichMemo; 
 
 type
+
   { TCustomRichMemo }
 
   TCustomRichMemo = class(TCustomMemo)
@@ -23,6 +24,10 @@ type
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont); 
     procedure SetTextAttributes(TextStart, TextLen: Integer; SetMask: TTextStyleMask; const TextParams: TFontParams); virtual; 
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
+
+    function LoadRichText(Source: TStream): Boolean; virtual;
+    function SaveRichText(Dest: TStream): Boolean; virtual;
+
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
   end;
   
@@ -90,7 +95,7 @@ function GetFontParams(styles: TFontStyles): TFontParams; overload;
 function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
-  
+
 implementation
 
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
@@ -166,6 +171,22 @@ function TCustomRichMemo.GetTextAttributes(TextStart: Integer; var TextParams: T
 begin
   if HandleAllocated then  
     Result := TWSCustomRichMemoClass(WidgetSetClass).GetTextAttributes(Self, TextStart, TextParams)
+  else
+    Result := false;
+end;
+
+function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
+begin
+  if Assigned(Source) and HandleAllocated then
+    Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source)
+  else
+    Result := false;
+end;
+
+function TCustomRichMemo.SaveRichText(Dest: TStream): Boolean;
+begin
+  if Assigned(Dest) and HandleAllocated then
+    Result := TWSCustomRichMemoClass(WidgetSetClass).SaveRichText(Self, Dest)
   else
     Result := false;
 end;

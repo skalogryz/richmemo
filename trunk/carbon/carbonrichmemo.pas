@@ -38,9 +38,27 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       Mask: TTextStyleMask; const Params: TFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;
+    class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
+    class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
   end;
 
 implementation
+
+// Notes:
+
+// http://developer.apple.com/DOCUMENTATION/Carbon/Reference/Multilingual_Text_Engine/Reference/reference.html
+// TXNFlattenObjectToCFDataRef
+//
+//oDataRef
+//   On input, points to a structure of type CFDataRef. On output, points to a flattened
+//   version of the text object in the format specified by the iTXNDataType parameter.
+//   You are responsible to retain the returned CFDataRef.
+//
+// It's unclear (though expected), if a user is responsible to release returned CFData object.
+//
+// Releasing is necessary, as noted this mailling list discussion
+// http://lists.apple.com/archives/carbon-dev/2005/Feb/msg00657.html
+
 
 const
   TXNAttributesMax = 10;
@@ -233,6 +251,91 @@ begin
 
 end;
 
+function GetTempFileUniqueName(forcedir: Boolean=true): String;
+var
+  g : TGUID;
+  d : String;
+begin
+  repeat
+    CreateGUID(g);
+    Result := GetTempFileName +  GUIDToString(g) +'.rtf';
+  until not FileExists(Result);
+  if forcedir then begin
+    d := ExtractFileDir(Result);
+    if not DirectoryExists(d) then ForceDirectories(d);
+  end;
+end;
+
+class function TCarbonWSCustomRichMemo.LoadRichText(const AWinControl: TWinControl;
+  Src: TStream): Boolean;
+var
+  edit  : TCarbonRichEdit;
+  filename: String;
+  fs  : TFileStream;
+  cf  : CFStringRef;
+  url : CFURLRef;
+  res : integer;
+begin
+  Result := IsValidControlHandle(AWinControl);
+  if not Result then Exit;
+  edit := TCarbonRichEdit(AWinControl.Handle);
+
+  Result := false;
+  filename := GetTempFileUniqueName;
+
+  try
+    fs := TFileStream.Create(filename, fmCreate);
+    try
+      fs.CopyFrom(Src, Src.Size - Src.Position);
+    finally
+      fs.Free;
+    end;
+
+    CreateCFString(filename, cf);
+    url := CFURLCreateWithFileSystemPath (kCFAllocatorDefault, cf, kCFURLPOSIXPathStyle, false);
+    try
+      TXNSelectAll(HITextViewGetTXNObject(edit.Widget));
+      Result := TXNSetDataFromCFURLRef( HITextViewGetTXNObject(edit.Widget), url, kTXNStartOffset, kTXNEndOffset) = noErr;
+    finally
+      CFRelease(url);
+      FreeCFString(cf);
+    end;
+
+  except
+    Result := false;
+  end;
+
+  if FileExists(filename) then DeleteFile(filename);
+end;
+
+class function TCarbonWSCustomRichMemo.SaveRichText(const AWinControl: TWinControl;
+  Dst: TStream): Boolean;
+var
+  edit  : TCarbonRichEdit;
+  data  : CFDataRef;
+  sz    : Integer;
+  ptr   : PByteArray;
+begin
+  Result := false;
+  if not IsValidControlHandle(AWinControl) then Exit;
+  edit := TCarbonRichEdit(AWinControl.Handle);
+  if not Assigned(Dst) then Exit;
+
+  Result := TXNFlattenObjectToCFDataRef(HITextViewGetTXNObject(edit.Widget), kTXNRichTextFormatData, data) = noErr;
+  if not Result and Assigned(data) then Exit;
+
+  try
+    sz := CFDataGetLength(data);
+    ptr := CFDataGetBytePtr(data);
+    if Assigned(ptr) and (sz > 0) then Dst.Write(ptr^, sz);
+    Result := false;
+  finally
+    // see TXNFlattenObjectToCFDataRef notes
+    CFRelease(data);
+  end;
+
+end;
+
 { TCarbonRichEdit }
 
 function TCarbonRichEdit.GetCreationOptions: TXNFrameOptions;
@@ -255,6 +358,9 @@ begin
   Result := TXNSetTypeAttributes(HITextViewGetTXNObject(Widget), iCount,
               @iTypeAttributes[0], StartOffset, EndOffset) = noErr;
 end;
+
+
+
 
 end.
 

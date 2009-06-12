@@ -23,6 +23,10 @@ type
   protected
     function GetCreationOptions: TXNFrameOptions; override;
   public
+    function GetIndexedRunInfoFromRange(iIndex: ItemCount;   iStartOffset, iEndOffset: TXNOffset;
+      var oRunStartOffset, oRunEndOffset: TXNOffset;
+      oRunDataType: TXNDataTypePtr; iTypeAttributeCount: ItemCount;
+      ioTypeAttributes: TXNTypeAttributesPtr): Boolean;
     function GetContinuousTypeAttributes(var oContinuousFlags: TXNContinuousFlags;
       iCount: ItemCount; var ioTypeAttributes: array of TXNTypeAttributes): Boolean;
     function SetTypeAttributes(iCount: ItemCount; const iTypeAttributes: array of TXNTypeAttributes;
@@ -33,6 +37,8 @@ type
 
   TCarbonWSCustomRichMemo = class(TWSCustomRichMemo)
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
+    class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
+      var RangeStart, RangeLen: Integer): Boolean; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TFontParams): Boolean; override;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
@@ -114,9 +120,12 @@ begin
   if b then Include(Result, fsStrikeOut);
 end;
 
-function IsValidControlHandle(AWinControl: TWinControl): Boolean;
+function GetValidRichEdit(AWinControl: TWinControl): TCarbonRichEdit;
 begin
-  Result := Assigned(AWinControl) and (AWinControl.Handle<>0);
+  if Assigned(AWinControl) and (AWinControl.Handle<>0) and (TObject(AWinControl.Handle) is TCarbonRichEdit) then
+    Result := TCarbonRichEdit(AWinControl.Handle)
+  else
+    Result := nil;
 end;
 
 procedure AttrSetFontName(const FontName: String; var Attr: TXNTypeAttributes);
@@ -190,6 +199,101 @@ begin
   Result := TLCLIntfHandle(TCarbonRichEdit.Create(AWinControl, AParams));
 end;
 
+class function TCarbonWSCustomRichMemo.GetStyleRange(const AWinControl: TWinControl;
+  TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean;
+var
+  edit      : TCarbonRichEdit;
+  obj       : TXNObject;
+  sst, slen : Integer;
+  st, len   : Integer;
+  send      : Integer;
+  fndstyle  : Boolean;
+  wattr     : array [0..1] of TXNTypeAttributes;
+  attr      : array [0..1] of TXNTypeAttributes;
+  astyle    : ATSUStyle;
+  flags     : TXNContinuousFlags;
+  d         : Integer;
+  macrgb    : RGBColor;
+  RngStart  : TXNOffset;
+  RngEnd    : TXNOffset;
+begin
+  Result := false;
+  edit := GetValidRichEdit(AWinControl);
+  if not Assigned(edit) then Exit;
+
+  Result := edit.GetIndexedRunInfoFromRange(0, TextStart, TextStart+1, RngStart, RngEnd, nil, 0, nil);
+  if Result then begin
+    RangeStart := RngStart;
+    RangeLen := RngEnd - RngStart;
+  end;
+
+{  edit.GetSelStart(sst);
+  edit.GetSelLength(slen);
+
+  edit.SetSelStart(TextStart);
+  edit.SetSelLength(1);
+
+  ATSUCreateStyle(astyle);
+  AttrSetATSUStyle(nil, wattr[0]);
+  AttrSetColor(macrgb, wattr[1]);
+  edit.GetContinuousTypeAttributes(flags, 2, wattr[0]);
+
+  GetTextLen(AWinControl, len);
+  dec(len, TextStart);
+  st:=TextStart;
+
+  writeln('TextStart  = ', TextStart);
+  writeln('TextLength = ', 2);
+  edit.SetSelStart(TextStart);
+  edit.SetSelLength(2);//send-TextStart);
+  attr := wattr;
+  edit.GetContinuousTypeAttributes(flags, 2, attr);
+
+  writeln('contflags ',flags);
+
+  Result := true;}
+
+{  fndstyle := false;
+  while not fndstyle do begin
+    edit.SetSelStart(st);
+    edit.SetSelLength(len);
+    attr := wattr;
+
+    send := st + len;
+    repeat
+      writeln(st,' ', send);
+      d := (st+send) div 2; {разделить пополам интервал просмотра}
+      edit.SetSelStart(TextStart);
+      edit.SetSelLength(send-TextStart);
+      attr := wattr;
+      edit.GetContinuousTypeAttributes(flags, 2, attr);
+      if flags = (kTXNColorContinuousMask or kTXNATSUIStyleContinuousMask) then
+        st := st+1
+      else
+        send := d-1;
+    until (st>send);}
+
+{    while send > st do begin
+      writeln(st, ' ', send, ' ', send - st, ' ', (send - st) div 2);
+      attr := wattr;
+      edit.SetSelStart(st);
+      edit.SetSelLength(st+len);
+      edit.GetContinuousTypeAttributes(flags, 2, attr);
+      writeln('   flags = ', flags);
+      {d := (send - st) div 2;
+      if d = 0 then d := 1;}
+      if flags = (kTXNColorContinuousMask or kTXNATSUIStyleContinuousMask)
+        then st := send
+        else dec(send, d);
+    end;
+    Result := send - TextStart;}
+ // end;
+
+{  edit.SetSelStart(sst);
+  edit.SetSelLength(slen);
+  ATSUDisposeStyle(astyle);}
+end;
+
 class function TCarbonWSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl;
   TextStart: Integer; var Params: TFontParams): Boolean;
 var
@@ -202,9 +306,9 @@ var
   astyle  : ATSUStyle;
 
 begin
-  Result := IsValidControlHandle(AWinControl);
-  if not Result then Exit;
-  memo := TCarbonRichEdit(AWinControl.Handle);
+  Result := false;
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
 
   memo.GetSelStart(sstart);
   memo.GetSelLength(slen);
@@ -237,8 +341,8 @@ var
   Count     : Integer;
   maccolor  : RGBColor;
 begin
-  if not IsValidControlHandle(AWinControl) then Exit;
-  memo := TCarbonRichEdit(AWinControl.Handle);
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
 
   ParamsToTXNAttribs(Mask, Params, attr, Count, maccolor);
 
@@ -276,9 +380,9 @@ var
   url : CFURLRef;
   res : integer;
 begin
-  Result := IsValidControlHandle(AWinControl);
-  if not Result then Exit;
-  edit := TCarbonRichEdit(AWinControl.Handle);
+  Result := false;
+  edit := GetValidRichEdit(AWinControl);
+  if not Assigned(edit) then Exit;
 
   Result := false;
   filename := GetTempFileUniqueName;
@@ -317,9 +421,8 @@ var
   ptr   : PByteArray;
 begin
   Result := false;
-  if not IsValidControlHandle(AWinControl) then Exit;
-  edit := TCarbonRichEdit(AWinControl.Handle);
-  if not Assigned(Dst) then Exit;
+  edit := GetValidRichEdit(AWinControl);
+  if not Assigned(edit) or not Assigned(Dst) then Exit;
 
   Result := TXNFlattenObjectToCFDataRef(HITextViewGetTXNObject(edit.Widget), kTXNRichTextFormatData, data) = noErr;
   if not Result and Assigned(data) then Exit;
@@ -343,12 +446,25 @@ begin
   Result := kOutputTextInUnicodeEncodingMask;
 end;
 
+function TCarbonRichEdit.GetIndexedRunInfoFromRange(iIndex: ItemCount;
+  iStartOffset, iEndOffset: TXNOffset;
+  var oRunStartOffset, oRunEndOffset: TXNOffset;
+  oRunDataType: TXNDataTypePtr; iTypeAttributeCount: ItemCount;
+  ioTypeAttributes: TXNTypeAttributesPtr): Boolean;
+begin
+  Result := TXNGetIndexedRunInfoFromRange( HITextViewGetTXNObject(Widget),
+    iIndex, iStartOffset, iEndOffset, @oRunStartOffset, @oRunEndOffset,
+    oRunDataType, iTypeAttributeCount, ioTypeAttributes ) = noErr;
+end;
+
 function TCarbonRichEdit.GetContinuousTypeAttributes(
   var oContinuousFlags: TXNContinuousFlags; iCount: ItemCount;
   var ioTypeAttributes: array of TXNTypeAttributes): Boolean;
+var
+  res : OSStatus;
 begin
   Result := TXNGetContinuousTypeAttributes(HITextViewGetTXNObject(Widget),
-              oContinuousFlags,  iCount, @ioTypeAttributes[0]) = noErr;
+              oContinuousFlags, iCount, @ioTypeAttributes[0]) = noErr;
 end;
 
 function TCarbonRichEdit.SetTypeAttributes(iCount: ItemCount;

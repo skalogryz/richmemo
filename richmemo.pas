@@ -21,9 +21,12 @@ type
     procedure UpdateRichMemo; virtual;
     procedure SetHideSelection(AValue: Boolean);
   public
-    procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont); 
-    procedure SetTextAttributes(TextStart, TextLen: Integer; SetMask: TTextStyleMask; const TextParams: TFontParams); virtual; 
+    procedure SetTextAttributes(TextStart, TextLen: Integer; SetMask: TTextStyleMask; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
+    function GetStyleRange(TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
+
+    procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
+    function GetStyleLength(TextStart: Integer): Integer;
 
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
@@ -174,6 +177,29 @@ begin
   else
     Result := false;
 end;
+
+function TCustomRichMemo.GetStyleRange(TextStart: Integer; var RangeStart,
+  RangeLen: Integer): Boolean;
+begin
+  if HandleAllocated then
+    Result := TWSCustomRichMemoClass(WidgetSetClass).GetStyleRange(Self, TextStart, RangeStart, RangeLen)
+  else begin
+    RangeStart := -1;
+    RangeLen := -1;
+    Result := false;
+  end;
+end;
+
+function TCustomRichMemo.GetStyleLength(TextStart: Integer): Integer;
+var
+  ofs, len  : Integer;
+begin
+  if GetStyleRange(TextStart, ofs, len) then
+    Result := len - (TextStart-ofs)
+  else
+    Result := 0;
+end;
+
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
 begin

@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls,
+  StdCtrls, ExtCtrls, ComCtrls,
   RichMemoTypes, RichMemo;
 
 type
@@ -19,14 +19,18 @@ type
     Button3: TButton;
     Button4: TButton;
     Button5: TButton;
+    Button6: TButton;
     FontDialog1: TFontDialog;
-    Memo1: TMemo;
+    OpenDialog1: TOpenDialog;
     RichMemo1: TRichMemo;
+    SaveDialog1: TSaveDialog;
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
+    procedure Button6Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { private declarations }
   public
@@ -71,30 +75,50 @@ end;
 
 procedure TForm1.Button4Click(Sender: TObject);
 var
-  m : TMemoryStream;
+  fs : TFileStream;
 begin
-  m := TMemoryStream.Create;
-  try
-    RichMemo1.SaveRichText(m);
-    m.Position:=0;
-    Memo1.Lines.LoadFromStream(m);
-  except
-    m.Free;
+  if OpenDialog1.Execute then begin
+    fs := nil;
+    try
+      fs := TFileStream.Create(OpenDialog1.FileName, fmCreate);
+      RichMemo1.SaveRichText(fs);
+    except
+    end;
+    fs.Free;
   end;
 end;
 
 procedure TForm1.Button5Click(Sender: TObject);
 var
-  m : TMemoryStream;
+  fs : TFileStream;
 begin
-  m := TMemoryStream.Create;
-  try
-    Memo1.Lines.SaveToStream(m);
-    m.Position := 0;
-    RichMemo1.LoadRichText(m);
-  finally
-    m.free;
+  if OpenDialog1.Execute then begin
+    fs := nil;
+    try
+      fs := TFileStream.Create(OpenDialog1.FileName, fmOpenRead or fmShareDenyNone);
+      RichMemo1.LoadRichText(fs);
+    except
+    end;
+    fs.Free;
   end;
+end;
+
+procedure TForm1.Button6Click(Sender: TObject);
+var
+  ofs, len  : Integer;
+begin
+  RichMemo1.GetStyleRange( RichMemo1.SelStart, ofs, len );
+  if (ofs = RichMEmo1.SelStart) and (len = RichMemo1.SelLength) then begin
+    ofs := ofs + len + 1;
+    RichMemo1.GetStyleRange( ofs, ofs, len );
+  end;
+  RichMemo1.SelStart := ofs;
+  RichMemo1.SelLength := len;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+
 end;
 
 initialization

@@ -6,7 +6,7 @@
       <MainUnit Value="0"/>
       <TargetFileExt Value=""/>
       <UseXPManifest Value="True"/>
-      <ActiveEditorIndexAtStart Value="2"/>
+      <ActiveEditorIndexAtStart Value="0"/>
     </General>
     <VersionInfo>
       <ProjectVersion Value=""/>
@@ -32,7 +32,7 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="36">
+    <Units Count="37">
       <Unit0>
         <Filename Value="project1.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -40,7 +40,7 @@
         <CursorPos X="32" Y="12"/>
         <TopLine Value="1"/>
         <EditorIndex Value="1"/>
-        <UsageCount Value="37"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
       </Unit0>
       <Unit1>
@@ -49,10 +49,10 @@
         <IsPartOfProject Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Unit1"/>
-        <CursorPos X="21" Y="93"/>
-        <TopLine Value="75"/>
+        <CursorPos X="62" Y="83"/>
+        <TopLine Value="76"/>
         <EditorIndex Value="0"/>
-        <UsageCount Value="37"/>
+        <UsageCount Value="46"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
@@ -137,7 +137,7 @@
         <UnitName Value="CarbonGDIObjects"/>
         <CursorPos X="3" Y="1109"/>
         <TopLine Value="1100"/>
-        <UsageCount Value="18"/>
+        <UsageCount Value="22"/>
         <Bookmarks Count="1">
           <Item0 X="25" Y="150" ID="1"/>
         </Bookmarks>
@@ -192,7 +192,7 @@
         <UnitName Value="CarbonPrivate"/>
         <CursorPos X="17" Y="649"/>
         <TopLine Value="640"/>
-        <UsageCount Value="17"/>
+        <UsageCount Value="21"/>
         <Loaded Value="True"/>
       </Unit20>
       <Unit21>
@@ -238,65 +238,60 @@
       <Unit27>
         <Filename Value="../../richmemo.pas"/>
         <UnitName Value="RichMemo"/>
-        <CursorPos X="1" Y="1"/>
-        <TopLine Value="1"/>
-        <EditorIndex Value="7"/>
-        <UsageCount Value="14"/>
+        <CursorPos X="14" Y="29"/>
+        <TopLine Value="19"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="18"/>
         <Loaded Value="True"/>
       </Unit27>
       <Unit28>
         <Filename Value="../../wsrichmemo.pas"/>
         <UnitName Value="WSRichMemo"/>
-        <CursorPos X="3" Y="57"/>
-        <TopLine Value="57"/>
-        <EditorIndex Value="8"/>
-        <UsageCount Value="14"/>
+        <CursorPos X="66" Y="42"/>
+        <TopLine Value="41"/>
+        <EditorIndex Value="6"/>
+        <UsageCount Value="18"/>
         <Loaded Value="True"/>
       </Unit28>
       <Unit29>
         <Filename Value="../../carbon/carbonrichmemo.pas"/>
         <UnitName Value="CarbonRichMemo"/>
-        <CursorPos X="1" Y="267"/>
-        <TopLine Value="249"/>
+        <CursorPos X="24" Y="222"/>
+        <TopLine Value="262"/>
         <EditorIndex Value="2"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="17"/>
+        <Bookmarks Count="2">
+          <Item0 X="16" Y="230" ID="2"/>
+          <Item1 X="33" Y="467" ID="4"/>
+        </Bookmarks>
         <Loaded Value="True"/>
       </Unit29>
       <Unit30>
         <Filename Value="../../../fpc/packages/univint/src/MacOSAll.pas"/>
         <UnitName Value="MacOSAll"/>
-        <CursorPos X="1" Y="218294"/>
-        <TopLine Value="218272"/>
-        <EditorIndex Value="6"/>
-        <UsageCount Value="12"/>
-        <Bookmarks Count="1">
-          <Item0 X="32" Y="83842" ID="2"/>
-        </Bookmarks>
+        <CursorPos X="39" Y="220678"/>
+        <TopLine Value="220670"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="16"/>
         <Loaded Value="True"/>
       </Unit30>
       <Unit31>
         <Filename Value="../../../fpc/rtl/objpas/sysutils/osutilsh.inc"/>
         <CursorPos X="10" Y="34"/>
-        <TopLine Value="18"/>
-        <EditorIndex Value="5"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <TopLine Value="20"/>
+        <UsageCount Value="11"/>
       </Unit31>
       <Unit32>
         <Filename Value="../../../fpc/rtl/objpas/classes/classesh.inc"/>
         <CursorPos X="19" Y="728"/>
-        <TopLine Value="709"/>
-        <EditorIndex Value="3"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <TopLine Value="714"/>
+        <UsageCount Value="11"/>
       </Unit32>
       <Unit33>
         <Filename Value="../../../fpc/rtl/objpas/classes/streams.inc"/>
         <CursorPos X="8" Y="147"/>
         <TopLine Value="140"/>
-        <EditorIndex Value="4"/>
-        <UsageCount Value="10"/>
-        <Loaded Value="True"/>
+        <UsageCount Value="11"/>
       </Unit33>
       <Unit34>
         <Filename Value="../../../../wnlibsvn/CarbonPaste.pas"/>
@@ -304,7 +299,7 @@
         <UnitName Value="CarbonPaste"/>
         <CursorPos X="43" Y="9"/>
         <TopLine Value="1"/>
-        <UsageCount Value="21"/>
+        <UsageCount Value="30"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../../fpc/rtl/objpas/sysutils/sysutilh.inc"/>
@@ -312,127 +307,136 @@
         <TopLine Value="169"/>
         <UsageCount Value="10"/>
       </Unit35>
+      <Unit36>
+        <Filename Value="../../../lazarus/lcl/widgetset/wsstdctrls.pp"/>
+        <UnitName Value="WSStdCtrls"/>
+        <CursorPos X="20" Y="145"/>
+        <TopLine Value="138"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="13"/>
+        <Loaded Value="True"/>
+      </Unit36>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="332" Column="3" TopLine="330"/>
+        <Caret Line="451" Column="48" TopLine="439"/>
       </Position1>
       <Position2>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="362" Column="5" TopLine="340"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="21" TopLine="15"/>
       </Position2>
       <Position3>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="349" Column="1" TopLine="345"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="110" Column="1" TopLine="94"/>
       </Position3>
       <Position4>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="336" Column="34" TopLine="325"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="109" Column="45" TopLine="99"/>
       </Position4>
       <Position5>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="327" Column="15" TopLine="316"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="26" TopLine="9"/>
       </Position5>
       <Position6>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="355" Column="37" TopLine="344"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="24" Column="18" TopLine="9"/>
       </Position6>
       <Position7>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="347" Column="18" TopLine="344"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="32" TopLine="9"/>
       </Position7>
       <Position8>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="358" Column="18" TopLine="347"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="24" Column="18" TopLine="9"/>
       </Position8>
       <Position9>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="372" Column="3" TopLine="352"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="26" Column="30" TopLine="9"/>
       </Position9>
       <Position10>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="371" Column="3" TopLine="351"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="26" TopLine="9"/>
       </Position10>
       <Position11>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="362" Column="22" TopLine="351"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="24" Column="18" TopLine="9"/>
       </Position11>
       <Position12>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="384" Column="38" TopLine="375"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="23" Column="30" TopLine="9"/>
       </Position12>
       <Position13>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="392" Column="3" TopLine="388"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="111" Column="29" TopLine="101"/>
       </Position13>
       <Position14>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="381" Column="18" TopLine="373"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="74" Column="1" TopLine="71"/>
       </Position14>
       <Position15>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="404" Column="5" TopLine="382"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="78" Column="1" TopLine="73"/>
       </Position15>
       <Position16>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="240" Column="16" TopLine="229"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="88" Column="33" TopLine="80"/>
       </Position16>
       <Position17>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="60" Column="14" TopLine="52"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="75" Column="1" TopLine="73"/>
       </Position17>
       <Position18>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="449" Column="36" TopLine="429"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="30" TopLine="25"/>
       </Position18>
       <Position19>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="445" Column="20" TopLine="437"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="26" Column="52" TopLine="25"/>
       </Position19>
       <Position20>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="462" Column="7" TopLine="448"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="25" Column="30" TopLine="25"/>
       </Position20>
       <Position21>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="426" Column="17" TopLine="415"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="24" Column="30" TopLine="24"/>
       </Position21>
       <Position22>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="440" Column="13" TopLine="410"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="88" Column="33" TopLine="81"/>
       </Position22>
       <Position23>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="418" Column="48" TopLine="410"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="80" Column="7" TopLine="75"/>
       </Position23>
       <Position24>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="309" Column="71" TopLine="301"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="88" Column="1" TopLine="75"/>
       </Position24>
       <Position25>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="348" Column="32" TopLine="324"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="79" Column="3" TopLine="75"/>
       </Position25>
       <Position26>
-        <Filename Value="../../../fpc/packages/univint/src/MacOSAll.pas"/>
-        <Caret Line="224096" Column="91" TopLine="224080"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="33" Column="44" TopLine="33"/>
       </Position26>
       <Position27>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="351" Column="1" TopLine="340"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="110" Column="3" TopLine="108"/>
       </Position27>
       <Position28>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="340" Column="1" TopLine="324"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="93" Column="1" TopLine="91"/>
       </Position28>
       <Position29>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="274" Column="1" TopLine="260"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="89" Column="1" TopLine="76"/>
       </Position29>
       <Position30>
-        <Filename Value="../../carbon/carbonrichmemo.pas"/>
-        <Caret Line="269" Column="9" TopLine="247"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="104" Column="1" TopLine="91"/>
       </Position30>
     </JumpHistory>
   </ProjectOptions>

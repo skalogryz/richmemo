@@ -18,7 +18,8 @@ type
 
   TWSCustomRichMemo = class(TWSCustomMemo)
   published
-    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer; 
+    class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
+    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TFontParams): Boolean; virtual;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       Mask: TTextStyleMask; const Params: TFontParams); virtual;
@@ -36,6 +37,14 @@ function WSRegisterCustomRichMemo: Boolean; external name 'WSRegisterCustomRichM
 implementation
 
 { TWSCustomRichMemo }
+
+class function TWSCustomRichMemo.GetStyleRange(const AWinControl: TWinControl;
+  TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean;
+begin
+  RangeStart :=-1;
+  RangeLen := -1;
+  Result := false;
+end;
 
 class function TWSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl; 
   TextStart: Integer; var Params: TFontParams): Boolean; 

@@ -40,9 +40,9 @@ type
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
       var RangeStart, RangeLen: Integer): Boolean; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
-      var Params: TFontParams): Boolean; override;
+      var Params: TIntFontParams): Boolean; override;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
-      Mask: TTextStyleMask; const Params: TFontParams); override;
+      {Mask: TTextStyleMask;} const Params: TIntFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
@@ -163,32 +163,32 @@ begin
   Attr.data.dataPtr := astyle;
 end;
 
-procedure ParamsToTXNAttribs(ParamsMask: TTextStyleMask; const Params: TFontParams;
+procedure ParamsToTXNAttribs({ParamsMask: TTextStyleMask;} const Params: TIntFontParams;
   var Attr: array of TXNTypeAttributes; var AttrCount: Integer; var MacColor: RGBColor);
 begin
   AttrCount := 0;
   //todo: replace QuickDraw style by ATSU style
 
-  if tsm_Color in ParamsMask then begin
+  //if tsm_Color in ParamsMask then begin
     MacColor := ColorToRGBColor(Params.Color);
     AttrSetColor(MacColor, Attr[AttrCount] );
     inc(AttrCount);
-  end;
+  //end;
 
-  if tsm_Name in ParamsMask then begin
+  //if tsm_Name in ParamsMask then begin
     AttrSetFontName(Params.Name, Attr[AttrCount] );
     inc(AttrCount);
-  end;
+  //end;
 
-  if tsm_Size in ParamsMask then begin
+  //if tsm_Size in ParamsMask then begin
     AttrSetSize(Params.Size, Attr[AttrCount] );
     inc(AttrCount);
-  end;
+  //end;
 
-  if tsm_Styles in ParamsMask then begin
+  //if tsm_Styles in ParamsMask then begin
     AttrSetStyle(Params.Style, Attr[AttrCount]);
     inc(AttrCount);
-  end;
+  //end;
 end;
 
 { TCarbonWSCustomRichMemo }
@@ -203,8 +203,6 @@ class function TCarbonWSCustomRichMemo.GetStyleRange(const AWinControl: TWinCont
   TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean;
 var
   edit      : TCarbonRichEdit;
-  obj       : TXNObject;
-  sst, slen : Integer;
   st, len   : Integer;
   send      : Integer;
   fndstyle  : Boolean;
@@ -227,77 +225,12 @@ begin
     RangeLen := RngEnd - RngStart;
   end;
 
-{  edit.GetSelStart(sst);
-  edit.GetSelLength(slen);
-
-  edit.SetSelStart(TextStart);
-  edit.SetSelLength(1);
-
-  ATSUCreateStyle(astyle);
-  AttrSetATSUStyle(nil, wattr[0]);
-  AttrSetColor(macrgb, wattr[1]);
-  edit.GetContinuousTypeAttributes(flags, 2, wattr[0]);
-
-  GetTextLen(AWinControl, len);
-  dec(len, TextStart);
-  st:=TextStart;
-
-  writeln('TextStart  = ', TextStart);
-  writeln('TextLength = ', 2);
-  edit.SetSelStart(TextStart);
-  edit.SetSelLength(2);//send-TextStart);
-  attr := wattr;
-  edit.GetContinuousTypeAttributes(flags, 2, attr);
-
-  writeln('contflags ',flags);
-
-  Result := true;}
-
-{  fndstyle := false;
-  while not fndstyle do begin
-    edit.SetSelStart(st);
-    edit.SetSelLength(len);
-    attr := wattr;
-
-    send := st + len;
-    repeat
-      writeln(st,' ', send);
-      d := (st+send) div 2; {разделить пополам интервал просмотра}
-      edit.SetSelStart(TextStart);
-      edit.SetSelLength(send-TextStart);
-      attr := wattr;
-      edit.GetContinuousTypeAttributes(flags, 2, attr);
-      if flags = (kTXNColorContinuousMask or kTXNATSUIStyleContinuousMask) then
-        st := st+1
-      else
-        send := d-1;
-    until (st>send);}
-
-{    while send > st do begin
-      writeln(st, ' ', send, ' ', send - st, ' ', (send - st) div 2);
-      attr := wattr;
-      edit.SetSelStart(st);
-      edit.SetSelLength(st+len);
-      edit.GetContinuousTypeAttributes(flags, 2, attr);
-      writeln('   flags = ', flags);
-      {d := (send - st) div 2;
-      if d = 0 then d := 1;}
-      if flags = (kTXNColorContinuousMask or kTXNATSUIStyleContinuousMask)
-        then st := send
-        else dec(send, d);
-    end;
-    Result := send - TextStart;}
- // end;
-
-{  edit.SetSelStart(sst);
-  edit.SetSelLength(slen);
-  ATSUDisposeStyle(astyle);}
 end;
 
 class function TCarbonWSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl;
-  TextStart: Integer; var Params: TFontParams): Boolean;
+  TextStart: Integer; var Params: TIntFontParams): Boolean;
 var
-  memo  : TCarbonRichEdit;
+  edit  : TCarbonRichEdit;
   attr  : array [0..1] of TXNTypeAttributes;
   sstart  : Integer;
   slen    : Integer;
@@ -307,20 +240,20 @@ var
 
 begin
   Result := false;
-  memo := GetValidRichEdit(AWinControl);
-  if not Assigned(memo) then Exit;
+  edit := GetValidRichEdit(AWinControl);
+  if not Assigned(edit) then Exit;
 
-  memo.GetSelStart(sstart);
-  memo.GetSelLength(slen);
+  edit.GetSelStart(sstart);
+  edit.GetSelLength(slen);
 
-  memo.SetSelStart(TextStart);
-  memo.SetSelLength(1);
+  edit.SetSelStart(TextStart);
+  edit.SetSelLength(1);
 
   ATSUCreateStyle(astyle);
   AttrSetATSUStyle(astyle, attr[0]);
   AttrSetStyle([], attr[1]);
 
-  Result := memo.GetContinuousTypeAttributes(flags, 2, attr);
+  Result := edit.GetContinuousTypeAttributes(flags, 2, attr);
   Params.Name := GetATSUFontName(astyle);
   Params.Color := GetATSUFontColor(astyle);
   Params.Style := GetATSUFontStyles(astyle) + QDStyleToFontStyle(attr[1].data.dataValue);
@@ -328,13 +261,12 @@ begin
 
   ATSUDisposeStyle(astyle);
 
-  memo.SetSelLength(sstart);
-  memo.SetSelLength(slen);
+  edit.SetSelStart(sstart);
+  edit.SetSelLength(slen);
 end;
 
 class procedure TCarbonWSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl;
-  TextStart, TextLen: Integer;
-  Mask: TTextStyleMask; const Params: TFontParams);
+  TextStart, TextLen: Integer; {Mask: TTextStyleMask; }const Params: TIntFontParams);
 var
   memo      : TCarbonRichEdit;
   Attr      : array [0..TXNAttributesMax-1] of TXNTypeAttributes;
@@ -344,7 +276,7 @@ begin
   memo := GetValidRichEdit(AWinControl);
   if not Assigned(memo) then Exit;
 
-  ParamsToTXNAttribs(Mask, Params, attr, Count, maccolor);
+  ParamsToTXNAttribs({Mask,} Params, attr, Count, maccolor);
 
   memo.SetTypeAttributes(Count, Attr, TextStart, TextStart+TextLen);
 end;

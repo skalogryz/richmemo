@@ -48,8 +48,7 @@ procedure TForm1.Button1Click(Sender: TObject);
 begin
   Caption := Format('sel start %d,  sel length %d', [RichMemo1.SelStart, RichMemo1.SelLength]);
   RichMemo1.SetTextAttributes(
-    RichMemo1.SelStart, RichMemo1.SelLength,
-    [tsm_Color, tsm_Styles], GetFontParams(clRed, [fsBold]) );
+    RichMemo1.SelStart, RichMemo1.SelLength, GetFontParams(clRed, [fsBold]) );
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);

@@ -10,6 +10,17 @@ uses
 
 type
 
+  TFontParams = TIntFontParams;
+  {TIntFontParams = record // declared at WSRichMemo
+     Name    : String;
+     Size    : Integer;
+     Color   : TColor;
+     Style   : TFontStyles;
+   end; }
+
+
+  TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
+
   { TCustomRichMemo }
 
   TCustomRichMemo = class(TCustomMemo)
@@ -21,12 +32,15 @@ type
     procedure UpdateRichMemo; virtual;
     procedure SetHideSelection(AValue: Boolean);
   public
-    procedure SetTextAttributes(TextStart, TextLen: Integer; SetMask: TTextStyleMask; const TextParams: TFontParams); virtual;
+    procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
     function GetStyleRange(TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     function GetStyleLength(TextStart: Integer): Integer;
+    procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
+    procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
+      const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
 
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
@@ -90,9 +104,6 @@ type
     property WantTabs;
     property WordWrap;
   end;
-  
-const
-  TextStyleAll : TTextStyleMask = [tsm_Color, tsm_Name, tsm_Size, tsm_Styles];
   
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
 function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overload;
@@ -160,14 +171,14 @@ begin
   params.Color := AFont.Color;
   params.Size := AFont.Size;
   params.Style := AFont.Style;
-  SetTextAttributes(TextStart, TextLen, TextStyleAll, params);
+  SetTextAttributes(TextStart, TextLen, {TextStyleAll,} params);
 end;
 
 procedure TCustomRichMemo.SetTextAttributes(TextStart, TextLen: Integer;  
-  SetMask: TTextStyleMask; const TextParams: TFontParams); 
+  {SetMask: TTextStyleMask;} const TextParams: TFontParams);
 begin
   if HandleAllocated then  
-    TWSCustomRichMemoClass(WidgetSetClass).SetTextAttributes(Self, TextStart, TextLen, SetMask, TextParams);
+    TWSCustomRichMemoClass(WidgetSetClass).SetTextAttributes(Self, TextStart, TextLen, {SetMask,} TextParams);
 end;
 
 function TCustomRichMemo.GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; 
@@ -194,10 +205,42 @@ function TCustomRichMemo.GetStyleLength(TextStart: Integer): Integer;
 var
   ofs, len  : Integer;
 begin
-  if GetStyleRange(TextStart, ofs, len) then
-    Result := len - (TextStart-ofs)
-  else
-    Result := 0;
+  if GetStyleRange(TextStart, ofs, len) then Result := len - (TextStart-ofs)
+  else Result := 1;
+  if Result = 0 then Result := 1;
+end;
+
+procedure TCustomRichMemo.SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
+begin
+  SetRangeParams(TextStart, TextLength, [tmm_Color], '', 0, FontColor, [], []);
+end;
+
+procedure TCustomRichMemo.SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
+      const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
+var
+  i : Integer;
+  j : Integer;
+  l : Integer;
+  p : TFontParams;
+begin
+  if (ModifyMask = []) or (TextLength = 0) then Exit;
+
+  i := TextStart;
+  j := TextStart + TextLength;
+  while i < j do begin
+    GetTextAttributes(i, p);
+
+    if tmm_Name in ModifyMask then p.Name := FontName;
+    if tmm_Color in ModifyMask then p.Color := FontColor;
+    if tmm_Size in ModifyMask then p.Size := FontSize;
+    if tmm_Styles in ModifyMask then p.Style := p.Style + AddFontStyle - RemoveFontStyle;
+
+    l := GetStyleLength(i);
+    if i + l > j then l := j - i;
+    if l = 0 then l := 1;
+    SetTextAttributes(i, l, p);
+    inc(i, l);
+  end;
 end;
 
 

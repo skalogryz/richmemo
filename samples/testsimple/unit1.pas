@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls,
-  RichMemoTypes, RichMemo;
+  RichMemo;
 
 type
 

@@ -11,7 +11,7 @@ uses
 
   Controls, Graphics,
 
-  RichMemoTypes, WSRichMemo,
+  WSRichMemo,
 
   CarbonProc, CarbonEdits;
 
@@ -89,7 +89,7 @@ procedure GetATSUFontRGBAColor(AStyle: ATSUStyle; var r,g,b,a: Byte);
 var
   rgba : ATSURGBAlphaColor;
 begin
-  ATSUGetAttribute(AStyle, kATSURGBAlphaColorTag, sizeof(Boolean), @rgba, nil);
+  writeln('getting color= ', ATSUGetAttribute(AStyle, kATSURGBAlphaColorTag, sizeof(ATSURGBAlphaColor), @rgba, nil));
   r := Round(rgba.red*255);
   g := Round(rgba.green*255);
   b := Round(rgba.blue*255);
@@ -231,13 +231,13 @@ class function TCarbonWSCustomRichMemo.GetTextAttributes(const AWinControl: TWin
   TextStart: Integer; var Params: TIntFontParams): Boolean;
 var
   edit  : TCarbonRichEdit;
-  attr  : array [0..1] of TXNTypeAttributes;
+  attr  : array [0..2] of TXNTypeAttributes;
   sstart  : Integer;
   slen    : Integer;
   flags   : TXNContinuousFlags;
 
   astyle  : ATSUStyle;
-
+  maccolor  : RGBColor;
 begin
   Result := false;
   edit := GetValidRichEdit(AWinControl);
@@ -252,10 +252,13 @@ begin
   ATSUCreateStyle(astyle);
   AttrSetATSUStyle(astyle, attr[0]);
   AttrSetStyle([], attr[1]);
+  AttrSetColor(maccolor, attr[2]);
 
-  Result := edit.GetContinuousTypeAttributes(flags, 2, attr);
+  Result := edit.GetContinuousTypeAttributes(flags, 3, attr);
   Params.Name := GetATSUFontName(astyle);
-  Params.Color := GetATSUFontColor(astyle);
+  Params.Color :=  RGBColorToColor(maccolor);
+  // GetATSUFontColor(astyle);
+  //writeln('got color: ', IntToHex(Params.Color, 8));
   Params.Style := GetATSUFontStyles(astyle) + QDStyleToFontStyle(attr[1].data.dataValue);
   Params.Size := GetATSUFontSize(astyle);
 

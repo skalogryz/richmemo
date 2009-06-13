@@ -49,7 +49,7 @@
         <IsPartOfProject Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Unit1"/>
-        <CursorPos X="3" Y="10"/>
+        <CursorPos X="15" Y="10"/>
         <TopLine Value="1"/>
         <EditorIndex Value="0"/>
         <UsageCount Value="49"/>

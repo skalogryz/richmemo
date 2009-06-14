@@ -45,10 +45,14 @@ implementation
 { TForm1 }
 
 procedure TForm1.Button1Click(Sender: TObject);
+var
+  fp   :  TFontParams;
 begin
   Caption := Format('sel start %d,  sel length %d', [RichMemo1.SelStart, RichMemo1.SelLength]);
-  RichMemo1.SetTextAttributes(
-    RichMemo1.SelStart, RichMemo1.SelLength, GetFontParams(clRed, [fsBold]) );
+  RichMemo1.GetTextAttributes(RichMemo1.SelStart, fp);
+  fp.Color := clRed;
+  fp.Style := [fsBold];
+  RichMemo1.SetTextAttributes(RichMemo1.SelStart, RichMemo1.SelLength, fp);
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);

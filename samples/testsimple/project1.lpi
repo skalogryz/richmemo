@@ -6,7 +6,7 @@
       <MainUnit Value="0"/>
       <TargetFileExt Value=""/>
       <UseXPManifest Value="True"/>
-      <ActiveEditorIndexAtStart Value="1"/>
+      <ActiveEditorIndexAtStart Value="4"/>
     </General>
     <VersionInfo>
       <ProjectVersion Value=""/>
@@ -39,7 +39,7 @@
         <UnitName Value="project1"/>
         <CursorPos X="32" Y="12"/>
         <TopLine Value="1"/>
-        <UsageCount Value="49"/>
+        <UsageCount Value="50"/>
       </Unit0>
       <Unit1>
         <Filename Value="unit1.pas"/>
@@ -47,10 +47,10 @@
         <IsPartOfProject Value="True"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Unit1"/>
-        <CursorPos X="10" Y="10"/>
-        <TopLine Value="1"/>
+        <CursorPos X="26" Y="52"/>
+        <TopLine Value="41"/>
         <EditorIndex Value="0"/>
-        <UsageCount Value="49"/>
+        <UsageCount Value="50"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
@@ -135,7 +135,7 @@
         <UnitName Value="CarbonGDIObjects"/>
         <CursorPos X="3" Y="1109"/>
         <TopLine Value="1100"/>
-        <UsageCount Value="24"/>
+        <UsageCount Value="25"/>
         <Bookmarks Count="1">
           <Item0 X="25" Y="150" ID="1"/>
         </Bookmarks>
@@ -190,7 +190,7 @@
         <UnitName Value="CarbonPrivate"/>
         <CursorPos X="17" Y="649"/>
         <TopLine Value="640"/>
-        <UsageCount Value="23"/>
+        <UsageCount Value="24"/>
         <Loaded Value="True"/>
       </Unit20>
       <Unit21>
@@ -236,19 +236,19 @@
       <Unit27>
         <Filename Value="../../richmemo.pas"/>
         <UnitName Value="RichMemo"/>
-        <CursorPos X="3" Y="9"/>
-        <TopLine Value="1"/>
+        <CursorPos X="18" Y="181"/>
+        <TopLine Value="178"/>
         <EditorIndex Value="4"/>
-        <UsageCount Value="20"/>
+        <UsageCount Value="21"/>
         <Loaded Value="True"/>
       </Unit27>
       <Unit28>
         <Filename Value="../../wsrichmemo.pas"/>
         <UnitName Value="WSRichMemo"/>
-        <CursorPos X="139" Y="28"/>
-        <TopLine Value="11"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
         <EditorIndex Value="3"/>
-        <UsageCount Value="20"/>
+        <UsageCount Value="21"/>
         <Loaded Value="True"/>
       </Unit28>
       <Unit29>
@@ -292,7 +292,7 @@
         <UnitName Value="CarbonPaste"/>
         <CursorPos X="43" Y="9"/>
         <TopLine Value="1"/>
-        <UsageCount Value="33"/>
+        <UsageCount Value="34"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../../fpc/rtl/objpas/sysutils/sysutilh.inc"/>
@@ -317,10 +317,10 @@
       <Unit38>
         <Filename Value="../../win32/win32richmemo.pas"/>
         <UnitName Value="Win32RichMemo"/>
-        <CursorPos X="79" Y="177"/>
-        <TopLine Value="168"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
         <EditorIndex Value="1"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
         <Loaded Value="True"/>
       </Unit38>
       <Unit39>
@@ -329,70 +329,73 @@
         <CursorPos X="1" Y="1"/>
         <TopLine Value="1"/>
         <EditorIndex Value="2"/>
-        <UsageCount Value="10"/>
+        <UsageCount Value="11"/>
+        <Bookmarks Count="1">
+          <Item0 X="1" Y="99" ID="2"/>
+        </Bookmarks>
         <Loaded Value="True"/>
       </Unit39>
     </Units>
-    <JumpHistory Count="30" HistoryIndex="29">
+    <JumpHistory Count="29" HistoryIndex="28">
       <Position1>
-        <Filename Value="unit1.pas"/>
-        <Caret Line="104" Column="1" TopLine="91"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position1>
       <Position2>
-        <Filename Value="unit1.pas"/>
-        <Caret Line="98" Column="21" TopLine="88"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="96" Column="33" TopLine="81"/>
       </Position2>
       <Position3>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="14" Column="1" TopLine="25"/>
+        <Caret Line="141" Column="53" TopLine="137"/>
       </Position3>
       <Position4>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="25" Column="11" TopLine="11"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position4>
       <Position5>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="107" Column="15" TopLine="106"/>
+        <Caret Line="26" Column="40" TopLine="1"/>
       </Position5>
       <Position6>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="27" Column="53" TopLine="14"/>
+        <Filename Value="../../win32/win32richmemo.pas"/>
+        <Caret Line="158" Column="38" TopLine="142"/>
       </Position6>
       <Position7>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="87" Column="47" TopLine="84"/>
+        <Filename Value="../../win32/win32richmemo.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position7>
       <Position8>
         <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="18" Column="15" TopLine="1"/>
+        <Caret Line="163" Column="36" TopLine="143"/>
       </Position8>
       <Position9>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="30" Column="25" TopLine="18"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="158" Column="38" TopLine="141"/>
       </Position9>
       <Position10>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="121" Column="62" TopLine="120"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="53" Column="20" TopLine="38"/>
       </Position10>
       <Position11>
         <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Caret Line="150" Column="42" TopLine="142"/>
       </Position11>
       <Position12>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="28" Column="33" TopLine="16"/>
+        <Filename Value="unit1.pas"/>
+        <Caret Line="53" Column="19" TopLine="38"/>
       </Position12>
       <Position13>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="30" Column="35" TopLine="16"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="148" Column="24" TopLine="130"/>
       </Position13>
       <Position14>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="121" Column="60" TopLine="109"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position14>
       <Position15>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="141" Column="19" TopLine="129"/>
+        <Caret Line="100" Column="36" TopLine="90"/>
       </Position15>
       <Position16>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
@@ -400,60 +403,56 @@
       </Position16>
       <Position17>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="25" Column="29" TopLine="13"/>
+        <Caret Line="48" Column="18" TopLine="33"/>
       </Position17>
       <Position18>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="26" Column="88" TopLine="13"/>
+        <Caret Line="100" Column="48" TopLine="85"/>
       </Position18>
       <Position19>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="96" Column="84" TopLine="84"/>
+        <Caret Line="119" Column="47" TopLine="104"/>
       </Position19>
       <Position20>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="107" Column="25" TopLine="95"/>
+        <Caret Line="133" Column="47" TopLine="104"/>
       </Position20>
       <Position21>
         <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="141" Column="1" TopLine="129"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position21>
       <Position22>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="143" Column="81" TopLine="131"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="48" Column="18" TopLine="33"/>
       </Position22>
       <Position23>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="32" Column="20" TopLine="20"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="122" Column="1" TopLine="117"/>
       </Position23>
       <Position24>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="121" Column="60" TopLine="109"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position24>
       <Position25>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="143" Column="1" TopLine="131"/>
+        <Filename Value="../../win32/win32richmemoproc.pas"/>
+        <Caret Line="156" Column="1" TopLine="148"/>
       </Position25>
       <Position26>
         <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="1" Column="1" TopLine="1"/>
+        <Caret Line="159" Column="19" TopLine="144"/>
       </Position26>
       <Position27>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="24" Column="38" TopLine="17"/>
+        <Filename Value="../../wsrichmemo.pas"/>
+        <Caret Line="29" Column="20" TopLine="14"/>
       </Position27>
       <Position28>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="175" Column="30" TopLine="145"/>
+        <Filename Value="../../richmemo.pas"/>
+        <Caret Line="197" Column="22" TopLine="184"/>
       </Position28>
       <Position29>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="124" Column="61" TopLine="115"/>
+        <Filename Value="../../richmemo.pas"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
       </Position29>
-      <Position30>
-        <Filename Value="../../win32/win32richmemo.pas"/>
-        <Caret Line="139" Column="61" TopLine="123"/>
-      </Position30>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>

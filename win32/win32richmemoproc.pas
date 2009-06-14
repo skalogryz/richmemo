@@ -6,13 +6,13 @@ interface
 
 uses
   // windows units
-  Windows,richedit,
+  Windows,richedit, 
   // RTL units  
   Classes, SysUtils, 
   // LCL units
   Graphics,
-  // RichMemo unit
-  RichMemoTypes, 
+  // RichMemoUnits
+  WSRichMemo, 
   // Win32 widgetset units  
   win32proc; 
   
@@ -22,8 +22,8 @@ type
   TRichEditManager = class(TObject)
   public
     class function SetSelectedTextStyle(RichEditWnd: Handle; 
-      SetMask: TTextStyleMask; Params: TFontParams): Boolean; virtual;
-    class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TFontParams): Boolean; virtual;
+      Params: TIntFontParams): Boolean; virtual;
+    class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
     class procedure GetSelection(RichEditWnd: Handle; var TextStart, TextLen: Integer); virtual;      
     class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;      
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
@@ -31,7 +31,7 @@ type
   TRichManagerClass = class of TRichEditManager;
                      
 var
-  RichEditManager : TRichManagerClass = TRichEditManager;
+  RichEditManager : TRichManagerClass = nil;
 
 function InitRichEdit: Boolean;
 function GetRichEditClass: AnsiString;
@@ -51,7 +51,7 @@ function GetRichEditClass: AnsiString;
 begin
   Result := GlobalRichClass;
 end;  
-  
+ 
 function InitRichEdit: Boolean;
 begin
   if GlobalRichClass = '' then begin
@@ -93,7 +93,7 @@ begin
 end;
 
          
-procedure CharFormatToFontParams(const fmt: TCHARFORMAT; var Params: TFontParams);
+procedure CharFormatToFontParams(const fmt: TCHARFORMAT; var Params: TIntFontParams);
 begin
   Params.Name := fmt.szFaceName;
   Params.Size := fmt.cbSize;
@@ -104,7 +104,7 @@ end;
 { TRichEditManager }
 
 class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle; 
-  SetMask: TTextStyleMask; Params: TFontParams): Boolean;
+  Params: TIntFontParams): Boolean;
 var
   w : WPARAM;
   fmt : TCHARFORMAT;
@@ -120,32 +120,25 @@ begin
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
   
-  if tsm_Color in SetMask then begin
-    fmt.dwMask := fmt.dwMask or CFM_COLOR;
-    fmt.crTextColor := Params.Color;
-  end;
+
+  fmt.dwMask := fmt.dwMask or CFM_COLOR;
+  fmt.crTextColor := Params.Color;
+
+  fmt.dwMask := fmt.dwMask or CFM_FACE ;
+  // keep last char for Null-termination?
+  CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1); 
   
-  if tsm_Name in SetMask then begin
-    fmt.dwMask := fmt.dwMask or CFM_FACE ;
-    // keep last char for Null-termination
-    CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1); 
-  end;
+  fmt.dwMask := fmt.dwMask or CFM_SIZE;
+  fmt.yHeight := Params.Size * TwipsInFontSize;
   
-  if tsm_Size in SetMask then begin
-    fmt.dwMask := fmt.dwMask or CFM_SIZE;
-    fmt.yHeight := Params.Size * TwipsInFontSize;
-  end;
-  
-  if tsm_Styles in SetMask then begin
-    fmt.dwMask := fmt.dwMask or CFM_EFFECTS;
-    fmt.dwEffects := FontStylesToEffects(Params.Style);
-  end;
+  fmt.dwMask := fmt.dwMask or CFM_EFFECTS;
+  fmt.dwEffects := FontStylesToEffects(Params.Style);
   
   Result := SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt))>0;
 end;
 
 class function TRichEditManager.GetSelectedTextStyle(RichEditWnd: Handle;  
-  var Params: TFontParams): Boolean; 
+  var Params: TIntFontParams): Boolean; 
 var
   w     : WPARAM;
   fmt   : TCHARFORMAT;

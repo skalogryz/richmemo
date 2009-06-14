@@ -15,7 +15,7 @@ uses
   // Win32WidgetSet 
   Win32WSControls, Win32Int, 
   // RichMemo headers
-  RichMemoTypes, WSRichMemo, Win32RichMemoProc;
+  WSRichMemo, Win32RichMemoProc;
 
 type  
 
@@ -24,11 +24,12 @@ type
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
-    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer; 
-      var Params: TFontParams): Boolean; override;
+    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
+      var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
-      Mask: TTextStyleMask; const Params: TFontParams); override;
+      const Params: TIntFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;      
+    class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
   end;
   
 implementation
@@ -117,7 +118,7 @@ begin
 end;
 
 class procedure TWin32WSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl; 
-  TextStart, TextLen: Integer; Mask: TTextStyleMask; const Params: TFontParams);  
+  TextStart, TextLen: Integer; const Params: TIntFontParams);  
 var
   OrigStart : Integer;
   OrigLen   : Integer;
@@ -131,15 +132,15 @@ begin
   if NeedLock then begin
     LockRedraw(AWinControl.Handle);
     RichEditManager.SetSelection(AWinControl.Handle, TextStart, TextLen);
-    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Mask, Params );
+    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params );
     RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
     UnlockRedraw(AWinControl.Handle);
   end else 
-    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Mask, Params);
+    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params);
 end;
 
 class function TWin32WSCustomRichMemo.GetTextAttributes(
-  const AWinControl: TWinControl; TextStart: Integer; var Params: TFontParams
+  const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams
   ): Boolean;  
 var
   OrigStart : Integer;
@@ -169,5 +170,12 @@ begin
   RichEditManager.SetHideSelection(AWinControl.Handle, AHideSelection);
 end;
 
+class function TWin32WSCustomRichMemo.GetStyleRange(
+  const AWinControl: TWinControl; TextStart: Integer; var RangeStart, 
+  RangeLen: Integer): Boolean;  
+begin
+  Result:=inherited GetStyleRange(AWinControl, TextStart, RangeStart, RangeLen);  
+end;
+ 
 end.
 

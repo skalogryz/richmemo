@@ -25,7 +25,7 @@ type
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
-      var Params: TIntFontParams): Boolean; virtual;
+      var Params: TIntFontParams): Boolean; override;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;      
@@ -147,7 +147,10 @@ var
   OrigLen   : Integer;
   NeedLock  : Boolean;  
 begin
-  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
+    Result := false;
+    Exit;
+  end;
   
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   

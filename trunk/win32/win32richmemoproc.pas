@@ -96,7 +96,7 @@ end;
 procedure CharFormatToFontParams(const fmt: TCHARFORMAT; var Params: TIntFontParams);
 begin
   Params.Name := fmt.szFaceName;
-  Params.Size := fmt.cbSize;
+  Params.Size := Round(fmt.yHeight/TwipsInFontSize);
   Params.Color := fmt.crTextColor;
   Params.Style := EffectsToFontStyles(fmt.dwEffects);
 end;
@@ -154,8 +154,7 @@ begin
   fmt.cbSize := sizeof(fmt);
   fmt.dwMask := CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS;
   
-  mask := SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
-  if mask = 0 then Exit;
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
   
   CharFormatToFontParams(fmt, Params);
   Result := true;  

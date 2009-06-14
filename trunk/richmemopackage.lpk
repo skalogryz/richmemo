@@ -19,50 +19,45 @@
 "/>
     <License Value="LGPL"/>
     <Version Minor="8"/>
-    <Files Count="9">
+    <Files Count="8">
       <Item1>
-        <Filename Value="richmemo.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="RichMemo"/>
-      </Item1>
-      <Item2>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="WSRichMemo"/>
-      </Item2>
-      <Item3>
+      </Item1>
+      <Item2>
         <Filename Value="win32\win32richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="Win32RichMemo"/>
-      </Item3>
-      <Item4>
+      </Item2>
+      <Item3>
         <Filename Value="win32\win32richmemoproc.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="Win32RichMemoProc"/>
-      </Item4>
-      <Item5>
+      </Item3>
+      <Item4>
         <Filename Value="richmemofactory.pas"/>
         <UnitName Value="RichMemoFactory"/>
-      </Item5>
-      <Item6>
-        <Filename Value="richmemotypes.pas"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="RichMemoTypes"/>
-      </Item6>
-      <Item7>
+      </Item4>
+      <Item5>
         <Filename Value="richmemoregister.pas"/>
         <HasRegisterProc Value="True"/>
         <UnitName Value="richmemoregister"/>
-      </Item7>
-      <Item8>
+      </Item5>
+      <Item6>
         <Filename Value="richmemopackage.lrs"/>
         <Type Value="LRS"/>
-      </Item8>
-      <Item9>
+      </Item6>
+      <Item7>
         <Filename Value="carbon\carbonrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="carbonrichmemo"/>
-      </Item9>
+      </Item7>
+      <Item8>
+        <Filename Value="richmemo.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="RichMemo"/>
+      </Item8>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

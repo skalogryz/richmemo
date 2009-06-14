@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, Graphics, StdCtrls, 
-  RichMemoTypes, WSRichMemo; 
+  WSRichMemo; 
 
 type
 

@@ -21,9 +21,9 @@ type
 
   TRichEditManager = class(TObject)
   public
-    class function SetSelectedTextStyle(RichEditWnd: Handle; 
-      Params: TIntFontParams): Boolean; virtual;
+    class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
+    class function GetStyleRange(RichEditWnd: Handle; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual; 
     class procedure GetSelection(RichEditWnd: Handle; var TextStart, TextLen: Integer); virtual;      
     class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;      
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
@@ -160,6 +160,58 @@ begin
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
   
   CharFormatToFontParams(fmt, Params);
+  Result := true;  
+end;
+
+class function TRichEditManager.GetStyleRange(RichEditWnd: Handle; TextStart: Integer; 
+  var RangeStart, RangeLen: Integer): Boolean; 
+var
+  w       : WPARAM;
+  len     : integer;
+  fmt     : TCHARFORMAT;
+  mask    : LongWord;
+  textlen : TGETTEXTEX;
+  sel     : TCHARRANGE;
+  rngend  : Integer;
+  d       : Integer;
+const
+  CP_UNICODE = 1200;  
+  ALL_MASK = CFM_BOLD or CFM_ITALIC or CFM_STRIKEOUT or CFM_UNDERLINE or 
+             CFM_SIZE or CFM_COLOR or CFM_FACE;
+begin
+  Result := false;
+  if RichEditWnd = 0 then Exit;
+  
+  textlen.flags := GTL_DEFAULT or GTL_NUMCHARS;
+  textlen.codepage := CP_UNICODE;
+  len := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
+    
+  sel.cpMin := TextStart;
+  sel.cpMax := len;
+  SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+    
+  FillChar(fmt, sizeof(fmt), 0);
+  fmt.cbSize := sizeof(fmt);
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+ 
+  
+  if fmt.dwMask and ALL_MASK <> ALL_MASK then begin
+    rngend := len;
+    d := rngend - sel.cpMin;
+    sel.cpMax := sel.cpMin + d div 2;
+    while d > 1 do begin
+      SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+      SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+      d := d div 2;    
+      if fmt.dwMask and ALL_MASK = ALL_MASK then 
+        sel.cpMax := sel.cpMax + d
+      else
+        sel.cpMax := sel.cpMax - d;
+    end;
+  end;
+
+  RangeStart := sel.cpMin;
+  RangeLen := sel.cpMax - sel.cpMin;
   Result := true;  
 end;
 

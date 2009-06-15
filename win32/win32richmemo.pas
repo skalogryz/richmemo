@@ -30,6 +30,8 @@ type
       const Params: TIntFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;      
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
+    class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; override;
+    class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
   end;
   
 implementation
@@ -178,6 +180,26 @@ class function TWin32WSCustomRichMemo.GetStyleRange(
   RangeLen: Integer): Boolean;  
 begin
   Result:=inherited GetStyleRange(AWinControl, TextStart, RangeStart, RangeLen);  
+end;
+
+class function TWin32WSCustomRichMemo.LoadRichText(
+  const AWinControl: TWinControl; Source: TStream): Boolean;  
+begin
+  Result := false;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
+    writeln('failed!');
+    Exit;
+  end;
+  writeln('loading rich edit text');
+  Result := RichEditManager.LoadRichText(AWinControl.Handle, Source);
+end;
+
+class function TWin32WSCustomRichMemo.SaveRichText(
+  const AWinControl: TWinControl; Dst: TStream): Boolean;  
+begin
+  Result := false;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+  Result := RichEditManager.SaveRichText(AWinControl.Handle, Dst);
 end;
  
 end.

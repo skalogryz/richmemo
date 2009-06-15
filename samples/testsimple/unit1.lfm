@@ -10,9 +10,9 @@ object Form1: TForm1
   OnCreate = FormCreate
   LCLVersion = '0.9.27'
   object RichMemo1: TRichMemo
-    Left = 8
+    Left = 16
     Height = 366
-    Top = 8
+    Top = 16
     Width = 619
     Anchors = [akTop, akLeft, akRight, akBottom]
     Font.Height = -13
@@ -22,9 +22,8 @@ object Form1: TForm1
       'RichMemo1'
     )
     ParentFont = False
-    ScrollBars = ssBoth
+    ScrollBars = ssVertical
     TabOrder = 0
-    WordWrap = False
   end
   object Button1: TButton
     Left = 24
@@ -62,7 +61,7 @@ object Form1: TForm1
     Top = 382
     Width = 75
     Anchors = [akLeft, akBottom]
-    Caption = 'Export'
+    Caption = 'Save RTF'
     OnClick = Button4Click
     TabOrder = 4
   end
@@ -72,7 +71,7 @@ object Form1: TForm1
     Top = 382
     Width = 75
     Anchors = [akLeft, akBottom]
-    Caption = 'Import'
+    Caption = 'Load RTF'
     OnClick = Button5Click
     TabOrder = 5
   end

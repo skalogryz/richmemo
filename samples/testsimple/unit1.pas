@@ -36,7 +36,7 @@ type
   public
     { public declarations }
   end; 
-
+  
 var
   Form1: TForm1; 
 
@@ -83,7 +83,7 @@ begin
   if OpenDialog1.Execute then begin
     fs := nil;
     try
-      fs := TFileStream.Create(OpenDialog1.FileName, fmCreate);
+      fs := TFileStream.Create( Utf8ToAnsi(OpenDialog1.FileName), fmCreate);
       RichMemo1.SaveRichText(fs);
     except
     end;
@@ -98,7 +98,8 @@ begin
   if OpenDialog1.Execute then begin
     fs := nil;
     try
-      fs := TFileStream.Create(OpenDialog1.FileName, fmOpenRead or fmShareDenyNone);
+      // Utf8ToAnsi is required for windows
+      fs := TFileStream.Create(Utf8ToAnsi(OpenDialog1.FileName), fmOpenRead or fmShareDenyNone);
       RichMemo1.LoadRichText(fs);
     except
     end;

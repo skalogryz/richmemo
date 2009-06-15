@@ -27,6 +27,9 @@ type
     class procedure GetSelection(RichEditWnd: Handle; var TextStart, TextLen: Integer); virtual;      
     class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;      
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
+    class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
+    class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
+    
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -186,6 +189,61 @@ begin
     SendMessage(RichEditWnd, EM_SETOPTIONS, ECOOP_AND, not ECO_NOHIDESEL)
   else
     SendMessage(RichEditWnd, EM_SETOPTIONS, ECOOP_OR, ECO_NOHIDESEL);
+end;
+
+type
+  TEditStream_ = record
+    dwCookie    : PDWORD;
+    dwError     : DWORD;
+    pfnCallback : EDITSTREAMCALLBACK;
+  end;
+  
+function RTFLoadCallback(dwCookie:PDWORD; pbBuff:LPBYTE; cb:LONG; var pcb:LONG):DWORD; stdcall;
+var
+  s : TStream;  
+begin
+  try
+    s := TStream(dwCookie);
+    pcb := s.Read(pbBuff^, cb);
+    Result := 0;
+  except
+    Result := 1;
+  end;
+end;
+
+class function TRichEditManager.LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; 
+var
+  cbs : TEditStream_;
+begin
+  cbs.dwCookie := PDWORD(ASrc);
+  cbs.dwError := 0;
+  cbs.pfnCallback := @RTFLoadCallback;
+  SendMessage(RichEditWnd, EM_STREAMIN, SF_RTF, LPARAM(@cbs) );
+  Result := cbs.dwError = 0;
+end;
+
+function RTFSaveCallback(dwCookie:PDWORD; pbBuff:LPBYTE; cb:LONG; var pcb:LONG):DWORD; stdcall;
+var
+  s : TStream;  
+begin
+  try
+    s := TStream(dwCookie);
+    pcb := s.Write(pbBuff^, cb);
+    Result := 0;
+  except
+    Result := 1;
+  end;
+end;
+
+class function TRichEditManager.SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; 
+var
+  cbs : TEditStream_;
+begin
+  cbs.dwCookie := PDWORD(ADst);
+  cbs.dwError := 0;
+  cbs.pfnCallback := @RTFSaveCallback;
+  SendMessage(RichEditWnd, EM_STREAMOUT, SF_RTF, LPARAM(@cbs) );
+  Result := cbs.dwError = 0;
 end;
 
 end.                                            

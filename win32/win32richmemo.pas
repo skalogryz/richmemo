@@ -178,8 +178,20 @@ end;
 class function TWin32WSCustomRichMemo.GetStyleRange(
   const AWinControl: TWinControl; TextStart: Integer; var RangeStart, 
   RangeLen: Integer): Boolean;  
+var
+  OrigStart : Integer;
+  OrigLen   : Integer;
 begin
-  Result:=inherited GetStyleRange(AWinControl, TextStart, RangeStart, RangeLen);  
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
+    Result := false;
+    Exit;
+  end;
+  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
+  LockRedraw(AWinControl.Handle);
+  RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
+  Result := RichEditManager.GetStyleRange(AWinControl.Handle, TextStart, RangeStart, RangeLen);
+  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+  UnlockRedraw(AWinControl.Handle);
 end;
 
 class function TWin32WSCustomRichMemo.LoadRichText(

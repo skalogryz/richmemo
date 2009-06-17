@@ -163,17 +163,17 @@ begin
   Result := true;  
 end;
 
+
 class function TRichEditManager.GetStyleRange(RichEditWnd: Handle; TextStart: Integer; 
   var RangeStart, RangeLen: Integer): Boolean; 
 var
-  w       : WPARAM;
   len     : integer;
   fmt     : TCHARFORMAT;
-  mask    : LongWord;
   textlen : TGETTEXTEX;
   sel     : TCHARRANGE;
   d       : Integer;
   last    : Integer;
+  
 const
   CP_UNICODE = 1200;  
   ALL_MASK = CFM_BOLD or CFM_ITALIC or CFM_STRIKEOUT or CFM_UNDERLINE or 
@@ -185,69 +185,75 @@ begin
   textlen.flags := GTL_DEFAULT or GTL_NUMCHARS;
   textlen.codepage := CP_UNICODE;
   len := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
-  writeln('TextStart  = ', TextStart);
-  writeln('TextLength = ', len);
-    
-  sel.cpMin := TextStart;
-  sel.cpMax := len;
-  SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
-    
+   
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
   
-  //todo: BOOST PERFORMANCE!!!
-  sel.cpMax := TextStart;
-  repeat
-    inc(sel.cpMax);
-    SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
-    SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-  until (sel.cpMax > len) or ((fmt.dwMask and ALL_MASK) <> ALL_MASK);
-
-  last := sel.cpMax;  
   sel.cpMin := TextStart;
-  sel.cpMax := TextStart+1;
-  repeat
-    dec(sel.cpMin);
-    SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
-    SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-  until ((fmt.dwMask and ALL_MASK) <> ALL_MASK) or (sel.cpMin < 0);
-  inc(sel.cpMin);
-  
-{  SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
- 
-  
-  if fmt.dwMask and ALL_MASK <> ALL_MASK then begin
-    d := (len - sel.cpMin) div 2;
-    sel.cpMax := sel.cpMin + d;
+  sel.cpMax := len+1;
+  SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+  if (fmt.dwMask and ALL_MASK) <> ALL_MASK then begin
+    d := (len - sel.cpMin);
     while d > 1 do begin
-      SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
-      SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-      d := d div 2;    
-      if fmt.dwMask and ALL_MASK = ALL_MASK then 
-        sel.cpMax := sel.cpMax + d
+      d := d div 2;
+      if (fmt.dwMask and ALL_MASK) = ALL_MASK then
+        sel.cpMax := sel.cpMax + d        
       else
         sel.cpMax := sel.cpMax - d;
+      SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+      SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
     end;
-    
     if (fmt.dwMask and ALL_MASK) = ALL_MASK then begin
-      repeat
+      while (sel.cpMax <= len) and ((fmt.dwMask and ALL_MASK) = ALL_MASK) do begin
         inc(sel.cpMax);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-        writeln(sel.cpMax, ' ', (fmt.dwMask and ALL_MASK) <> ALL_MASK);
-      until (sel.cpMax = len) or ((fmt.dwMask and ALL_MASK) <> ALL_MASK);
+      end;
     end else begin
-      repeat
+      while (sel.cpMax > sel.cpMin) and ((fmt.dwMask and ALL_MASK) <> ALL_MASK) do begin
         dec(sel.cpMax);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-      until (sel.cpMax <= sel.cpMin) or ((fmt.dwMask and ALL_MASK) = ALL_MASK);
+      end;
+      inc(sel.cpMax);
     end;
-  end;}
-
+  end;
+  last := sel.cpMax;  
+  
+  sel.cpMin := 0;
+  sel.cpMax := TextStart+1;
+  SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+  if (fmt.dwMask and ALL_MASK) <> ALL_MASK then begin
+    d := TextStart;
+    while d > 1 do begin
+      d := d div 2;
+      if (fmt.dwMask and ALL_MASK) = ALL_MASK then
+        dec(sel.cpMin,d)
+      else
+        inc(sel.cpMin,d);
+      SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+      SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+    end;
+    if (fmt.dwMask and ALL_MASK) = ALL_MASK then begin
+      while (sel.cpMin > 0) and ((fmt.dwMask and ALL_MASK) = ALL_MASK) do begin
+        dec(sel.cpMin);
+        SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+        SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+      end;
+      if (fmt.dwMask and ALL_MASK) <> ALL_MASK then inc(sel.cpMin);
+    end else begin
+      while (sel.cpMin < TextStart) and ((fmt.dwMask and ALL_MASK) <> ALL_MASK) do begin
+        inc(sel.cpMin);
+        SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+        SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+      end;
+    end;
+  end;  
+ 
   RangeStart := sel.cpMin;
   RangeLen := last - sel.cpMin - 1;
-  writeln('Range Start = ', RangeStart, '  Len = ', RangeLen);
   Result := true;  
 end;
 

@@ -113,7 +113,7 @@ var
 begin
   RichMemo1.GetStyleRange( RichMemo1.SelStart, ofs, len );
   if (ofs = RichMEmo1.SelStart) and (len = RichMemo1.SelLength) then begin
-    ofs := ofs + len + 1;
+    ofs := ofs + len;
     RichMemo1.GetStyleRange( ofs, ofs, len );
   end;
   RichMemo1.SelStart := ofs;

@@ -58,7 +58,9 @@ end;
 function InitRichEdit: Boolean;
 begin
   if GlobalRichClass = '' then begin
-    if LoadLibrary('RICHED20.DLL') <> 0 then begin
+    if LoadLibrary('Msftedit.dll') <> 0 then begin
+      GlobalRichClass := 'RichEdit50W'
+    end else if LoadLibrary('RICHED20.DLL') <> 0 then begin
       if UnicodeEnabledOS then GlobalRichClass := 'RichEdit20W'
       else GlobalRichClass := 'RichEdit20A'
     end else if LoadLibrary('RICHED32.DLL') <> 0 then

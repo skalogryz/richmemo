@@ -12,13 +12,16 @@
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Other>
+        <CompilerMessages>
+          <IgnoredMessages idx4055="True" idx5024="True" idx5057="True" idx5060="True"/>
+        </CompilerMessages>
         <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="RichMemo control. Implements cross-platfrom RichEdit control.
 "/>
     <License Value="LGPL"/>
-    <Version Minor="8"/>
+    <Version Major="1"/>
     <Files Count="8">
       <Item1>
         <Filename Value="wsrichmemo.pas"/>
@@ -51,7 +54,7 @@
       <Item7>
         <Filename Value="carbon\carbonrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="carbonrichmemo"/>
+        <UnitName Value="CarbonRichMemo"/>
       </Item7>
       <Item8>
         <Filename Value="richmemo.pas"/>

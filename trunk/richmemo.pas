@@ -50,13 +50,13 @@ type
     procedure CreateWnd; override;    
     procedure UpdateRichMemo; virtual;
     procedure SetHideSelection(AValue: Boolean);
+    function GetContStyleLength(TextStart: Integer): Integer;
   public
     procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
-    function GetStyleRange(TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
+    function GetStyleRange(CharOfs: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
-    function GetStyleLength(TextStart: Integer): Integer;
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
     procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
       const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
@@ -208,11 +208,11 @@ begin
     Result := false;
 end;
 
-function TCustomRichMemo.GetStyleRange(TextStart: Integer; var RangeStart,
+function TCustomRichMemo.GetStyleRange(CharOfs: Integer; var RangeStart,
   RangeLen: Integer): Boolean;
 begin
   if HandleAllocated then
-    Result := TWSCustomRichMemoClass(WidgetSetClass).GetStyleRange(Self, TextStart, RangeStart, RangeLen)
+    Result := TWSCustomRichMemoClass(WidgetSetClass).GetStyleRange(Self, CharOfs, RangeStart, RangeLen)
   else begin
     RangeStart := -1;
     RangeLen := -1;
@@ -220,7 +220,7 @@ begin
   end;
 end;
 
-function TCustomRichMemo.GetStyleLength(TextStart: Integer): Integer;
+function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;
 var
   ofs, len  : Integer;
 begin
@@ -254,7 +254,7 @@ begin
     if tmm_Size in ModifyMask then p.Size := FontSize;
     if tmm_Styles in ModifyMask then p.Style := p.Style + AddFontStyle - RemoveFontStyle;
 
-    l := GetStyleLength(i);
+    l := GetContStyleLength(i);
     if i + l > j then l := j - i;
     if l = 0 then l := 1;
     SetTextAttributes(i, l, p);

@@ -108,7 +108,7 @@ procedure GetATSUFontRGBAColor(AStyle: ATSUStyle; var r,g,b,a: Byte);
 var
   rgba : ATSURGBAlphaColor;
 begin
-  writeln('getting color= ', ATSUGetAttribute(AStyle, kATSURGBAlphaColorTag, sizeof(ATSURGBAlphaColor), @rgba, nil));
+  ATSUGetAttribute(AStyle, kATSURGBAlphaColorTag, sizeof(ATSURGBAlphaColor), @rgba, nil);
   r := Round(rgba.red*255);
   g := Round(rgba.green*255);
   b := Round(rgba.blue*255);

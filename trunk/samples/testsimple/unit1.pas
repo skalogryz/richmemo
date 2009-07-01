@@ -7,6 +7,7 @@ interface
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls,
+  CarbonRichMemo,
   RichMemo;
 
 type
@@ -20,6 +21,7 @@ type
     Button4: TButton;
     Button5: TButton;
     Button6: TButton;
+    Edit1: TEdit;
     FontDialog1: TFontDialog;
     OpenDialog1: TOpenDialog;
     RichMemo1: TRichMemo;
@@ -80,10 +82,10 @@ procedure TForm1.Button4Click(Sender: TObject);
 var
   fs : TFileStream;
 begin
-  if OpenDialog1.Execute then begin
+  if SaveDialog1.Execute then begin
     fs := nil;
     try
-      fs := TFileStream.Create( Utf8ToAnsi(OpenDialog1.FileName), fmCreate);
+      fs := TFileStream.Create( Utf8ToAnsi(SaveDialog1.FileName), fmCreate);
       RichMemo1.SaveRichText(fs);
     except
     end;

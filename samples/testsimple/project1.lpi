@@ -32,25 +32,25 @@
         <PackageName Value="LCL"/>
       </Item2>
     </RequiredPackages>
-    <Units Count="47">
+    <Units Count="50">
       <Unit0>
         <Filename Value="project1.lpr"/>
         <IsPartOfProject Value="True"/>
         <UnitName Value="project1"/>
         <CursorPos X="12" Y="6"/>
         <TopLine Value="6"/>
-        <UsageCount Value="61"/>
+        <UsageCount Value="64"/>
       </Unit0>
       <Unit1>
         <Filename Value="unit1.pas"/>
-        <ComponentName Value="Form1"/>
         <IsPartOfProject Value="True"/>
+        <ComponentName Value="Form1"/>
         <ResourceBaseClass Value="Form"/>
         <UnitName Value="Unit1"/>
-        <CursorPos X="1" Y="1"/>
-        <TopLine Value="1"/>
+        <CursorPos X="27" Y="57"/>
+        <TopLine Value="49"/>
         <EditorIndex Value="0"/>
-        <UsageCount Value="61"/>
+        <UsageCount Value="64"/>
         <Loaded Value="True"/>
       </Unit1>
       <Unit2>
@@ -135,7 +135,7 @@
         <UnitName Value="CarbonGDIObjects"/>
         <CursorPos X="3" Y="1109"/>
         <TopLine Value="1100"/>
-        <UsageCount Value="30"/>
+        <UsageCount Value="31"/>
         <Bookmarks Count="1">
           <Item0 X="25" Y="150" ID="1"/>
         </Bookmarks>
@@ -190,7 +190,7 @@
         <UnitName Value="CarbonPrivate"/>
         <CursorPos X="17" Y="649"/>
         <TopLine Value="640"/>
-        <UsageCount Value="29"/>
+        <UsageCount Value="30"/>
         <Loaded Value="True"/>
       </Unit20>
       <Unit21>
@@ -236,30 +236,36 @@
       <Unit27>
         <Filename Value="../../richmemo.pas"/>
         <UnitName Value="RichMemo"/>
-        <CursorPos X="1" Y="4"/>
-        <TopLine Value="1"/>
-        <UsageCount Value="26"/>
+        <CursorPos X="15" Y="55"/>
+        <TopLine Value="42"/>
+        <EditorIndex Value="6"/>
+        <UsageCount Value="27"/>
+        <Loaded Value="True"/>
       </Unit27>
       <Unit28>
         <Filename Value="../../wsrichmemo.pas"/>
         <UnitName Value="WSRichMemo"/>
-        <CursorPos X="1" Y="2"/>
-        <TopLine Value="1"/>
-        <UsageCount Value="26"/>
+        <CursorPos X="31" Y="47"/>
+        <TopLine Value="32"/>
+        <EditorIndex Value="5"/>
+        <UsageCount Value="27"/>
+        <Loaded Value="True"/>
       </Unit28>
       <Unit29>
         <Filename Value="../../carbon/carbonrichmemo.pas"/>
         <UnitName Value="CarbonRichMemo"/>
-        <CursorPos X="16" Y="2"/>
-        <TopLine Value="1"/>
-        <UsageCount Value="18"/>
+        <CursorPos X="12" Y="281"/>
+        <TopLine Value="268"/>
+        <UsageCount Value="19"/>
       </Unit29>
       <Unit30>
         <Filename Value="../../../fpc/packages/univint/src/MacOSAll.pas"/>
         <UnitName Value="MacOSAll"/>
-        <CursorPos X="39" Y="220678"/>
-        <TopLine Value="220670"/>
-        <UsageCount Value="17"/>
+        <CursorPos X="1" Y="495"/>
+        <TopLine Value="495"/>
+        <EditorIndex Value="4"/>
+        <UsageCount Value="18"/>
+        <Loaded Value="True"/>
       </Unit30>
       <Unit31>
         <Filename Value="../../../fpc/rtl/objpas/sysutils/osutilsh.inc"/>
@@ -285,7 +291,7 @@
         <UnitName Value="CarbonPaste"/>
         <CursorPos X="43" Y="9"/>
         <TopLine Value="1"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="48"/>
       </Unit34>
       <Unit35>
         <Filename Value="../../../fpc/rtl/objpas/sysutils/sysutilh.inc"/>
@@ -296,8 +302,8 @@
       <Unit36>
         <Filename Value="../../../lazarus/lcl/widgetset/wsstdctrls.pp"/>
         <UnitName Value="WSStdCtrls"/>
-        <CursorPos X="20" Y="145"/>
-        <TopLine Value="138"/>
+        <CursorPos X="20" Y="144"/>
+        <TopLine Value="131"/>
         <UsageCount Value="14"/>
       </Unit36>
       <Unit37>
@@ -319,8 +325,8 @@
         <UnitName Value="Win32RichMemoProc"/>
         <CursorPos X="35" Y="172"/>
         <TopLine Value="154"/>
-        <EditorIndex Value="1"/>
-        <UsageCount Value="16"/>
+        <EditorIndex Value="7"/>
+        <UsageCount Value="17"/>
         <Bookmarks Count="1">
           <Item0 X="1" Y="121" ID="2"/>
         </Bookmarks>
@@ -374,44 +380,122 @@
         <TopLine Value="1"/>
         <UsageCount Value="10"/>
       </Unit46>
+      <Unit47>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <UnitName Value="CarbonEdits"/>
+        <CursorPos X="1" Y="1"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="1"/>
+        <UsageCount Value="11"/>
+        <Bookmarks Count="1">
+          <Item0 X="1" Y="188" ID="3"/>
+        </Bookmarks>
+        <Loaded Value="True"/>
+      </Unit47>
+      <Unit48>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonstrings.pp"/>
+        <UnitName Value="CarbonStrings"/>
+        <CursorPos X="25" Y="5"/>
+        <TopLine Value="1"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="11"/>
+        <Loaded Value="True"/>
+      </Unit48>
+      <Unit49>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbondef.pp"/>
+        <UnitName Value="CarbonDef"/>
+        <CursorPos X="5" Y="83"/>
+        <TopLine Value="70"/>
+        <EditorIndex Value="2"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit49>
     </Units>
-    <JumpHistory Count="9" HistoryIndex="8">
+    <JumpHistory Count="21" HistoryIndex="20">
       <Position1>
-        <Filename Value="unit1.pas"/>
-        <Caret Line="116" Column="21" TopLine="116"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1580" Column="5" TopLine="1555"/>
       </Position1>
       <Position2>
-        <Filename Value="unit1.pas"/>
-        <Caret Line="130" Column="14" TopLine="125"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1592" Column="1" TopLine="1580"/>
       </Position2>
       <Position3>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="5" Column="1" TopLine="1"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1600" Column="1" TopLine="1584"/>
       </Position3>
       <Position4>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="168" Column="3" TopLine="157"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1880" Column="1" TopLine="1855"/>
       </Position4>
       <Position5>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="169" Column="7" TopLine="157"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="27" Column="1" TopLine="27"/>
       </Position5>
       <Position6>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="179" Column="13" TopLine="157"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1560" Column="5" TopLine="1535"/>
       </Position6>
       <Position7>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="200" Column="11" TopLine="185"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1557" Column="61" TopLine="1544"/>
       </Position7>
       <Position8>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="361" Column="23" TopLine="350"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="178" Column="61" TopLine="163"/>
       </Position8>
       <Position9>
-        <Filename Value="../../win32/win32richmemoproc.pas"/>
-        <Caret Line="20" Column="22" TopLine="1"/>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1561" Column="18" TopLine="1556"/>
       </Position9>
+      <Position10>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="178" Column="52" TopLine="178"/>
+      </Position10>
+      <Position11>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1557" Column="61" TopLine="1557"/>
+      </Position11>
+      <Position12>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1601" Column="1" TopLine="1592"/>
+      </Position12>
+      <Position13>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1557" Column="25" TopLine="1544"/>
+      </Position13>
+      <Position14>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="178" Column="52" TopLine="178"/>
+      </Position14>
+      <Position15>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="190" Column="14" TopLine="176"/>
+      </Position15>
+      <Position16>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1560" Column="51" TopLine="1548"/>
+      </Position16>
+      <Position17>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1591" Column="19" TopLine="1578"/>
+      </Position17>
+      <Position18>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1606" Column="3" TopLine="1588"/>
+      </Position18>
+      <Position19>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1773" Column="1" TopLine="1763"/>
+      </Position19>
+      <Position20>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="1" Column="1" TopLine="1"/>
+      </Position20>
+      <Position21>
+        <Filename Value="../../../lazarus/lcl/interfaces/carbon/carbonedits.pp"/>
+        <Caret Line="342" Column="27" TopLine="333"/>
+      </Position21>
     </JumpHistory>
   </ProjectOptions>
   <CompilerOptions>
@@ -419,6 +503,13 @@
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)/"/>
     </SearchPaths>
+    <Linking>
+      <Options>
+        <Win32>
+          <GraphicApplication Value="True"/>
+        </Win32>
+      </Options>
+    </Linking>
     <Other>
       <CompilerPath Value="$(CompPath)"/>
     </Other>

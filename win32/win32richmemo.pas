@@ -34,7 +34,7 @@ uses
   // Win32WidgetSet 
   Win32WSControls, Win32Int, 
   // RichMemo headers
-  WSRichMemo, Win32RichMemoProc;
+  WSRichMemo, Win32RichMemoProc, Win32WSStdCtrls;
 
 type  
 
@@ -42,6 +42,9 @@ type
 
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
+    class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
+    class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
+
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; override;
@@ -64,28 +67,50 @@ const
   );
 
   
-procedure LockRedraw(AHandle: Integer);
+procedure LockRedraw(AHandle: HWND);
 begin
   SendMessage(AHandle, WM_SETREDRAW, 0, 0);
 end;
 
-procedure UnlockRedraw(AHandle: Integer; Invalidate: Boolean = true);
+procedure UnlockRedraw(AHandle: HWND; NeedInvalidate: Boolean = true);
 begin
   SendMessage(AHandle, WM_SETREDRAW, 1, 0);
-  if Invalidate then InvalidateRect(AHandle, nil, false);
+  if NeedInvalidate then 
+    Windows.InvalidateRect(AHandle, nil, true);
 end;  
 
 function RichEditProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
    LParam: Windows.LParam): LResult; stdcall;
 begin 
-  if Msg = WM_PAINT then
+  if Msg = WM_PAINT then begin
     //todo: LCL WM_PAINT handling prevents richedit from drawing correctly
     Result := CallDefaultWindowProc(Window, Msg, WParam, LParam)
-  else
+    //Result := WindowProc(Window, Msg, WParam, LParam)
+  end else
     Result := WindowProc(Window, Msg, WParam, LParam);
 end;  
 
 { TWin32WSCustomRichMemo }
+
+class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  
+var
+  range : Tcharrange;
+begin
+  range.cpMin := NewStart;
+  range.cpMax := NewStart;
+  SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
+  InvalidateRect(ACustomEdit.Handle, nil, false);  
+end;
+
+class procedure TWin32WSCustomRichMemo.SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer);  
+var
+  range : Tcharrange;
+begin
+  SendMessage(ACustomEdit.Handle, EM_EXGETSEL, 0, LPARAM(@range));
+  range.cpMax := range.cpMin + NewLength;
+  SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
+  InvalidateRect(ACustomEdit.Handle, nil, false);
+end;
 
 class function TWin32WSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;  
   const AParams: TCreateParams): HWND;  
@@ -194,23 +219,48 @@ begin
   RichEditManager.SetHideSelection(AWinControl.Handle, AHideSelection);
 end;
 
+procedure InitScrollInfo(var info: TScrollInfo);
+begin
+  FillChar(info, sizeof(info), 0);
+  info.cbSize := sizeof(info);
+  info.fMask := SIF_ALL;
+end;
+
 class function TWin32WSCustomRichMemo.GetStyleRange(
   const AWinControl: TWinControl; TextStart: Integer; var RangeStart, 
   RangeLen: Integer): Boolean;  
 var
   OrigStart : Integer;
   OrigLen   : Integer;
+  hInfo     : TScrollInfo;
+  vInfo     : TScrollInfo;
+  hVisible  : Boolean;
+  vVisible  : Boolean;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
+  
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   LockRedraw(AWinControl.Handle);
+  InitScrollInfo(hInfo);
+  InitScrollInfo(vInfo);  
+  hVisible:=GetScrollbarVisible(AWinControl.Handle, SB_Horz);
+  vVisible:=GetScrollbarVisible(AWinControl.Handle, SB_Vert);
+  GetScrollInfo(AWinControl.Handle, SB_Horz, hInfo);
+  GetScrollInfo(AWinControl.Handle, SB_Vert, vInfo);
+  
   RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
-  Result := RichEditManager.GetStyleRange(AWinControl.Handle, TextStart, RangeStart, RangeLen);
+  try
+    Result := RichEditManager.GetStyleRange(AWinControl.Handle, TextStart, RangeStart, RangeLen);
+  except
+  end;
+  
+  if hVisible then SetScrollInfo(AWinControl.Handle, SB_Horz, hInfo, false);
+  if vVisible then SetScrollInfo(AWinControl.Handle, SB_Vert, vInfo, false);
   RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-  UnlockRedraw(AWinControl.Handle);
+  UnlockRedraw(AWinControl.Handle, false);
 end;
 
 class function TWin32WSCustomRichMemo.LoadRichText(

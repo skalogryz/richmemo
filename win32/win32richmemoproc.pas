@@ -183,13 +183,19 @@ begin
   Result := true;  
 end;
 
+type
+  gettextlengthex = packed record
+    flags     : DWORD;
+    codepage  : LongWord;
+  end;
+  Tgettextlengthex = gettextlengthex;
 
 class function TRichEditManager.GetStyleRange(RichEditWnd: Handle; TextStart: Integer; 
   var RangeStart, RangeLen: Integer): Boolean; 
 var
   len     : integer;
   fmt     : TCHARFORMAT;
-  textlen : TGETTEXTEX;
+  textlen : Tgettextlengthex;
   sel     : TCHARRANGE;
   d       : Integer;
   last    : Integer;

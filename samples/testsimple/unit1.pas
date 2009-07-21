@@ -7,7 +7,6 @@ interface
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls,
-  CarbonRichMemo,
   RichMemo;
 
 type
@@ -21,7 +20,6 @@ type
     Button4: TButton;
     Button5: TButton;
     Button6: TButton;
-    Edit1: TEdit;
     FontDialog1: TFontDialog;
     OpenDialog1: TOpenDialog;
     RichMemo1: TRichMemo;
@@ -124,7 +122,6 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
-
 end;
 
 initialization

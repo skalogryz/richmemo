@@ -42,6 +42,8 @@ type
 
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
+    class procedure SetColor(const AWinControl: TWinControl); override;
+  
     class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
 
@@ -91,6 +93,13 @@ begin
 end;  
 
 { TWin32WSCustomRichMemo }
+
+class procedure TWin32WSCustomRichMemo.SetColor(const AWinControl: TWinControl);  
+begin
+  // this methos is implemented, because Win32RichMemo doesn't use 
+  // default LCL WM_PAINT message!
+  SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, AWinControl.Color);
+end;
 
 class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  
 var
@@ -151,8 +160,10 @@ begin
       Flags := Flags and not WS_HSCROLL
     else
       Flags := Flags or ES_AUTOHSCROLL;
+      
     if ACustomMemo.BorderStyle=bsSingle then
       FlagsEx := FlagsEx or WS_EX_CLIENTEDGE;
+      
     pClassName := @RichClass[1];
     WindowTitle := StrCaption;
   end;
@@ -185,18 +196,22 @@ begin
     RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params);
 end;
 
-class function TWin32WSCustomRichMemo.GetTextAttributes(
-  const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams
-  ): Boolean;  
+class function TWin32WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl; 
+  TextStart: Integer; var Params: TIntFontParams): Boolean;  
 var
   OrigStart : Integer;
   OrigLen   : Integer;
   NeedLock  : Boolean;  
+  eventmask : LongWord;
 begin
+  writeln('[GetTextAttributes] begin');
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
+  
+  eventmask := SendMessage(AWinControl.Handle, EM_GETEVENTMASK, 0, 0);
+  SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, 0);
   
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   
@@ -207,8 +222,14 @@ begin
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
     RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
     UnlockRedraw(AWinControl.Handle);
-  end else 
+  end else begin
+    LockRedraw(AWinControl.Handle);
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params);
+    UnlockRedraw(AWinControl.Handle);
+  end;
+    
+  SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
+  writeln('[GetTextAttributes] end');
 end;
 
 
@@ -236,11 +257,15 @@ var
   vInfo     : TScrollInfo;
   hVisible  : Boolean;
   vVisible  : Boolean;
+  eventmask : longword;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
+  
+  eventmask := SendMessage(AWinControl.Handle, EM_GETEVENTMASK, 0, 0);
+  SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, 0);
   
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   LockRedraw(AWinControl.Handle);
@@ -261,6 +286,8 @@ begin
   if vVisible then SetScrollInfo(AWinControl.Handle, SB_Vert, vInfo, false);
   RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
   UnlockRedraw(AWinControl.Handle, false);
+  
+  SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
 end;
 
 class function TWin32WSCustomRichMemo.LoadRichText(

@@ -48,7 +48,6 @@ type
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
     class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
     class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
-    
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -77,13 +76,14 @@ end;
 function InitRichEdit: Boolean;
 begin
   if GlobalRichClass = '' then begin
-    if LoadLibrary('Msftedit.dll') <> 0 then begin
-      GlobalRichClass := 'RichEdit50W'
+    if LoadLibrary('Msftedit.dll') <> 0 then begin 
+      GlobalRichClass := 'RichEdit50W';
     end else if LoadLibrary('RICHED20.DLL') <> 0 then begin
       if UnicodeEnabledOS then GlobalRichClass := 'RichEdit20W'
       else GlobalRichClass := 'RichEdit20A'
-    end else if LoadLibrary('RICHED32.DLL') <> 0 then
+    end else if LoadLibrary('RICHED32.DLL') <> 0 then begin
       GlobalRichClass := 'RichEdit';
+    end;
       
     if not Assigned(RichEditManager) then 
       RichEditManager := TRichEditManager;
@@ -208,7 +208,7 @@ begin
   Result := false;
   if RichEditWnd = 0 then Exit;
   
-  textlen.flags := GTL_DEFAULT or GTL_NUMCHARS;
+  textlen.flags := GTL_NUMCHARS or GTL_USECRLF or GTL_PRECISE;
   textlen.codepage := CP_UNICODE;
   len := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
    

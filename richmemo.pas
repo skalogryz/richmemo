@@ -211,9 +211,10 @@ end;
 function TCustomRichMemo.GetStyleRange(CharOfs: Integer; var RangeStart,
   RangeLen: Integer): Boolean;
 begin
-  if HandleAllocated then
-    Result := TWSCustomRichMemoClass(WidgetSetClass).GetStyleRange(Self, CharOfs, RangeStart, RangeLen)
-  else begin
+  if HandleAllocated then begin
+    Result := TWSCustomRichMemoClass(WidgetSetClass).GetStyleRange(Self, CharOfs, RangeStart, RangeLen);
+    if Result and (RangeLen = 0) then RangeLen := 1;
+  end else begin
     RangeStart := -1;
     RangeLen := -1;
     Result := false;

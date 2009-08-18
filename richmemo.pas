@@ -51,6 +51,8 @@ type
     procedure UpdateRichMemo; virtual;
     procedure SetHideSelection(AValue: Boolean);
     function GetContStyleLength(TextStart: Integer): Integer;
+    
+    procedure SetSelText(const SelTextUTF8: string); override;
   public
     procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
@@ -228,6 +230,22 @@ begin
   if GetStyleRange(TextStart, ofs, len) then Result := len - (TextStart-ofs)
   else Result := 1;
   if Result = 0 then Result := 1;
+end;
+
+procedure TCustomRichMemo.SetSelText(const SelTextUTF8: string);  
+var
+  st  : Integer;
+begin
+  Lines.BeginUpdate;
+  try
+    st := SelStart;
+    if HandleAllocated then  
+      TWSCustomRichMemoClass(WidgetSetClass).InDelText(Self, SelTextUTF8, SelStart, SelLength);
+    SelStart := st;
+    SelLength := length(UTF8Decode(SelTextUTF8));
+  finally
+    Lines.EndUpdate;
+  end;
 end;
 
 procedure TCustomRichMemo.SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);

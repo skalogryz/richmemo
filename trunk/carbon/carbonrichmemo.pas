@@ -50,6 +50,7 @@ type
       iCount: ItemCount; var ioTypeAttributes: array of TXNTypeAttributes): Boolean;
     function SetTypeAttributes(iCount: ItemCount; const iTypeAttributes: array of TXNTypeAttributes;
       StartOffset, EndOffset: Integer): Boolean;
+    procedure InDelText(const text: WideString; replstart, repllength: Integer);
   end;
 
   { TCarbonWSCustomRichMemo }
@@ -63,6 +64,7 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       {Mask: TTextStyleMask;} const Params: TIntFontParams); override;
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;
+    class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
   end;
@@ -193,6 +195,7 @@ begin
     AttrSetColor(MacColor, Attr[AttrCount] );
     inc(AttrCount);
   //end;
+  
 
   //if tsm_Name in ParamsMask then begin
     AttrSetFontName(Params.Name, Attr[AttrCount] );
@@ -222,15 +225,6 @@ class function TCarbonWSCustomRichMemo.GetStyleRange(const AWinControl: TWinCont
   TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean;
 var
   edit      : TCarbonRichEdit;
-  st, len   : Integer;
-  send      : Integer;
-  fndstyle  : Boolean;
-  wattr     : array [0..1] of TXNTypeAttributes;
-  attr      : array [0..1] of TXNTypeAttributes;
-  astyle    : ATSUStyle;
-  flags     : TXNContinuousFlags;
-  d         : Integer;
-  macrgb    : RGBColor;
   RngStart  : TXNOffset;
   RngEnd    : TXNOffset;
 begin
@@ -238,11 +232,11 @@ begin
   edit := GetValidRichEdit(AWinControl);
   if not Assigned(edit) then Exit;
 
-  Result := edit.GetIndexedRunInfoFromRange(0, TextStart, TextStart+1, RngStart, RngEnd, nil, 0, nil);
+  Result := edit.GetIndexedRunInfoFromRange(0, TextStart, TextStart, RngStart, RngEnd, nil, 0, nil);
   if Result then begin
     RangeStart := RngStart;
     RangeLen := RngEnd - RngStart;
-  end;
+  end;   
 
 end;
 
@@ -251,40 +245,41 @@ class function TCarbonWSCustomRichMemo.GetTextAttributes(const AWinControl: TWin
 var
   edit  : TCarbonRichEdit;
   attr  : array [0..2] of TXNTypeAttributes;
-  sstart  : Integer;
-  slen    : Integer;
   flags   : TXNContinuousFlags;
 
   astyle  : ATSUStyle;
   maccolor  : RGBColor;
+
+  oStart  : TXNOffset;
+  oEnd    : TXNOffset;
+  txobj   : TXNObject;
 begin
   Result := false;
   edit := GetValidRichEdit(AWinControl);
   if not Assigned(edit) then Exit;
 
-  edit.GetSelStart(sstart);
-  edit.GetSelLength(slen);
-
-  edit.SetSelStart(TextStart);
-  edit.SetSelLength(1);
-
+  txobj := HITextViewGetTXNObject(edit.Widget);
+  if not Assigned(txobj) then Exit;
+  
+  TXNGetSelection(txobj, oStart, oEnd);
+  TXNSetSelection(txobj, TextStart, TextStart+1);
+ 
   ATSUCreateStyle(astyle);
   AttrSetATSUStyle(astyle, attr[0]);
   AttrSetStyle([], attr[1]);
+  FillChar(maccolor, sizeof(maccolor), 0);
   AttrSetColor(maccolor, attr[2]);
 
   Result := edit.GetContinuousTypeAttributes(flags, 3, attr);
   Params.Name := GetATSUFontName(astyle);
-  Params.Color :=  RGBColorToColor(maccolor);
-  // GetATSUFontColor(astyle);
+  Params.Color := RGBColorToColor(maccolor);
   //writeln('got color: ', IntToHex(Params.Color, 8));
   Params.Style := GetATSUFontStyles(astyle) + QDStyleToFontStyle(attr[1].data.dataValue);
   Params.Size := GetATSUFontSize(astyle);
 
   ATSUDisposeStyle(astyle);
 
-  edit.SetSelStart(sstart);
-  edit.SetSelLength(slen);
+  TXNSetSelection(txobj, oStart, oEnd);
 end;
 
 class procedure TCarbonWSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl;
@@ -298,15 +293,24 @@ begin
   memo := GetValidRichEdit(AWinControl);
   if not Assigned(memo) then Exit;
 
-  ParamsToTXNAttribs({Mask,} Params, attr, Count, maccolor);
+  ParamsToTXNAttribs(Params, attr, Count, maccolor);
 
+  writeln('setting attr, start = ', textstart, ', end = ', textStart + textLen, ' color = ', IntToHex(Params.Color,8));
   memo.SetTypeAttributes(Count, Attr, TextStart, TextStart+TextLen);
 end;
 
-class procedure TCarbonWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl;
-  AHideSelection: Boolean);
+class procedure TCarbonWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean);
 begin
+  //todo:
+end;
 
+class procedure TCarbonWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 
+var
+  memo   : TCarbonRichEdit;
+begin
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
+  memo.InDelText(UTF8Decode(TextUTF8), DstStart, DstLen);
 end;
 
 function GetTempFileUniqueName(forcedir: Boolean=true): String;
@@ -332,7 +336,6 @@ var
   fs  : TFileStream;
   cf  : CFStringRef;
   url : CFURLRef;
-  res : integer;
 begin
   Result := false;
   edit := GetValidRichEdit(AWinControl);
@@ -414,8 +417,6 @@ end;
 function TCarbonRichEdit.GetContinuousTypeAttributes(
   var oContinuousFlags: TXNContinuousFlags; iCount: ItemCount;
   var ioTypeAttributes: array of TXNTypeAttributes): Boolean;
-var
-  res : OSStatus;
 begin
   Result := TXNGetContinuousTypeAttributes(HITextViewGetTXNObject(Widget),
               oContinuousFlags, iCount, @ioTypeAttributes[0]) = noErr;
@@ -427,6 +428,26 @@ function TCarbonRichEdit.SetTypeAttributes(iCount: ItemCount;
 begin
   Result := TXNSetTypeAttributes(HITextViewGetTXNObject(Widget), iCount,
               @iTypeAttributes[0], StartOffset, EndOffset) = noErr;
+end;
+
+procedure TCarbonRichEdit.InDelText(const text: WideString; replstart, repllength: Integer); 
+var
+  data    : UnivPtr;
+  datasz  : ByteCount;
+  res : OSStatus;
+  replend : Integer;
+begin
+  if text = '' then begin
+    data := nil;
+    datasz := 0;
+  end else begin
+    data := @text[1];
+    datasz := length(text)*2;
+  end;
+  if repllength < 0 then replend  := kTXNEndOffset
+  else replend := replstart+repllength;                                                                                         
+  res := TXNSetData(HITextViewGetTXNObject(Widget), kTXNUnicodeTextData, data, datasz, replstart, replend); 
+  writeln('TXNSetData ', res);
 end;
 
 

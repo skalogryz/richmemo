@@ -48,7 +48,8 @@ type
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
-      {Mask: TTextStyleMask;} const Params: TIntFontParams); virtual;
+      const Params: TIntFontParams); virtual;
+    class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual; 
     class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); virtual;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
@@ -80,6 +81,11 @@ class procedure TWSCustomRichMemo.SetTextAttributes(const AWinControl: TWinContr
   TextStart, TextLen: Integer;  
   {Mask: TTextStyleMask;} const Params: TIntFontParams);
 begin
+end;
+
+class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 
+begin
+
 end;
 
 class procedure TWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); 

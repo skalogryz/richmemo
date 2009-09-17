@@ -32,15 +32,22 @@ uses
 
   WSRichMemo,
 
-  CarbonProc, CarbonEdits;
+  CarbonDef, CarbonUtils,
+  CarbonPrivate, CarbonCanvas, CarbonProc, CarbonEdits;
 
 type
 
   { TCarbonRichEdit }
 
   TCarbonRichEdit = class(TCarbonMemo)
+  private
+    fCaretVisible : Boolean;
+    fisBackBlack  : Boolean;
+    target  : EventTargetRef;
   protected
     function GetCreationOptions: TXNFrameOptions; override;
+    procedure PostDraw(acontext: CGContextRef);
+    procedure RegisterEvents; override;
   public
     function GetIndexedRunInfoFromRange(iIndex: ItemCount;   iStartOffset, iEndOffset: TXNOffset;
       var oRunStartOffset, oRunEndOffset: TXNOffset;
@@ -50,8 +57,10 @@ type
       iCount: ItemCount; var ioTypeAttributes: array of TXNTypeAttributes): Boolean;
     function SetTypeAttributes(iCount: ItemCount; const iTypeAttributes: array of TXNTypeAttributes;
       StartOffset, EndOffset: Integer): Boolean;
+    procedure SetColor(const AColor: TColor); override;
     procedure InDelText(const text: WideString; replstart, repllength: Integer);
   end;
+
 
   { TCarbonWSCustomRichMemo }
 
@@ -273,7 +282,6 @@ begin
   Result := edit.GetContinuousTypeAttributes(flags, 3, attr);
   Params.Name := GetATSUFontName(astyle);
   Params.Color := RGBColorToColor(maccolor);
-  //writeln('got color: ', IntToHex(Params.Color, 8));
   Params.Style := GetATSUFontStyles(astyle) + QDStyleToFontStyle(attr[1].data.dataValue);
   Params.Size := GetATSUFontSize(astyle);
 
@@ -295,7 +303,6 @@ begin
 
   ParamsToTXNAttribs(Params, attr, Count, maccolor);
 
-  writeln('setting attr, start = ', textstart, ', end = ', textStart + textLen, ' color = ', IntToHex(Params.Color,8));
   memo.SetTypeAttributes(Count, Attr, TextStart, TextStart+TextLen);
 end;
 
@@ -304,7 +311,7 @@ begin
   //todo:
 end;
 
-class procedure TCarbonWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 
+class procedure TCarbonWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer);
 var
   memo   : TCarbonRichEdit;
 begin
@@ -393,7 +400,6 @@ begin
     // see TXNFlattenObjectToCFDataRef notes
     CFRelease(data);
   end;
-
 end;
 
 { TCarbonRichEdit }
@@ -401,6 +407,90 @@ end;
 function TCarbonRichEdit.GetCreationOptions: TXNFrameOptions;
 begin
   Result := kOutputTextInUnicodeEncodingMask;
+end;
+
+procedure TCarbonRichEdit.PostDraw(acontext: CGContextRef);
+var
+  point : HIPoint;
+  obj   : TXNObject;
+  pst,
+  pend  : TXNOffset;
+  x,y   : Integer;
+  w,h     : Fixed;
+  linenum : UInt32;
+  r       : CGRect;
+  flags   : TXNContinuousFlags;
+  attr    : TXNTypeAttributes;
+  event   : EventRef;
+  ref     : ControlRef;
+  refcon  : Integer;
+  ofs     : LongWord;
+  hh      : Word;
+const
+  caretHorzOffset = 1;
+  caretHorzWidth  = 2;
+begin
+  if not fisBackBlack then Exit;
+
+  fCaretVisible := not fCaretVisible ;
+  if not fCaretVisible then Exit;
+
+  obj := HITextViewGetTXNObject(Widget);
+  if not Assigned(obj) then Exit;
+
+  TXNGetSelection(obj, pst, pend);
+  if TXNOffsetToHIPoint(obj, pst, point) <> noErr then Exit;
+
+  // getting current line-height, anyone knows a better way?
+  CreateEvent(kCFAllocatorDefault, kEventClassTextInput, kEventTextInputOffsetToPos, 0, 0, event);
+  ref := Widget;
+  refcon := 0;
+  SetEventParameter(event, kEventParamTextInputSendComponentInstance, typeControlRef, sizeof(Widget), ref);
+  SetEventParameter(event, kEventParamTextInputSendRefCon, typeLongInteger, sizeof(refcon), @refcon);
+  SetEventParameter(event, kEventParamTextInputSendTextOffset, typeLongInteger, sizeof(pst), @pst);
+  SendEventToEventTarget(event, target);
+  GetEventParameter(event, kEventParamTextInputReplyLineHeight, typeShortInteger, nil, sizeof(hh), nil, @hh);
+  CFRelease(event);
+
+  point.x := point.x-caretHorzOffset;
+  r.origin := point;
+  r.size.width:=caretHorzWidth;
+  r.size.height:=hh;
+
+  CGContextSetRGBFillColor(aContext, 1,1,1,1);
+  CGContextFillRect(aContext, r);
+end;
+
+function CarbonRichEdit_Draw(ANextHandler: EventHandlerCallRef;
+  AEvent: EventRef;
+  AWidget: TCarbonWidget): OSStatus; {$IFDEF darwin}mwpascal;{$ENDIF}
+var
+  context  : CGContextRef;
+begin
+  Result := CallNextEventHandler(ANextHandler, AEvent);
+  if Assigned(AWidget) then
+  begin
+    GetEventParameter(AEvent, kEventParamCGContextRef, typeCGContextRef, nil, sizeof(context), nil, @context);
+    if not Assigned(context) then Exit;
+    TCarbonRichEdit(AWidget).PostDraw(context);
+  end;
+end;
+
+procedure TCarbonRichEdit.RegisterEvents;
+var
+  TmpSpec: EventTypeSpec;
+begin
+  inherited RegisterEvents;
+
+  if GetEditPart >= 0 then
+  begin
+    TmpSpec := MakeEventSpec(kEventClassControl, kEventControlDraw);
+    InstallControlEventHandler(Widget,
+      RegisterEventHandler(@CarbonRichEdit_Draw),
+      1, @TmpSpec, Pointer(Self), nil);
+  end;
+
+  target :=HIViewGetEventTarget(Widget);
 end;
 
 function TCarbonRichEdit.GetIndexedRunInfoFromRange(iIndex: ItemCount;
@@ -430,6 +520,12 @@ begin
               @iTypeAttributes[0], StartOffset, EndOffset) = noErr;
 end;
 
+procedure TCarbonRichEdit.SetColor(const AColor: TColor);
+begin
+  fisBackBlack := AColor = clBlack;
+  inherited SetColor(AColor);
+end;
+
 procedure TCarbonRichEdit.InDelText(const text: WideString; replstart, repllength: Integer); 
 var
   data    : UnivPtr;
@@ -447,11 +543,7 @@ begin
   if repllength < 0 then replend  := kTXNEndOffset
   else replend := replstart+repllength;                                                                                         
   res := TXNSetData(HITextViewGetTXNObject(Widget), kTXNUnicodeTextData, data, datasz, replstart, replend); 
-  writeln('TXNSetData ', res);
 end;
-
-
-
 
 end.
 

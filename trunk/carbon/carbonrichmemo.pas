@@ -176,7 +176,7 @@ procedure AttrSetSize(FontSize: Integer; var Attr: TXNTypeAttributes);
 begin
   Attr.tag := kTXNQDFontSizeAttribute;
   Attr.size := kTXNQDFontSizeAttributeSize;
-  Attr.data.dataValue := FontSize;
+  Attr.data.dataValue := Long2Fix(FontSize);
 end;
 
 procedure AttrSetStyle(FontStyle: TFontStyles; var Attr: TXNTypeAttributes);

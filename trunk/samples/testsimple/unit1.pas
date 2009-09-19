@@ -31,6 +31,7 @@ type
     procedure Button5Click(Sender: TObject);
     procedure Button6Click(Sender: TObject);
     procedure FormCreate(Sender: TObject);
+    procedure RichMemo1Change(Sender: TObject);
   private
     { private declarations }
   public
@@ -122,6 +123,12 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+end;
+
+procedure TForm1.RichMemo1Change(Sender: TObject);
+begin
+  Caption := Caption + '.';
+  if length(CAption)>20 then Caption:='';
 end;
 
 initialization

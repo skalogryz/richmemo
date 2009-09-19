@@ -8,7 +8,7 @@ object Form1: TForm1
   ClientHeight = 457
   ClientWidth = 634
   OnCreate = FormCreate
-  LCLVersion = '0.9.27'
+  LCLVersion = '0.9.29'
   object RichMemo1: TRichMemo
     Left = 15
     Height = 358
@@ -21,6 +21,7 @@ object Form1: TForm1
     Lines.Strings = (
       'RichMemo1'
     )
+    OnChange = RichMemo1Change
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 0

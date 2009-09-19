@@ -204,7 +204,6 @@ var
   NeedLock  : Boolean;  
   eventmask : LongWord;
 begin
-  writeln('[GetTextAttributes] begin');
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
@@ -221,15 +220,14 @@ begin
     RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
     RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-    UnlockRedraw(AWinControl.Handle);
+    UnlockRedraw(AWinControl.Handle, false);
   end else begin
     LockRedraw(AWinControl.Handle);
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params);
-    UnlockRedraw(AWinControl.Handle);
+    UnlockRedraw(AWinControl.Handle, false);
   end;
     
   SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
-  writeln('[GetTextAttributes] end');
 end;
 
 

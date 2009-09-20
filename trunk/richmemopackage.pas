@@ -7,7 +7,7 @@ unit richmemopackage;
 interface
 
 uses
-  RichMemoFactory, richmemoregister, LazarusPackageIntf;
+  RichMemoFactory, richmemoregister, Gtk2RichMemo, LazarusPackageIntf;
 
 implementation
 

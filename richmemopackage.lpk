@@ -8,7 +8,7 @@
       <Version Value="8"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <OtherUnitFiles Value="win32\;carbon\"/>
+        <OtherUnitFiles Value="win32\;carbon\;gtk2\"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Other>
@@ -22,7 +22,7 @@
 "/>
     <License Value="LGPL"/>
     <Version Major="1"/>
-    <Files Count="8">
+    <Files Count="9">
       <Item1>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
@@ -61,6 +61,10 @@
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="RichMemo"/>
       </Item8>
+      <Item9>
+        <Filename Value="gtk2\gtk2richmemo.pas"/>
+        <UnitName Value="gtk2richmemo"/>
+      </Item9>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

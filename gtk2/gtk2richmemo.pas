@@ -25,11 +25,11 @@ interface
 
 uses
   // Bindings
-  gtk2,
+  gtk2, glib2, gdk2, pango,
   // FCL
   Classes, SysUtils,
   // LCL
-  LCLType, Controls,
+  LCLType, Controls, Graphics,
   // Gtk2 widget
   GtkDef,
   GTKWinApiWindow, GtkGlobals, GtkProc, InterfaceBase,
@@ -44,6 +44,7 @@ type
     class procedure SetCallbacks(const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
+    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams); override;
   end;
 
 implementation
@@ -101,6 +102,57 @@ begin
 
   Set_RC_Name(AWinControl, Widget);
   SetCallbacks(Widget, WidgetInfo);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams);
+var
+  Widget, TextWidget: PGtkWidget;
+  list    : PGList;
+  buffer  : PGtkTextBuffer;
+  tag     : Pointer;
+  istart  : TGtkTextIter;
+  iend    : TGtkTextIter;
+  gcolor  : TGdkColor;
+  nm      : string;
+const
+  PangoUnderline : array [Boolean] of Integer = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
+  PangoBold      : array [Boolean] of Integer = (PANGO_WEIGHT_NORMAL, PANGO_WEIGHT_BOLD);
+  PangoItalic    : array [Boolean] of Integer = (PANGO_STYLE_NORMAL, PANGO_STYLE_ITALIC);
+begin
+  Widget := PGtkWidget(PtrUInt(AWinControl.Handle));
+
+  list := gtk_container_get_children(PGtkContainer(Widget));
+  if not Assigned(list) then Exit;
+
+  TextWidget := PGtkWidget(list^.data);
+  if not Assigned(TextWidget) then Exit;
+
+  buffer := gtk_text_view_get_buffer (PGtkTextView(TextWidget));
+  if not Assigned(buffer) then Exit;
+
+  gcolor := TColortoTGDKColor(Params.Color);
+  nm := Params.Name;
+  if nm = '' then nm := #0;
+
+  tag := gtk_text_buffer_create_tag (buffer, nil,
+      'foreground-gdk', [@gcolor,
+      'size-set',       gboolean(true),
+      'size-points',    Double(Params.Size),
+      'underline-set',  gboolean(True),
+      'underline',      PangoUnderline[fsUnderline in Params.Style],
+      'weight-set',     gboolean(True),
+      'weight',         PangoBold[fsBold in Params.Style],
+      'style-set',      gboolean(True),
+      'style',          PangoItalic[fsItalic in Params.Style],
+      'strikethrough-set', gboolean(True),
+      'strikethrough ',    gboolean(fsStrikeOut in Params.Style),
+      'familty-set',    gboolean(true),
+      'family',         @nm[1],
+      nil]);
+
+  gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
+  gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
+  gtk_text_buffer_apply_tag(buffer, tag, @istart, @iend);
 end;
 
 end.

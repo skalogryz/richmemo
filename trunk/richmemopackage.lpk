@@ -63,6 +63,7 @@
       </Item8>
       <Item9>
         <Filename Value="gtk2\gtk2richmemo.pas"/>
+        <AddToUsesPkgSection Value="False"/>
         <UnitName Value="gtk2richmemo"/>
       </Item9>
     </Files>

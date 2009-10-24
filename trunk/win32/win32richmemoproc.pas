@@ -303,12 +303,17 @@ begin
   SendMessage(RichEditWnd, EM_EXSETSEL, 0, PtrInt(@Range));
 end;
 
-class procedure TRichEditManager.SetHideSelection(RichEditWnd: Handle; AValue: Boolean); 
+class procedure TRichEditManager.SetHideSelection(RichEditWnd: Handle; AValue: Boolean);
+var
+  style  : LResult;
 begin
+  // res-setting options might RichEdit style. Must restore it, after option is changed
+  style := GetWindowLong(RichEditWnd, GWL_STYLE);
   if AValue then
     SendMessage(RichEditWnd, EM_SETOPTIONS, ECOOP_AND, not ECO_NOHIDESEL)
   else
     SendMessage(RichEditWnd, EM_SETOPTIONS, ECOOP_OR, ECO_NOHIDESEL);
+  SetWindowLong(RichEditWnd, GWL_STYLE, style);
 end;
 
 type

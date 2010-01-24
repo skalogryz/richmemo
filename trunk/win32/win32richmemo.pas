@@ -30,7 +30,7 @@ uses
   Classes, SysUtils, 
   // LCL headers
   LCLType, LCLIntf, LCLProc, WSLCLClasses,
-  Controls, StdCtrls,
+  Graphics, Controls, StdCtrls, 
   // Win32WidgetSet 
   Win32WSControls, Win32Int, 
   // RichMemo headers
@@ -98,7 +98,7 @@ class procedure TWin32WSCustomRichMemo.SetColor(const AWinControl: TWinControl);
 begin
   // this methos is implemented, because Win32RichMemo doesn't use 
   // default LCL WM_PAINT message!
-  SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, AWinControl.Color);
+  SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, ColorToRGB(AWinControl.Color));
 end;
 
 class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  
@@ -127,6 +127,8 @@ var
   Params      : TCreateWindowExParams;
   RichClass   : AnsiString;
   ACustomMemo : TCustomMemo;
+var
+  SaveInstance: THandle;
 begin
   InitRichEdit;
   RichClass := GetRichEditClass;
@@ -144,7 +146,7 @@ begin
   with Params do
   begin
     Flags := Flags or ES_AUTOVSCROLL or ES_MULTILINE or ES_WANTRETURN;
-    
+
     if ACustomMemo.ReadOnly then
       Flags := Flags or ES_READONLY;
     Flags := Flags or AlignmentToEditFlags[ACustomMemo.Alignment];

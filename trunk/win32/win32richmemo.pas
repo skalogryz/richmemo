@@ -138,7 +138,7 @@ begin
   end;
 
   // general initialization of Params
-  PrepareCreateWindow(AWinControl, Params);
+  PrepareCreateWindow(AWinControl, AParams, Params);
   Params.SubClassWndProc := @RichEditProc;
 
   // customization of Params

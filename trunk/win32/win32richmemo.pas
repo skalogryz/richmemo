@@ -138,7 +138,12 @@ begin
   end;
 
   // general initialization of Params
+
+  // if you're using 0.9.28.2 compiler, uncomment the line,
+  // PrepareCreateWindow(AWinControl, Params);
+  // and comment the following like (it's for 0.9.30 compatiblity):
   PrepareCreateWindow(AWinControl, AParams, Params);
+
   Params.SubClassWndProc := @RichEditProc;
 
   // customization of Params

@@ -298,6 +298,5 @@ begin
     Result := false;
 end;
 
-
 end.
 

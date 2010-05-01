@@ -65,7 +65,7 @@ implementation
 const
   GlobalRichClass : AnsiString = '';
   
-const  
+const
   TwipsInFontSize = 20; // see MSDN for CHARFORMAT Structure CFM_SIZE
   
 function GetRichEditClass: AnsiString;
@@ -184,11 +184,11 @@ begin
 end;
 
 type
-  gettextlengthex = packed record
+  richedit_gettextlengthex = packed record
     flags     : DWORD;
     codepage  : LongWord;
   end;
-  Tgettextlengthex = gettextlengthex;
+  Tgettextlengthex = richedit_gettextlengthex;
 
 class function TRichEditManager.GetStyleRange(RichEditWnd: Handle; TextStart: Integer; 
   var RangeStart, RangeLen: Integer): Boolean; 
@@ -206,11 +206,13 @@ const
              CFM_SIZE or CFM_COLOR or CFM_FACE;
 begin
   Result := false;
-  if RichEditWnd = 0 then Exit;
+  if (RichEditWnd = 0) then Exit;
   
   textlen.flags := GTL_NUMCHARS or GTL_USECRLF or GTL_PRECISE;
   textlen.codepage := CP_UNICODE;
   len := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
+  Result := TextStart < len;
+  if not Result then Exit;
    
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);

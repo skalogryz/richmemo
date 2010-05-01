@@ -53,7 +53,12 @@ type
     function GetContStyleLength(TextStart: Integer): Integer;
     
     procedure SetSelText(const SelTextUTF8: string); override;
+    
   public
+    procedure CopyToClipboard; override;
+    procedure CutToClipboard; override;
+    procedure PasteFromClipboard; override;
+    
     procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
     function GetStyleRange(CharOfs: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
@@ -246,6 +251,24 @@ begin
   finally
     Lines.EndUpdate;
   end;
+end;
+
+procedure TCustomRichMemo.CopyToClipboard;  
+begin
+  if HandleAllocated then  
+    TWSCustomRichMemoClass(WidgetSetClass).CopyToClipboard(Self);
+end;
+
+procedure TCustomRichMemo.CutToClipboard;  
+begin
+  if HandleAllocated then  
+    TWSCustomRichMemoClass(WidgetSetClass).CutToClipboard(Self);
+end;
+
+procedure TCustomRichMemo.PasteFromClipboard;  
+begin
+  if HandleAllocated then  
+    TWSCustomRichMemoClass(WidgetSetClass).PasteFromClipboard(Self);
 end;
 
 procedure TCustomRichMemo.SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);

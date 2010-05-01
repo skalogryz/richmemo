@@ -46,13 +46,17 @@ type
   
     class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
+    
+    class procedure CutToClipboard(const AWinControl: TWinControl); override;
+    class procedure CopyToClipboard(const AWinControl: TWinControl); override;
+    class procedure PasteFromClipboard(const AWinControl: TWinControl); override;
 
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; override;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); override;
-    class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;      
+    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;      
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
@@ -119,6 +123,21 @@ begin
   range.cpMax := range.cpMin + NewLength;
   SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
   InvalidateRect(ACustomEdit.Handle, nil, false);
+end;
+
+class procedure TWin32WSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl);  
+begin
+  SendMessage(AWinControl.Handle, WM_CUT, 0,0);  
+end;
+
+class procedure TWin32WSCustomRichMemo.CopyToClipboard(const AWinControl: TWinControl);  
+begin
+  SendMessage(AWinControl.Handle, WM_COPY, 0,0);  
+end;
+
+class procedure TWin32WSCustomRichMemo.PasteFromClipboard(const AWinControl: TWinControl);  
+begin
+  SendMessage(AWinControl.Handle, WM_PASTE, 0,0);
 end;
 
 class function TWin32WSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;  
@@ -239,10 +258,10 @@ end;
 
 
 class procedure TWin32WSCustomRichMemo.SetHideSelection(
-  const AWinControl: TWinControl; AHideSelection: Boolean);  
+  const ACustomEdit: TCustomEdit; AHideSelection: Boolean);  
 begin
-  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
-  RichEditManager.SetHideSelection(AWinControl.Handle, AHideSelection);
+  if not Assigned(RichEditManager) or not Assigned(ACustomEdit) then Exit;
+  RichEditManager.SetHideSelection(ACustomEdit.Handle, AHideSelection);
 end;
 
 procedure InitScrollInfo(var info: TScrollInfo);

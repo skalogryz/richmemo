@@ -26,9 +26,9 @@ interface
 uses
   Classes, SysUtils, 
 
-  Graphics, Controls, 
+  Graphics, Controls, StdCtrls,
   
-  WSStdCtrls; 
+  WSStdCtrls;  
   
 type
 
@@ -44,13 +44,20 @@ type
 
   TWSCustomRichMemo = class(TWSCustomMemo)
   published
+    //Note: RichMemo cannot use LCL TCustomEdit copy/paste/cut operations
+    //      because there's no support for (system native) RICHTEXT clipboard format
+    //      that's why Clipboard operations are moved to widgetset level
+    class procedure CutToClipboard(const AWinControl: TWinControl); virtual;
+    class procedure CopyToClipboard(const AWinControl: TWinControl); virtual;
+    class procedure PasteFromClipboard(const AWinControl: TWinControl); virtual;
+    
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); virtual;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual; 
-    class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); virtual;
+    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
   end;
@@ -62,6 +69,21 @@ function WSRegisterCustomRichMemo: Boolean; external name 'WSRegisterCustomRichM
 implementation
 
 { TWSCustomRichMemo }
+
+class procedure TWSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl); 
+begin
+
+end;
+
+class procedure TWSCustomRichMemo.CopyToClipboard(const AWinControl: TWinControl); 
+begin
+
+end;
+
+class procedure TWSCustomRichMemo.PasteFromClipboard(const AWinControl: TWinControl); 
+begin
+
+end;
 
 class function TWSCustomRichMemo.GetStyleRange(const AWinControl: TWinControl;
   TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean;
@@ -88,7 +110,7 @@ begin
 
 end;
 
-class procedure TWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); 
+class procedure TWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); 
 begin
 
 end;

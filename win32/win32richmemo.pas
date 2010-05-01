@@ -34,7 +34,7 @@ uses
   // Win32WidgetSet 
   Win32WSControls, Win32Int, 
   // RichMemo headers
-  WSRichMemo, Win32RichMemoProc, Win32WSStdCtrls;
+  WSRichMemo, Win32RichMemoProc;
 
 type  
 
@@ -146,8 +146,6 @@ var
   Params      : TCreateWindowExParams;
   RichClass   : AnsiString;
   ACustomMemo : TCustomMemo;
-var
-  SaveInstance: THandle;
 begin
   InitRichEdit;
   RichClass := GetRichEditClass;

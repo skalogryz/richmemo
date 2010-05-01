@@ -28,12 +28,12 @@ uses
 
   LCLType, Classes, SysUtils,
 
-  Controls, Graphics,
+  Controls, Graphics, StdCtrls,
 
   WSRichMemo,
 
   CarbonDef, CarbonUtils,
-  CarbonPrivate, CarbonCanvas, CarbonProc, CarbonEdits;
+  CarbonProc, CarbonEdits;
 
 type
 
@@ -65,6 +65,10 @@ type
   { TCarbonWSCustomRichMemo }
 
   TCarbonWSCustomRichMemo = class(TWSCustomRichMemo)
+    class procedure CutToClipboard(const AWinControl: TWinControl); override;
+    class procedure CopyToClipboard(const AWinControl: TWinControl); override;
+    class procedure PasteFromClipboard(const AWinControl: TWinControl); override;
+
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
       var RangeStart, RangeLen: Integer): Boolean; override;
@@ -72,7 +76,7 @@ type
       var Params: TIntFontParams): Boolean; override;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       {Mask: TTextStyleMask;} const Params: TIntFontParams); override;
-    class procedure SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean); override;
+    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
@@ -224,6 +228,33 @@ end;
 
 { TCarbonWSCustomRichMemo }
 
+class procedure TCarbonWSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl);
+var
+  memo      : TCarbonRichEdit;
+begin
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
+  TXNCut(memo.GetTextObject);
+end;
+
+class procedure TCarbonWSCustomRichMemo.CopyToClipboard(const AWinControl: TWinControl);
+var
+  memo      : TCarbonRichEdit;
+begin
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
+  TXNCopy(memo.GetTextObject);
+end;
+
+class procedure TCarbonWSCustomRichMemo.PasteFromClipboard(const AWinControl:TWinControl);
+var
+  memo      : TCarbonRichEdit;
+begin
+  memo := GetValidRichEdit(AWinControl);
+  if not Assigned(memo) then Exit;
+  TXNPaste(memo.GetTextObject);
+end;
+
 class function TCarbonWSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): HWND;
 begin
@@ -306,7 +337,7 @@ begin
   memo.SetTypeAttributes(Count, Attr, TextStart, TextStart+TextLen);
 end;
 
-class procedure TCarbonWSCustomRichMemo.SetHideSelection(const AWinControl: TWinControl; AHideSelection: Boolean);
+class procedure TCarbonWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean);
 begin
   //todo:
 end;
@@ -415,16 +446,16 @@ var
   obj   : TXNObject;
   pst,
   pend  : TXNOffset;
-  x,y   : Integer;
-  w,h     : Fixed;
-  linenum : UInt32;
+  //x,y   : Integer;
+  //w,h     : Fixed;
+  //linenum : UInt32;
   r       : CGRect;
-  flags   : TXNContinuousFlags;
-  attr    : TXNTypeAttributes;
+  //flags   : TXNContinuousFlags;
+  //attr    : TXNTypeAttributes;
   event   : EventRef;
   ref     : ControlRef;
   refcon  : Integer;
-  ofs     : LongWord;
+  //ofs     : LongWord;
   hh      : Word;
 const
   caretHorzOffset = 1;
@@ -530,7 +561,6 @@ procedure TCarbonRichEdit.InDelText(const text: WideString; replstart, repllengt
 var
   data    : UnivPtr;
   datasz  : ByteCount;
-  res : OSStatus;
   replend : Integer;
 begin
   if text = '' then begin
@@ -542,7 +572,7 @@ begin
   end;
   if repllength < 0 then replend  := kTXNEndOffset
   else replend := replstart+repllength;                                                                                         
-  res := TXNSetData(HITextViewGetTXNObject(Widget), kTXNUnicodeTextData, data, datasz, replstart, replend); 
+  TXNSetData(HITextViewGetTXNObject(Widget), kTXNUnicodeTextData, data, datasz, replstart, replend);
 end;
 
 end.

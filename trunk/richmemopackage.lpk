@@ -22,7 +22,7 @@
 "/>
     <License Value="LGPL"/>
     <Version Major="1"/>
-    <Files Count="9">
+    <Files Count="12">
       <Item1>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
@@ -66,6 +66,20 @@
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="gtk2richmemo"/>
       </Item9>
+      <Item10>
+        <Filename Value="rtfparspre211.pp"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="RTFParsPre211"/>
+      </Item10>
+      <Item11>
+        <Filename Value="richmemortf.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="RichMemoRTF"/>
+      </Item11>
+      <Item12>
+        <Filename Value="rtfdata.inc"/>
+        <Type Value="Include"/>
+      </Item12>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

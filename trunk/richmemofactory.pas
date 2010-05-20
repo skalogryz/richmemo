@@ -4,24 +4,23 @@ unit RichMemoFactory;
 
 interface
 
+{$define NoRichMemo}
+{$ifdef LCLWin32}{$undef NoRichMemo}{$endif}
+{$ifdef LCLCarbon}{$undef NoRichMemo}{$endif}
+{$ifdef LCLGtk2}{$undef NoRichMemo}{$endif}
 
 uses
   WSLCLClasses,
-  RichMemo,
-  WSRichMemo
+  RichMemo
+  {$ifdef NoRichMemo},WSRichMemo{$endif}
   {$ifdef LCLWin32},Win32RichMemo{$endif}
   {$ifdef LCLCarbon},CarbonRichMemo{$endif}
-  {$ifdef LCLGtk2},Gtk2RichMemo{$endif}
+  {$ifdef LCLGtk2},RichMemoRTF, Gtk2RichMemo{$endif}
   ;
 
 function RegisterCustomRichMemo: Boolean;
 
 implementation
-
-{$define NoRichMemo}
-{$ifdef LCLWin32}{$undef NoRichMemo}{$endif}
-{$ifdef LCLCarbon}{$undef NoRichMemo}{$endif}
-{$ifdef LCLGtk2}{$undef NoRichMemo}{$endif}
 
 function RegisterCustomRichMemo: Boolean; alias : 'WSRegisterCustomRichMemo';
 begin

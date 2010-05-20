@@ -48,6 +48,7 @@ type
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
     class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
     class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
+    class procedure SetText(RichEditWnd: Handle; const Text: WideString; TextStart, ReplaceLength: Integer); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -371,6 +372,29 @@ begin
   cbs.pfnCallback := @RTFSaveCallback;
   SendMessage(RichEditWnd, EM_STREAMOUT, SF_RTF, LPARAM(@cbs) );
   Result := cbs.dwError = 0;
+end;
+
+class procedure TRichEditManager.SetText(RichEditWnd:Handle;
+  const Text: WideString; TextStart, ReplaceLength:Integer);
+var
+  AnsiText : AnsiString;
+  txt      : PChar;
+  s, l     : Integer;
+begin
+  GetSelection(RichEditWnd, s, l);
+  SetSelection(RichEditWnd, TextStart, ReplaceLength);
+
+  txt:=nil;
+  if UnicodeEnabledOS then begin
+    if Text<>'' then txt:=@Text[1];
+    SendMessageW(RichEditWnd, EM_REPLACESEL, 0, LPARAM(txt));
+  end else begin
+    AnsiText:=Text;
+    if AnsiText<>'' then txt:=@AnsiText[1];
+    SendMessageA(RichEditWnd, EM_REPLACESEL, 0, LPARAM(txt));
+  end;
+
+  SetSelection(RichEditWnd, s, l);
 end;
 
 end.                                            

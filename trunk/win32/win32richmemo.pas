@@ -31,7 +31,7 @@ uses
   // LCL headers
   LCLType, LCLIntf, LCLProc, WSLCLClasses,
   Graphics, Controls, StdCtrls, 
-  // Win32WidgetSet 
+  // Win32WidgetSet
   Win32WSControls, Win32Int, 
   // RichMemo headers
   WSRichMemo, Win32RichMemoProc;
@@ -54,12 +54,14 @@ type
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; override;
-    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
+    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const Params: TIntFontParams); override;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;      
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
+
+    class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
   end;
   
 implementation
@@ -316,6 +318,7 @@ class function TWin32WSCustomRichMemo.LoadRichText(
   const AWinControl: TWinControl; Source: TStream): Boolean;  
 begin
   Result := false;
+  Exit;
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   Result := RichEditManager.LoadRichText(AWinControl.Handle, Source);
 end;
@@ -326,6 +329,12 @@ begin
   Result := false;
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   Result := RichEditManager.SaveRichText(AWinControl.Handle, Dst);
+end;
+
+class procedure TWin32WSCustomRichMemo.InDelText(const AWinControl:TWinControl;
+  const TextUTF8:String;DstStart,DstLen:Integer);
+begin
+  RichEditManager.SetText(AWinControl.Handle,UTF8Decode(TextUTF8),DstStart,DstLen);
 end;
  
 end.

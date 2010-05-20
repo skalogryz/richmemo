@@ -136,6 +136,10 @@ function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overloa
 function GetFontParams(const Name: String; color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
 
+var
+  RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
+  RTFSaveStream : function (AMemo: TCustomRichMemo; Dest: TStream): Boolean = nil;
+
 implementation
 
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
@@ -307,17 +311,25 @@ end;
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
 begin
-  if Assigned(Source) and HandleAllocated then
-    Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source)
-  else
+  if Assigned(Source) and HandleAllocated then begin
+    Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source);
+    if not Result and Assigned(RTFLoadStream) then begin
+      Self.Lines.BeginUpdate;
+      Self.Lines.Clear;
+      Result:=RTFLoadStream(Self, Source);
+      Self.Lines.EndUpdate;
+    end;
+  end else
     Result := false;
 end;
 
 function TCustomRichMemo.SaveRichText(Dest: TStream): Boolean;
 begin
-  if Assigned(Dest) and HandleAllocated then
-    Result := TWSCustomRichMemoClass(WidgetSetClass).SaveRichText(Self, Dest)
-  else
+  if Assigned(Dest) and HandleAllocated then begin
+    Result := TWSCustomRichMemoClass(WidgetSetClass).SaveRichText(Self, Dest);
+    if not Result and Assigned(RTFSaveStream) then
+      Result:=RTFSaveStream(Self, Dest);
+  end else
     Result := false;
 end;
 

@@ -24,16 +24,12 @@ implementation
 {$ifdef LCLGtk2}{$undef NoRichMemo}{$endif}
 
 function RegisterCustomRichMemo: Boolean; alias : 'WSRegisterCustomRichMemo';
-var
-  cls : TWSLCLComponentClass;
 begin
   Result := True;
   {$ifdef LCLWin32}RegisterWSComponent(TCustomRichMemo, TWin32WSCustomRichMemo);{$endif}
   {$ifdef LCLCarbon}RegisterWSComponent(TCustomRichMemo, TCarbonWSCustomRichMemo);{$endif}
   {$ifdef LCLGtk2}RegisterWSComponent(TCustomRichMemo, TGtk2WSCustomRichMemo);{$endif}
   {$ifdef NoRichMemo}RegisterWSComponent(TCustomRichMemo, TWSCustomRichMemo);{$endif}
-  cls:=FindWSComponentClass(TCustomRichMemo);
-  if not Assigned(cls) then RegisterWSComponent(TCustomRichMemo, TWSCustomRichMemo);
 end;
 
 

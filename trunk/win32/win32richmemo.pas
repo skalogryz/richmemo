@@ -317,8 +317,7 @@ end;
 class function TWin32WSCustomRichMemo.LoadRichText(
   const AWinControl: TWinControl; Source: TStream): Boolean;  
 begin
-  Result := false;
-  Exit;
+  Result := False;
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   Result := RichEditManager.LoadRichText(AWinControl.Handle, Source);
 end;

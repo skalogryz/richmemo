@@ -321,7 +321,7 @@ begin
 end;
 
 type
-  TEditStream_ = record
+  TEditStream_ = packed record
     dwCookie    : PDWORD;
     dwError     : DWORD;
     pfnCallback : EDITSTREAMCALLBACK;

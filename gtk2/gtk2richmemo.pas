@@ -31,9 +31,9 @@ uses
   // LCL
   LCLType, Controls, Graphics,
   // Gtk2 widget
-  GtkDef,
-  GTKWinApiWindow, GtkGlobals, GtkProc, InterfaceBase,
-  GtkWSControls,
+  Gtk2Def,
+  GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
+  Gtk2WSControls,
   // RichMemo
   WSRichMemo;
 
@@ -98,7 +98,7 @@ end;
 class procedure TGtk2WSCustomRichMemo.SetCallbacks(
   const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
 begin
-   TGtkWSWinControl.SetCallbacks(PGtkObject(AGtkWidget), TComponent(AWidgetInfo^.LCLObject));
+   TGtk2WSWinControl.SetCallbacks(PGtkObject(AGtkWidget), TComponent(AWidgetInfo^.LCLObject));
 end;
 
 class function TGtk2WSCustomRichMemo.CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle;

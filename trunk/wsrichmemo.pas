@@ -39,6 +39,42 @@ type
     Style   : TFontStyles;
   end;
 
+const
+  AL_LEFT    = 1;
+  AL_RIGHT   = 2;
+  AL_CENTER  = 3;
+  AL_JUSTIFY = 4;
+
+type
+  TIntParaMetric = record
+    StartIndent : Double; // in points
+    RightIndent : Double; // in points
+    Offset      : Double; // in points
+    SpaceBefore : Double; // in points
+    SpaceAfter  : Double; // in points
+    LineSpacing : Double; // todo: ?
+  end;
+
+  TParaNumStyle = (pnNone, pnBullet, pnNumber, pnLowLetter
+    , pnLowRoman, pnUpLetter, pnUpRoman, pnCustomChar);
+
+  TIntParaNumbering = record
+    Numbering   : TParaNumStyle;
+    NumCustom   : WideChar;
+  end;
+
+  TTabAlignment = (taLeft, taCenter, taRight, taDecimal, taWordBar);
+
+  TTabInfo = record
+    Offset : Double;
+    Align  : TTabAlignment;
+  end;
+
+  TIntParaTabs = record
+    Count : Integer;
+    Tabs  : array of TTabInfo;
+  end;
+
 
   { TWSCustomRichMemo }
 
@@ -56,7 +92,13 @@ type
       var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); virtual;
-    class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual; 
+    class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
+      var AAlign: Integer): Boolean; virtual;
+    class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AAlign: Integer); virtual;
+    class function GetParaMatrics(const AWinControl: TWinControl; TextStart: Integer;
+      var AMetrics: TIntParaMetric): Boolean; virtual;
+    class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
@@ -103,6 +145,25 @@ class procedure TWSCustomRichMemo.SetTextAttributes(const AWinControl: TWinContr
   TextStart, TextLen: Integer;  
   {Mask: TTextStyleMask;} const Params: TIntFontParams);
 begin
+end;
+
+class function TWSCustomRichMemo.GetParaAlignment(
+  const AWinControl: TWinControl; TextStart: Integer; var AAlign: Integer
+  ): Boolean;
+begin
+  Result := false;
+end;
+
+class procedure TWSCustomRichMemo.SetParaAlignment(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer; const AAlign: Integer);
+begin
+
+end;
+
+class function TWSCustomRichMemo.GetParaMatrics(const AWinControl: TWinControl;
+  TextStart: Integer; var AMetrics: TIntParaMetric): Boolean;
+begin
+  Result := false;
 end;
 
 class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 

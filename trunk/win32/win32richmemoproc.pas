@@ -49,6 +49,8 @@ type
     class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
     class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
     class procedure SetText(RichEditWnd: Handle; const Text: WideString; TextStart, ReplaceLength: Integer); virtual;
+    class procedure GetPara2(RichEditWnd: Handle; TextStart: Integer; var para: PARAFORMAT2); virtual;
+    class procedure SetPara2(RichEditWnd: Handle; TextStart, TextLen: Integer; const para: PARAFORMAT2); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -394,6 +396,34 @@ begin
     if AnsiText<>'' then txt:=@AnsiText[1];
     SendMessageA(RichEditWnd, EM_REPLACESEL, 0, LPARAM(txt));
   end;
+
+  SetSelection(RichEditWnd, s, l);
+end;
+
+class procedure TRichEditManager.GetPara2(RichEditWnd: Handle; TextStart: Integer;
+  var para: PARAFORMAT2);
+var
+  s, l     : Integer;
+begin
+  GetSelection(RichEditWnd, s, l);
+  SetSelection(RichEditWnd, TextStart, 0);
+
+  FillChar(para, sizeof(para), 0);
+  para.cbSize:=sizeof(para);
+  SendMessagea(RichEditWnd, EM_GETPARAFORMAT, 0, LPARAM(@para));
+
+  SetSelection(RichEditWnd, s, l);
+end;
+
+class procedure TRichEditManager.SetPara2(RichEditWnd: Handle;
+  TextStart, TextLen: Integer; const para: PARAFORMAT2);
+var
+  s, l     : Integer;
+begin
+  GetSelection(RichEditWnd, s, l);
+  SetSelection(RichEditWnd, TextStart, TextLen);
+
+  SendMessagea(RichEditWnd, EM_SETPARAFORMAT, 0, LPARAM(@para));
 
   SetSelection(RichEditWnd, s, l);
 end;

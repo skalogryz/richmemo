@@ -1,5 +1,5 @@
 {
- richmemo.pp
+ richmemo.pas
  
  Author: Dmitry 'skalogryz' Boyarintsev 
 
@@ -29,14 +29,11 @@ uses
 
 type
 
-  TFontParams = TIntFontParams;
-  {TIntFontParams = record // declared at WSRichMemo
-     Name    : String;
-     Size    : Integer;
-     Color   : TColor;
-     Style   : TFontStyles;
-   end; }
-
+  TFontParams     = WSRichMemo.TIntFontParams;
+  TParaAlignment  = (paLeft, paRight, paCenter, paJustify);
+  TParaMetric     = WSRichMemo.TIntParaMetric;
+  TParaNumStyle   = WSRichMemo.TParaNumStyle;
+  TParaNumbering  = WSRichMemo.TIntParaNumbering;
 
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
 
@@ -62,6 +59,9 @@ type
     procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
     function GetStyleRange(CharOfs: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
+
+    function GetParaAllignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; virtual;
+    procedure SetParaAlignment(TextStart, TextLen: Integer; AAlign: TParaAlignment); virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
@@ -141,6 +141,9 @@ var
   RTFSaveStream : function (AMemo: TCustomRichMemo; Dest: TStream): Boolean = nil;
 
 implementation
+
+const
+  ParaAlignCode : array [TParaAlignment] of Integer = (AL_LEFT, AL_RIGHT, AL_CENTER, AL_JUSTIFY);
 
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
 begin 
@@ -232,6 +235,32 @@ begin
     RangeLen := -1;
     Result := false;
   end;
+end;
+
+function TCustomRichMemo.GetParaAllignment(TextStart: Integer;
+  var AAlign: TParaAlignment): Boolean;
+var
+  ac: Integer;
+begin
+  Result := HandleAllocated and
+    TWSCustomRichMemoClass(WidgetSetClass).GetParaAlignment(Self, TextStart, ac);
+  if Result then begin
+    case ac of
+      AL_LEFT: AAlign:=paLeft;
+      AL_RIGHT: AAlign:=paRight;
+      AL_CENTER: AAlign:=paCenter;
+      AL_JUSTIFY: AAlign:=paJustify
+    else
+      AAlign:=paLeft;
+    end;
+  end;
+end;
+
+procedure TCustomRichMemo.SetParaAlignment(TextStart, TextLen: Integer;
+  AAlign: TParaAlignment);
+begin
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).SetParaAlignment(Self, TextStart, TextLen, ParaAlignCode[AAlign]);
 end;
 
 function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;

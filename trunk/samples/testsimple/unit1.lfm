@@ -1,19 +1,19 @@
 object Form1: TForm1
-  Left = 295
+  Left = 281
   Height = 457
-  Top = 168
+  Top = 198
   Width = 634
   ActiveControl = RichMemo1
   Caption = 'Form1'
   ClientHeight = 457
   ClientWidth = 634
   OnCreate = FormCreate
-  LCLVersion = '0.9.29'
+  LCLVersion = '1.3'
   object RichMemo1: TRichMemo
     Left = 15
-    Height = 358
-    Top = 16
-    Width = 619
+    Height = 264
+    Top = 96
+    Width = 609
     Anchors = [akTop, akLeft, akRight, akBottom]
     Font.Height = -13
     Font.Name = 'Tahoma'
@@ -22,6 +22,8 @@ object Form1: TForm1
       'RichMemo1'
     )
     OnChange = RichMemo1Change
+    OnKeyUp = RichMemo1KeyUp
+    OnMouseUp = RichMemo1MouseUp
     ParentFont = False
     ScrollBars = ssVertical
     TabOrder = 0
@@ -91,6 +93,100 @@ object Form1: TForm1
     OnClick = Button6Click
     TabOrder = 6
     TabStop = False
+  end
+  object Button7: TButton
+    Left = 15
+    Height = 25
+    Top = 16
+    Width = 51
+    Caption = 'Left'
+    OnClick = Button7Click
+    TabOrder = 7
+  end
+  object Button8: TButton
+    Left = 72
+    Height = 25
+    Top = 16
+    Width = 53
+    Caption = 'Center'
+    OnClick = Button8Click
+    TabOrder = 8
+  end
+  object Button9: TButton
+    Left = 131
+    Height = 25
+    Top = 16
+    Width = 53
+    Caption = 'Right'
+    OnClick = Button9Click
+    TabOrder = 9
+  end
+  object Button10: TButton
+    Left = 192
+    Height = 25
+    Top = 16
+    Width = 53
+    Caption = 'Justify'
+    OnClick = Button10Click
+    TabOrder = 10
+  end
+  object StartIdent: TFloatSpinEdit
+    Left = 344
+    Height = 21
+    Top = 18
+    Width = 78
+    Increment = 1
+    MaxValue = 100
+    MinValue = 0
+    OnChange = StartIdentChange
+    TabOrder = 11
+    Value = 0
+  end
+  object Label1: TLabel
+    Left = 304
+    Height = 13
+    Top = 18
+    Width = 27
+    Caption = 'Start '
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 304
+    Height = 13
+    Top = 48
+    Width = 31
+    Caption = 'Offset'
+    ParentColor = False
+  end
+  object OffsetIdent: TFloatSpinEdit
+    Left = 344
+    Height = 21
+    Top = 46
+    Width = 78
+    Increment = 1
+    MaxValue = 100
+    MinValue = 0
+    OnChange = StartIdentChange
+    TabOrder = 12
+    Value = 0
+  end
+  object Button11: TButton
+    Left = 16
+    Height = 25
+    Top = 52
+    Width = 75
+    Caption = 'Bullet'
+    OnClick = Button11Click
+    TabOrder = 13
+  end
+  object Button12: TButton
+    Left = 104
+    Height = 25
+    Top = 52
+    Width = 75
+    Caption = 'Number'
+    OnClick = Button12Click
+    TabOrder = 14
   end
   object FontDialog1: TFontDialog
     MinFontSize = 0

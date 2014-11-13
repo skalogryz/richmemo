@@ -48,7 +48,7 @@ const
 type
   TIntParaMetric = record
     StartIndent : Double; // in points
-    RightIndent : Double; // in points
+    EndIndent   : Double; // in points
     Offset      : Double; // in points
     SpaceBefore : Double; // in points
     SpaceAfter  : Double; // in points
@@ -61,6 +61,7 @@ type
   TIntParaNumbering = record
     Numbering   : TParaNumStyle;
     NumCustom   : WideChar;
+    NumIndent   : Double;
   end;
 
   TTabAlignment = (taLeft, taCenter, taRight, taDecimal, taWordBar);
@@ -96,8 +97,12 @@ type
       var AAlign: Integer): Boolean; virtual;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AAlign: Integer); virtual;
-    class function GetParaMatrics(const AWinControl: TWinControl; TextStart: Integer;
-      var AMetrics: TIntParaMetric): Boolean; virtual;
+    class function GetParaMetric(const AWinControl: TWinControl; TextStart: Integer;
+      var AMetric: TIntParaMetric): Boolean; virtual;
+    class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AMetric: TIntParaMetric); virtual;
+    class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const ANumber: TIntParaNumbering); virtual;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
@@ -160,10 +165,24 @@ begin
 
 end;
 
-class function TWSCustomRichMemo.GetParaMatrics(const AWinControl: TWinControl;
-  TextStart: Integer; var AMetrics: TIntParaMetric): Boolean;
+class function TWSCustomRichMemo.GetParaMetric(const AWinControl: TWinControl;
+  TextStart: Integer; var AMetric: TIntParaMetric): Boolean;
 begin
   Result := false;
+end;
+
+class procedure TWSCustomRichMemo.SetParaMetric(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AMetric: TIntParaMetric);
+begin
+
+end;
+
+class procedure TWSCustomRichMemo.SetParaNumbering(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const ANumber: TIntParaNumbering);
+begin
+
 end;
 
 class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 

@@ -62,6 +62,9 @@ type
 
     function GetParaAllignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; virtual;
     procedure SetParaAlignment(TextStart, TextLen: Integer; AAlign: TParaAlignment); virtual;
+    function GetParaMetric(TextStart: Integer; var AMetric: TParaMetric): Boolean; virtual;
+    procedure SetParaMetric(TextStart, TextLen: Integer; const AMetric: TParaMetric); virtual;
+    procedure SetParaNumbering(TextStart, TextLen: Integer; const ANumber: TParaNumbering); virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
@@ -261,6 +264,28 @@ procedure TCustomRichMemo.SetParaAlignment(TextStart, TextLen: Integer;
 begin
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).SetParaAlignment(Self, TextStart, TextLen, ParaAlignCode[AAlign]);
+end;
+
+function TCustomRichMemo.GetParaMetric(TextStart: Integer;
+  var AMetric: TParaMetric): Boolean;
+begin
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).GetParaMetric(Self, TextStart, AMetric);
+  Result:=true;
+end;
+
+procedure TCustomRichMemo.SetParaMetric(TextStart, TextLen: Integer;
+  const AMetric: TParaMetric);
+begin
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).SetParaMetric(Self, TextStart, TextLen, AMetric);
+end;
+
+procedure TCustomRichMemo.SetParaNumbering(TextStart, TextLen: Integer;
+  const ANumber: TParaNumbering);
+begin
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).SetParaNumbering(Self, TextStart, TextLen, ANumber);
 end;
 
 function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;

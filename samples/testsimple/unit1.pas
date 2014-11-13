@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
-  StdCtrls, ExtCtrls, ComCtrls,
+  StdCtrls, ExtCtrls, ComCtrls, Spin,
   RichMemo;
 
 type
@@ -15,25 +15,47 @@ type
 
   TForm1 = class(TForm)
     Button1: TButton;
+    Button10: TButton;
+    Button11: TButton;
+    Button12: TButton;
     Button2: TButton;
     Button3: TButton;
     Button4: TButton;
     Button5: TButton;
     Button6: TButton;
+    Button7: TButton;
+    Button8: TButton;
+    Button9: TButton;
+    StartIdent: TFloatSpinEdit;
     FontDialog1: TFontDialog;
+    Label1: TLabel;
+    Label2: TLabel;
     OpenDialog1: TOpenDialog;
     RichMemo1: TRichMemo;
     SaveDialog1: TSaveDialog;
+    OffsetIdent: TFloatSpinEdit;
+    procedure Button10Click(Sender: TObject);
+    procedure Button11Click(Sender: TObject);
+    procedure Button12Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
     procedure Button5Click(Sender: TObject);
     procedure Button6Click(Sender: TObject);
+    procedure Button7Click(Sender: TObject);
+    procedure Button8Click(Sender: TObject);
+    procedure Button9Click(Sender: TObject);
+    procedure RichMemo1MouseUp(Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
+    procedure StartIdentChange(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure RichMemo1Change(Sender: TObject);
+    procedure RichMemo1KeyUp(Sender: TObject; var Key: Word; Shift: TShiftState
+      );
   private
     { private declarations }
+    procedure ParaMetricRead;
   public
     { public declarations }
   end; 
@@ -54,6 +76,27 @@ begin
   fp.Color := clRed;
   fp.Style := [fsBold];
   RichMemo1.SetTextAttributes(RichMemo1.SelStart, RichMemo1.SelLength, fp);
+end;
+
+procedure TForm1.Button10Click(Sender: TObject);
+begin
+  RichMemo1.SetParaAlignment( RichMemo1.SelStart, RichMemo1.SelLength, paJustify);
+end;
+
+procedure TForm1.Button11Click(Sender: TObject);
+var
+  Num : TParaNumbering;
+begin
+  Num.Numbering:=TParaNumStyle(1);
+  RichMemo1.SetParaNumbering(RichMemo1.SelStart, RichMEmo1.SelLength, Num);
+end;
+
+procedure TForm1.Button12Click(Sender: TObject);
+var
+  Num : TParaNumbering;
+begin
+  Num.Numbering:=TParaNumStyle(3);
+  RichMemo1.SetParaNumbering(RichMemo1.SelStart, RichMEmo1.SelLength, Num);
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
@@ -121,6 +164,39 @@ begin
   RichMemo1.SelLength := len;
 end;
 
+procedure TForm1.Button7Click(Sender: TObject);
+begin
+  RichMemo1.SetParaAlignment( RichMemo1.SelStart, RichMemo1.SelLength, paLeft);
+end;
+
+procedure TForm1.Button8Click(Sender: TObject);
+begin
+  RichMemo1.SetParaAlignment( RichMemo1.SelStart, RichMemo1.SelLength, paCenter);
+end;
+
+procedure TForm1.Button9Click(Sender: TObject);
+begin
+  RichMemo1.SetParaAlignment( RichMemo1.SelStart, RichMemo1.SelLength, paRight);
+end;
+
+procedure TForm1.RichMemo1MouseUp(Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
+begin
+  ParaMetricRead;
+end;
+
+procedure TForm1.StartIdentChange(Sender: TObject);
+var
+  m: TParaMetric;
+begin
+  RichMemo1.GetParaMetric(RichMemo1.SelStart, m);
+
+  m.StartIndent:=StartIdent.Value;
+  m.Offset:=OffsetIdent.Value;
+
+  RichMemo1.SetParaMetric(RichMemo1.SelStart, RichMemo1.SelLength, m);
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);
 begin
 end;
@@ -129,6 +205,27 @@ procedure TForm1.RichMemo1Change(Sender: TObject);
 begin
   Caption := Caption + '.';
   if length(CAption)>20 then Caption:='';
+end;
+
+procedure TForm1.RichMemo1KeyUp(Sender: TObject; var Key: Word;
+  Shift: TShiftState);
+begin
+  ParaMetricRead;
+end;
+
+procedure TForm1.ParaMetricRead;
+var
+  m: TParaMetric;
+begin
+  RichMemo1.GetParaMetric(RichMemo1.SelStart, m);
+  StartIdent.OnChange:=nil;
+  OffsetIdent.OnChange:=nil;
+
+  StartIdent.Value:=m.StartIndent;
+  OffsetIdent.Value:=m.Offset;
+
+  StartIdent.OnChange:=@StartIdentChange;
+  OffsetIdent.OnChange:=@StartIdentChange;
 end;
 
 initialization

@@ -71,6 +71,8 @@ type
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLength: Integer;
       const AMetrics: TIntParaMetric); override;
 
+    class function GetParaNumbering(const AWinControl: TWinControl; TextStart: Integer;
+      var ANumber: TIntParaNumbering): Boolean; override;
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); override;
 
@@ -388,9 +390,9 @@ begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
 
-  AMetrics.StartIndent:=para.dxStartIndent/20;
-  AMetrics.EndIndent:=para.dxRightIndent/20;
-  AMetrics.Offset:=para.dxOffset/20;
+  AMetrics.FirstLine:=para.dxStartIndent/20;
+  AMetrics.TailIndent:=para.dxRightIndent/20;
+  AMetrics.HeadIndent:=(para.dxStartIndent+para.dxOffset)/20;
   AMetrics.SpaceAfter:=para.dySpaceAfter/20;
   AMetrics.SpaceBefore:=para.dySpaceBefore/20;
   AMetrics.LineSpacing:=para.dyLineSpacing/20;
@@ -411,9 +413,10 @@ begin
      or PFM_OFFSET
      or PFM_SPACEAFTER or PFM_SPACEBEFORE
      or PFM_LINESPACING;
-  para.dxStartIndent:=round(AMetrics.StartIndent*20);
-  para.dxRightIndent:=round(AMetrics.EndIndent*20);
-  para.dxOffset:=round(AMetrics.Offset*20);
+  para.dxStartIndent:=round(AMetrics.FirstLine*20);
+  para.dxRightIndent:=round(AMetrics.TailIndent*20);
+  para.dxOffset:=round((AMetrics.HeadIndent-AMetrics.FirstLine)*20);
+    //round(AMetrics.HeadIndent*20);
   para.dySpaceAfter:=round(AMetrics.SpaceAfter*20);
   para.dySpaceBefore:=round(AMetrics.SpaceBefore*20);
   para.dyLineSpacing:=round(AMetrics.LineSpacing*20);
@@ -421,12 +424,40 @@ begin
 end;
 
 const
-  PFN_ARABIC   = 1;
-  PFN_LCLETTER = 2;
-  PFN_LCROMAN  = 3;
-  PFN_UCLETTER = 4;
-  PFN_UCROMAN  = 5;
+  PFN_ARABIC   = 2;
+  PFN_LCLETTER = 3;
+  PFN_LCROMAN  = 4;
+  PFN_UCLETTER = 5;
+  PFN_UCROMAN  = 6;
   PFN_CUSTOM   = 7;
+
+class function TWin32WSCustomRichMemo.GetParaNumbering(
+  const AWinControl: TWinControl; TextStart: Integer;
+  var ANumber: TIntParaNumbering): Boolean;
+var
+  para : PARAFORMAT2;
+begin
+  Result:=False;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+
+  RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
+  case para.wNumbering of
+    PFN_BULLET:   ANumber.Numbering:=pnBullet;
+    PFN_ARABIC:   ANumber.Numbering:=pnNumber;
+    PFN_LCLETTER: ANumber.Numbering:=pnLowLetter;
+    PFN_LCROMAN:  ANumber.Numbering:=pnLowRoman;
+    PFN_UCLETTER: ANumber.Numbering:=pnUpLetter;
+    PFN_UCROMAN:  ANumber.Numbering:=pnUpRoman;
+    PFN_CUSTOM:   begin
+      ANumber.Numbering:=pnCustomChar;
+      ANumber.NumCustom:=WideChar(para.wNumberingStart);
+    end;
+  else
+    ANumber.Numbering:=pnNone;
+  end;
+  ANumber.NumIndent:=para.wNumberingTab/20;
+  Result:=true
+end;
 
 class procedure TWin32WSCustomRichMemo.SetParaNumbering(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;

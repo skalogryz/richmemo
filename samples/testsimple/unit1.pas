@@ -95,7 +95,7 @@ procedure TForm1.Button12Click(Sender: TObject);
 var
   Num : TParaNumbering;
 begin
-  Num.Numbering:=TParaNumStyle(3);
+  Num.Numbering:=TParaNumStyle(2);
   RichMemo1.SetParaNumbering(RichMemo1.SelStart, RichMEmo1.SelLength, Num);
 end;
 
@@ -191,8 +191,8 @@ var
 begin
   RichMemo1.GetParaMetric(RichMemo1.SelStart, m);
 
-  m.StartIndent:=StartIdent.Value;
-  m.Offset:=OffsetIdent.Value;
+  m.FirstLine:=StartIdent.Value;
+  m.HeadIndent:=OffsetIdent.Value;
 
   RichMemo1.SetParaMetric(RichMemo1.SelStart, RichMemo1.SelLength, m);
 end;
@@ -221,8 +221,8 @@ begin
   StartIdent.OnChange:=nil;
   OffsetIdent.OnChange:=nil;
 
-  StartIdent.Value:=m.StartIndent;
-  OffsetIdent.Value:=m.Offset;
+  StartIdent.Value:=m.FirstLine;
+  OffsetIdent.Value:=m.HeadIndent;
 
   StartIdent.OnChange:=@StartIdentChange;
   OffsetIdent.OnChange:=@StartIdentChange;

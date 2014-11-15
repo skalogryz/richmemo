@@ -64,6 +64,7 @@ type
     procedure SetParaAlignment(TextStart, TextLen: Integer; AAlign: TParaAlignment); virtual;
     function GetParaMetric(TextStart: Integer; var AMetric: TParaMetric): Boolean; virtual;
     procedure SetParaMetric(TextStart, TextLen: Integer; const AMetric: TParaMetric); virtual;
+    function GetParaNumbering(TextStart: Integer; var ANumber: TParaNumbering): Boolean; virtual;
     procedure SetParaNumbering(TextStart, TextLen: Integer; const ANumber: TParaNumbering); virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
@@ -270,8 +271,9 @@ function TCustomRichMemo.GetParaMetric(TextStart: Integer;
   var AMetric: TParaMetric): Boolean;
 begin
   if HandleAllocated then
-    TWSCustomRichMemoClass(WidgetSetClass).GetParaMetric(Self, TextStart, AMetric);
-  Result:=true;
+    Result := TWSCustomRichMemoClass(WidgetSetClass).GetParaMetric(Self, TextStart, AMetric)
+  else
+    Result := false;
 end;
 
 procedure TCustomRichMemo.SetParaMetric(TextStart, TextLen: Integer;
@@ -279,6 +281,15 @@ procedure TCustomRichMemo.SetParaMetric(TextStart, TextLen: Integer;
 begin
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).SetParaMetric(Self, TextStart, TextLen, AMetric);
+end;
+
+function TCustomRichMemo.GetParaNumbering(TextStart: Integer;
+  var ANumber: TParaNumbering): Boolean;
+begin
+  if HandleAllocated then
+    Result := TWSCustomRichMemoClass(WidgetSetClass).GetParaNumbering(Self, TextStart, ANumber)
+  else
+    Result := false;
 end;
 
 procedure TCustomRichMemo.SetParaNumbering(TextStart, TextLen: Integer;

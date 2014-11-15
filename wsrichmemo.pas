@@ -47,9 +47,9 @@ const
 
 type
   TIntParaMetric = record
-    StartIndent : Double; // in points
-    EndIndent   : Double; // in points
-    Offset      : Double; // in points
+    FirstLine   : Double; // in points
+    TailIndent  : Double; // in points
+    HeadIndent  : Double; // in points
     SpaceBefore : Double; // in points
     SpaceAfter  : Double; // in points
     LineSpacing : Double; // todo: ?
@@ -101,6 +101,8 @@ type
       var AMetric: TIntParaMetric): Boolean; virtual;
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AMetric: TIntParaMetric); virtual;
+    class function GetParaNumbering(const AWinControl: TWinControl; TextStart: Integer;
+      var ANumber: TIntParaNumbering): Boolean; virtual;
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); virtual;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
@@ -176,6 +178,13 @@ class procedure TWSCustomRichMemo.SetParaMetric(
   const AMetric: TIntParaMetric);
 begin
 
+end;
+
+class function TWSCustomRichMemo.GetParaNumbering(
+  const AWinControl: TWinControl; TextStart: Integer;
+  var ANumber: TIntParaNumbering): Boolean;
+begin
+  Result := false;
 end;
 
 class procedure TWSCustomRichMemo.SetParaNumbering(

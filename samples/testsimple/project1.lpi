@@ -51,7 +51,7 @@
         <UnitName Value="Unit1"/>
       </Unit1>
       <Unit2>
-        <Filename Value="../../../../../wnlibsvn/CarbonPaste.pas"/>
+        <Filename Value="../../../../wnlibsvn/CarbonPaste.pas"/>
         <IsPartOfProject Value="True"/>
       </Unit2>
     </Units>
@@ -70,13 +70,9 @@
         <UseAnsiStrings Value="False"/>
       </SyntaxOptions>
     </Parsing>
-    <Linking>
-      <Options>
-        <Win32>
-          <GraphicApplication Value="True"/>
-        </Win32>
-      </Options>
-    </Linking>
+    <Other>
+      <CompilerPath Value="$(CompPath)"/>
+    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

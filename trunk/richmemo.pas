@@ -383,13 +383,17 @@ function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
 begin
   if not HandleAllocated then HandleNeeded;
   if Assigned(Source) and HandleAllocated then begin
-    Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source);
-    if not Result and Assigned(RTFLoadStream) then begin
+    if Assigned(RTFLoadStream) then begin
       Self.Lines.BeginUpdate;
-      Self.Lines.Clear;
-      Result:=RTFLoadStream(Self, Source);
-      Self.Lines.EndUpdate;
+      try
+        Self.Lines.Clear;
+        Result:=RTFLoadStream(Self, Source);
+      finally
+        Self.Lines.EndUpdate;
+      end;
     end;
+    if not Result then
+      Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source);
   end else
     Result := false;
 end;

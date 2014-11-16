@@ -419,7 +419,10 @@ begin
     //round(AMetrics.HeadIndent*20);
   para.dySpaceAfter:=round(AMetrics.SpaceAfter*20);
   para.dySpaceBefore:=round(AMetrics.SpaceBefore*20);
-  para.dyLineSpacing:=round(AMetrics.LineSpacing*20);
+  if AMetrics.LineSpacing > 0 then begin
+    para.dyLineSpacing:=round(AMetrics.LineSpacing*20);
+    para.bLineSpacingRule:=5; // always line spacing?
+  end;
   RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLength, para);
 end;
 

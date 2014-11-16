@@ -5,9 +5,9 @@ unit Unit1;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
+  Classes, SysUtils, LCLIntf, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls, Spin,
-  RichMemo;
+  RichMemo, RichMemoRTF, Win32RichMemo;
 
 type
 
@@ -26,6 +26,7 @@ type
     Button7: TButton;
     Button8: TButton;
     Button9: TButton;
+    Label3: TLabel;
     StartIdent: TFloatSpinEdit;
     FontDialog1: TFontDialog;
     Label1: TLabel;
@@ -138,6 +139,7 @@ end;
 procedure TForm1.Button5Click(Sender: TObject);
 var
   fs : TFileStream;
+  tm : longWord;
 begin
   if OpenDialog1.Execute then begin
     fs := nil;
@@ -211,6 +213,7 @@ procedure TForm1.RichMemo1KeyUp(Sender: TObject; var Key: Word;
   Shift: TShiftState);
 begin
   ParaMetricRead;
+  Label3.Caption:='Sel start: '+IntToStr(RichMemo1.SelStart);
 end;
 
 procedure TForm1.ParaMetricRead;

@@ -1,11 +1,11 @@
 object Form1: TForm1
   Left = 281
-  Height = 457
+  Height = 483
   Top = 198
   Width = 634
   ActiveControl = RichMemo1
   Caption = 'Form1'
-  ClientHeight = 457
+  ClientHeight = 483
   ClientWidth = 634
   OnCreate = FormCreate
   LCLVersion = '1.2.4.0'
@@ -29,9 +29,9 @@ object Form1: TForm1
     TabOrder = 0
   end
   object Button1: TButton
-    Left = 24
+    Left = 16
     Height = 25
-    Top = 382
+    Top = 368
     Width = 160
     Anchors = [akLeft, akBottom]
     Caption = 'Make Bold and Red'
@@ -42,7 +42,7 @@ object Form1: TForm1
   object Button2: TButton
     Left = 192
     Height = 25
-    Top = 382
+    Top = 368
     Width = 97
     Anchors = [akLeft, akBottom]
     Caption = 'Get Attribs'
@@ -53,7 +53,7 @@ object Form1: TForm1
   object Button3: TButton
     Left = 304
     Height = 25
-    Top = 382
+    Top = 368
     Width = 96
     Anchors = [akLeft, akBottom]
     Caption = 'Select Font'
@@ -64,7 +64,7 @@ object Form1: TForm1
   object Button4: TButton
     Left = 528
     Height = 25
-    Top = 382
+    Top = 368
     Width = 75
     Anchors = [akLeft, akBottom]
     Caption = 'Save RTF'
@@ -75,7 +75,7 @@ object Form1: TForm1
   object Button5: TButton
     Left = 440
     Height = 25
-    Top = 382
+    Top = 368
     Width = 75
     Anchors = [akLeft, akBottom]
     Caption = 'Load RTF'
@@ -84,9 +84,9 @@ object Form1: TForm1
     TabStop = False
   end
   object Button6: TButton
-    Left = 24
+    Left = 16
     Height = 25
-    Top = 415
+    Top = 400
     Width = 160
     Anchors = [akLeft, akBottom]
     Caption = 'Next Style Range'
@@ -188,23 +188,31 @@ object Form1: TForm1
     OnClick = Button12Click
     TabOrder = 14
   end
+  object Label3: TLabel
+    Left = 16
+    Height = 15
+    Top = 434
+    Width = 34
+    Caption = 'Label3'
+    ParentColor = False
+  end
   object FontDialog1: TFontDialog
     MinFontSize = 0
     MaxFontSize = 0
     left = 352
-    top = 429
+    top = 389
   end
   object SaveDialog1: TSaveDialog
     DefaultExt = '.rtf'
     Filter = 'RichText file (*.rtf)|*.rtf'
     Options = [ofOverwritePrompt, ofEnableSizing, ofViewDetail]
     left = 280
-    top = 429
+    top = 389
   end
   object OpenDialog1: TOpenDialog
     DefaultExt = '.rtf'
     Filter = 'RichText file (*.rtf)|*.rtf'
     left = 208
-    top = 429
+    top = 389
   end
 end

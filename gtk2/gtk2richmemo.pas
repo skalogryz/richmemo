@@ -56,6 +56,9 @@ type
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AAlign: Integer); override;
 
+    class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AMetric: TIntParaMetric); override;
+
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
   end;
 
@@ -299,6 +302,50 @@ begin
       'justification-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetParaMetric(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AMetric: TIntParaMetric);
+var
+  w      : PGtkWidget;
+  buffer : PGtkTextBuffer;
+  tag    : PGtkTextTag;
+  h      : double;
+  fl     : double;
+  t      : double;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  DPIFactor = ScreenDPI / PageDPI;
+begin
+  h:=AMetric.HeadIndent;
+  if h<0 then h:=0;
+  fl:=AMetric.FirstLine;
+  if fl<0 then fl:=0;
+
+  if fl<h then begin
+    t:=h;
+    h:=fl;
+    fl:=fl-t;
+  end else
+    fl:=fl-h;
+
+  GetWidgetBuffer(AWinControl, w, buffer);
+  tag := gtk_text_buffer_create_tag (buffer, nil,
+      'pixels-above-lines',   [round(AMetric.SpaceBefore*DPIFactor) ,
+      'pixels-above-lines-set', gboolean(gTRUE),
+      'pixels-below-lines',   round(AMetric.SpaceAfter*DPIFactor),
+      'pixels-below-lines-set', gboolean(gTRUE),
+      'left-margin', round(h*DPIFactor),
+      'left-margin-set', gboolean(gTRUE),
+      'right-margin', round(AMetric.TailIndent*DPIFactor),
+      'right-margin-set', gboolean(gTRUE),
+      'indent', round(fl*DPIFactor),
+      'indent-set', gboolean(gTRUE),
+      nil]);
+  ApplyTag(buffer, tag, TextStart, TextLen, true);
+
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;

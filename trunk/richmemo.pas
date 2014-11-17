@@ -381,6 +381,7 @@ end;
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
 begin
+  Result:=false;
   if not HandleAllocated then HandleNeeded;
   if Assigned(Source) and HandleAllocated then begin
     if Assigned(RTFLoadStream) then begin
@@ -394,8 +395,7 @@ begin
     end;
     if not Result then
       Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source);
-  end else
-    Result := false;
+  end;
 end;
 
 function TCustomRichMemo.SaveRichText(Dest: TStream): Boolean;

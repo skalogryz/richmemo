@@ -7,7 +7,7 @@ interface
 uses
   Classes, SysUtils, LCLIntf, FileUtil, LResources, Forms, Controls, Graphics, Dialogs,
   StdCtrls, ExtCtrls, ComCtrls, Spin,
-  RichMemo, RichMemoRTF, Win32RichMemo;
+  RichMemo, RichMemoRTF;
 
 type
 
@@ -201,6 +201,7 @@ end;
 
 procedure TForm1.FormCreate(Sender: TObject);
 begin
+  RegisterRTFLoader;
 end;
 
 procedure TForm1.RichMemo1Change(Sender: TObject);

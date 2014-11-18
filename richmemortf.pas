@@ -218,8 +218,18 @@ end;
 { TRTFMemoParserr }
 
 procedure TRTFMemoParser.classUnk;
+var
+  txt : string;
+  ws : UnicodeString;
 begin
   //writelN('unk: ', rtfMajor, ' ',rtfMinor,' ', rtfParam,' ', GetRtfText);
+  txt:=GetRtfText;
+  if (length(txt)>2) and (txt[1]='\') and (txt[2]='u') and (txt[3] in ['0'..'9']) then begin
+    SetLength(Ws,1);
+    ws[1]:=UnicodeChar(rtfParam);
+    txtbuf:=txtbuf+UTF8Encode(ws);
+    txtlen:=length(txtbuf);
+  end; 
 end;
 
 function CharToByte(const ch: AnsiChar): Byte;

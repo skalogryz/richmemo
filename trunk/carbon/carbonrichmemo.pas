@@ -77,7 +77,7 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       {Mask: TTextStyleMask;} const Params: TIntFontParams); override;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
-      const AAlign: Integer); override;
+      const AAlign: TIntParaAlignment); override;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
@@ -341,7 +341,7 @@ end;
 
 class procedure TCarbonWSCustomRichMemo.SetParaAlignment(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;
-  const AAlign: Integer);
+  const AAlign: TIntParaAlignment);
 begin
  { Doesn't seem to be possible. See this:
   http://lists.apple.com/archives/carbon-dev/2005/Jun/msg01068.html }

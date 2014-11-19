@@ -28,7 +28,7 @@
 "/>
     <License Value="LGPL"/>
     <Version Major="1"/>
-    <Files Count="13">
+    <Files Count="15">
       <Item1>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
@@ -88,7 +88,16 @@
       <Item13>
         <Filename Value="cocoa\cocoarichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="cocoarichmemo"/>
       </Item13>
+      <Item14>
+        <Filename Value="richmemoutils.pas"/>
+        <UnitName Value="RichMemoUtils"/>
+      </Item14>
+      <Item15>
+        <Filename Value="richmemohelpers.pas"/>
+        <UnitName Value="RichMemoHelpers"/>
+      </Item15>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

@@ -31,14 +31,53 @@ uses
   // LCL units
   Graphics,
   // RichMemoUnits
-  WSRichMemo, 
+  RichMemo, WSRichMemo, RichMemoUtils,
   // Win32 widgetset units  
-  win32proc
-  ,ActiveX, ComObj;
+  win32proc,ActiveX, ComObj;
 
 const
   IID_IRichEditOle: TGUID = '{00020D00-0000-0000-C000-000000000046}';
   IID_IRichEditOleCallback: TGUID = '{00020D03-0000-0000-C000-000000000046}';
+  CLSID_NULL: TGUID = '{00000000-0000-0000-0000-000000000000}';
+
+const
+  OLERENDER_NONE    = 0;
+  OLERENDER_DRAW    = 1;
+  OLERENDER_FORMAT  = 2;
+  OLERENDER_ASIS    = 3;
+
+const
+  REO_GETOBJ_NO_INTERFACES	= 0;
+  REO_GETOBJ_POLEOBJ	= 1;
+  REO_GETOBJ_PSTG	 = 2;
+  REO_GETOBJ_POLESITE	 = 4;
+  REO_GETOBJ_ALL_INTERFACES	= 7;
+  REO_CP_SELECTION  = -1;
+  REO_IOB_SELECTION = -1;
+  REO_IOB_USE_CP = -2;
+  REO_NULL	= 0;
+  REO_READWRITEMASK	= $3F;
+  REO_DONTNEEDPALETTE	= 32;
+  REO_BLANK	=  16;
+  REO_DYNAMICSIZE		= 8;
+  REO_INVERTEDSELECT	= 4;
+  REO_BELOWBASELINE	= 2;
+  REO_RESIZABLE	    = 1;
+  REO_LINK	        = $80000000;
+  REO_STATIC        =	$40000000;
+  REO_SELECTED			= $08000000;
+  REO_OPEN	        = $4000000;
+  REO_INPLACEACTIVE	= $2000000;
+  REO_HILITED	      = $1000000;
+  REO_LINKAVAILABLE	= $800000;
+  REO_GETMETAFILE	  = $400000;
+  RECO_PASTE = 0;
+  RECO_DROP	 = 1;
+  RECO_COPY	 = 2;
+  RECO_CUT	 = 3;
+  RECO_DRAG	 = 4;
+
+
 
 type
   TREOBJECT = packed record
@@ -496,6 +535,81 @@ begin
 
   SetSelection(RichEditWnd, s, l);
 end;
+
+function WinInsertImageFromFile (const ARichMemo: TCustomRichMemo; APos: Integer;
+   const FileNameUTF8: string;
+   const Options: TInsertOptions;
+   const AImgSize: TSize): Boolean;
+var
+  hnd : THandle;
+  rch : IRichEditOle;
+  Fmt : FORMATETC;
+  FN : WideString;
+  LockBytes: ILockBytes;
+  ClientSite: IOleClientSite;
+  Storage: IStorage;
+  Image: IOleObject;
+  Obj: TREOBJECT;
+  id: TGUID;
+  ImageLink: IOleObject;
+
+  sl, ss: Integer;
+begin
+  Result:=false;
+  if not Assigned(ARichMemo) then Exit;
+  if not ARichMemo.HandleAllocated then begin
+    ARichMemo.HandleNeeded;
+    if not ARichMemo.HandleAllocated then Exit;
+  end;
+  if (FileNameUTF8 ='') then Exit;
+
+  ss:=ARichMemo.SelStart;
+  sl:=ARichMemo.SelLength;
+  try
+    hnd:= THandle(ARichMemo.Handle);
+    SendMessage(hnd, EM_GETOLEINTERFACE, 0, LPARAM(@rch));
+
+    FillChar(Fmt, sizeoF(Fmt), 0);
+    Fmt.dwAspect:=DVASPECT_CONTENT;
+    Fmt.lindex:=-1;
+
+    CreateILockBytesOnHGlobal(0, True, LockBytes);
+    StgCreateDocfileOnILockBytes(LockBytes, STGM_SHARE_EXCLUSIVE or STGM_CREATE or STGM_READWRITE, 0, Storage);
+    rch.GetClientSite(ClientSite);
+
+    FN := UTF8Decode( FileNameUTF8 );
+    OleCreateFromFile(CLSID_NULL, @FN[1], IOleObject
+       , OLERENDER_DRAW, @Fmt, ClientSite, Storage, Image);
+    OleSetContainedObject(Image, True);
+
+    FillChar(Obj, sizeof(Obj),0);
+    Obj.cbStruct := SizeOf(Obj);
+    Obj.cp := REO_CP_SELECTION;
+    Image.GetUserClassID(Obj.clsid);
+    Obj.poleobj := Image;
+    Obj.pstg := Storage;
+    Obj.polesite := ClientSite;
+    Obj.dvaspect := DVASPECT_CONTENT;
+    if (AImgSize.cx<>0) or (AImgSize.cy<>0) then begin
+      //http://msdn.microsoft.com/en-us/library/windows/desktop/bb787946%28v=vs.85%29.aspx
+      //The size of the object. The unit of measure is 0.01 millimeters, which is a HIMETRIC measurement.
+      Obj.sizel.cx:=round(AImgSize.cx / 72 * 2.54 * 1000);
+      Obj.sizel.cy:=round(AImgSize.cy / 72 * 2.54 * 1000);
+    end;
+    if ioBelowBaseLine in Options then
+      Obj.dwFlags:=Obj.dwFlags or REO_BELOWBASELINE;
+
+    ARichMemo.SelStart:=APos;
+    ARichMemo.SelLength:=0;
+    Result:= Succeeded(rch.InsertObject(obj));
+  finally
+    ARichMemo.SelStart:=ss;
+    ARichMemo.SelLength:=sl;
+  end;
+end;
+
+initialization
+  InsertImageFromFile := @WinInsertImageFromFile;
 
 end.                                            
 

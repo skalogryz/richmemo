@@ -35,7 +35,7 @@ uses
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
   Gtk2WSControls,
   // RichMemo
-  WSRichMemo;
+  RichMemo, WSRichMemo;
 
   { TGtk2WSCustomRichMemo }
 type
@@ -52,9 +52,9 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams); override;
 
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
-      var AAlign: Integer): Boolean; override;
+      var AAlign: TIntParaAlignment): Boolean; override;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
-      const AAlign: Integer); override;
+      const AAlign: TIntParaAlignment); override;
 
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AMetric: TIntParaMetric); override;
@@ -231,9 +231,9 @@ var
   gcolor  : TGdkColor;
   nm      : string;
 const
-  PangoUnderline : array [Boolean] of Integer = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
-  PangoBold      : array [Boolean] of Integer = (PANGO_WEIGHT_NORMAL, PANGO_WEIGHT_BOLD);
-  PangoItalic    : array [Boolean] of Integer = (PANGO_STYLE_NORMAL, PANGO_STYLE_ITALIC);
+  pu: array [Boolean] of gint = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
+  pb: array [Boolean] of gint = (PANGO_WEIGHT_NORMAL, PANGO_WEIGHT_BOLD);
+  pi: array [Boolean] of gint = (PANGO_STYLE_NORMAL, PANGO_STYLE_ITALIC);
 begin
   GetWidgetBuffer(AWinControl, TextWidget, buffer);
   if not Assigned(buffer) then Exit;
@@ -246,13 +246,13 @@ begin
       'family',         @nm[1],
       'foreground-gdk', @gcolor,
       'size-set',       gboolean(gTRUE),
-      'size-points',    Double(Params.Size),
+      'size-points',    gdouble(Params.Size),
       'underline-set',  gboolean(gTRUE),
-      'underline',      PangoUnderline[fsUnderline in Params.Style],
+      'underline',      gint(pu[fsUnderline in Params.Style]),
       'weight-set',     gboolean(gTRUE),
-      'weight',         PangoBold[fsBold in Params.Style],
+      'weight',         gint(pb[fsBold in Params.Style]),
       'style-set',      gboolean(gTRUE),
-      'style',          PangoItalic[fsItalic in Params.Style],
+      'style',          gint(pi[fsItalic in Params.Style]),
       'strikethrough-set', gboolean(gTRUE),
       'strikethrough',    gboolean(fsStrikeOut in Params.Style),
       nil]);
@@ -261,7 +261,7 @@ begin
 end;
 
 class function TGtk2WSCustomRichMemo.GetParaAlignment(
-  const AWinControl: TWinControl; TextStart: Integer; var AAlign: Integer
+  const AWinControl: TWinControl; TextStart: Integer; var AAlign: TIntParaAlignment
   ): Boolean;
 var
   attr       : PGtkTextAttributes;
@@ -270,12 +270,12 @@ begin
   Result := Assigned(attr);
   if Result then begin
     case attr^.justification of
-      GTK_JUSTIFY_LEFT:   AAlign:=AL_LEFT;
-      GTK_JUSTIFY_RIGHT:  AAlign:=AL_RIGHT;
-      GTK_JUSTIFY_CENTER: AAlign:=AL_CENTER;
-      GTK_JUSTIFY_FILL:   AAlign:=AL_JUSTIFY;
+      GTK_JUSTIFY_LEFT:   AAlign:=paLeft;
+      GTK_JUSTIFY_RIGHT:  AAlign:=paRIGHT;
+      GTK_JUSTIFY_CENTER: AAlign:=paCenter;
+      GTK_JUSTIFY_FILL:   AAlign:=paJustify;
     else
-      AAlign:=AL_LEFT;
+      AAlign:=paLeft;
     end;
     gtk_text_attributes_unref(attr);
   end;
@@ -283,22 +283,23 @@ end;
 
 class procedure TGtk2WSCustomRichMemo.SetParaAlignment(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;
-  const AAlign: Integer);
+  const AAlign: TIntParaAlignment);
 var
   w      : PGtkWidget;
   buffer : PGtkTextBuffer;
   tag    : PGtkTextTag;
   val    : Integer;
 begin
-  val := GTK_JUSTIFY_LEFT;
   case AAlign of
-    AL_RIGHT:   val:=GTK_JUSTIFY_RIGHT;
-    AL_CENTER:  val:=GTK_JUSTIFY_CENTER;
-    AL_JUSTIFY: val:=GTK_JUSTIFY_FILL;
+    paRight:   val:=GTK_JUSTIFY_RIGHT;
+    paCenter:  val:=GTK_JUSTIFY_CENTER;
+    paJustify: val:=GTK_JUSTIFY_FILL;
+  else
+    val := GTK_JUSTIFY_LEFT;
   end;
   GetWidgetBuffer(AWinControl, w, buffer);
   tag := gtk_text_buffer_create_tag (buffer, nil,
-      'justification', [  val,
+      'justification', [   gint(val),
       'justification-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
@@ -314,6 +315,7 @@ var
   h      : double;
   fl     : double;
   t      : double;
+  v      : Integer;
 const
   ScreenDPI = 96; // todo: might change, should be received dynamically
   PageDPI   = 72; // not expected to be changed
@@ -333,16 +335,16 @@ begin
 
   GetWidgetBuffer(AWinControl, w, buffer);
   tag := gtk_text_buffer_create_tag (buffer, nil,
-      'pixels-above-lines',   [round(AMetric.SpaceBefore*DPIFactor) ,
+      'pixels-above-lines',   [ gint(round(AMetric.SpaceBefore*DPIFactor)),
       'pixels-above-lines-set', gboolean(gTRUE),
-      'pixels-below-lines',   round(AMetric.SpaceAfter*DPIFactor),
+      'pixels-below-lines',     gint(round(AMetric.SpaceAfter*DPIFactor)),
       'pixels-below-lines-set', gboolean(gTRUE),
-      'left-margin', round(h*DPIFactor),
-      'left-margin-set', gboolean(gTRUE),
-      'right-margin', round(AMetric.TailIndent*DPIFactor),
-      'right-margin-set', gboolean(gTRUE),
-      'indent', round(fl*DPIFactor),
-      'indent-set', gboolean(gTRUE),
+      'left-margin',            gint(round(h*DPIFactor)),
+      'left-margin-set',        gboolean(gTRUE),
+      'right-margin',           gint(round(AMetric.TailIndent*DPIFactor)),
+      'right-margin-set',       gboolean(gTRUE),
+      'indent',                 gint(round(fl*DPIFactor)),
+      'indent-set',             gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
 

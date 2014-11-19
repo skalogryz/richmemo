@@ -33,8 +33,77 @@ uses
   // RichMemoUnits
   WSRichMemo, 
   // Win32 widgetset units  
-  win32proc; 
-  
+  win32proc
+  ,ActiveX, ComObj;
+
+const
+  IID_IRichEditOle: TGUID = '{00020D00-0000-0000-C000-000000000046}';
+  IID_IRichEditOleCallback: TGUID = '{00020D03-0000-0000-C000-000000000046}';
+
+type
+  TREOBJECT = packed record
+    cbStruct  : DWORD;
+    cp        : LONG;
+    clsid     : CLSID;
+    poleobj   : IOLEOBJECT;
+    pstg      : ISTORAGE;
+    polesite  : IOLECLIENTSITE;
+    sizel     : SIZEL;
+    dvaspect  : DWORD;
+    dwFlags   : DWORD;
+    dwUser    : DWORD;
+  end;
+
+type
+  IRichEditOle = interface(IUnknown)
+    ['{00020D00-0000-0000-C000-000000000046}']
+    // *** IRichEditOle methods ***
+    function GetClientSite(out clientSite: IOleClientSite): HRESULT; stdcall;
+    function GetObjectCount: LongInt; stdcall;
+    function GetLinkCount: LongInt; stdcall;
+    function GetObject(iob: LongInt; out ReObject: TReObject;
+      dwFlags: DWORD): HRESULT; stdcall;
+    function InsertObject(var ReObject: TReObject): HRESULT; stdcall;
+    function ConvertObject(iob: LongInt; const clsidNew: TCLSID;
+      lpStrUserTypeNew: LPCSTR): HRESULT; stdcall;
+    function ActivateAs(const clsid, clsidAs: TCLSID): HRESULT; stdcall;
+    function SetHostNames(lpstrContainerApp: LPCSTR;
+      lpstrContainerObj: LPCSTR): HRESULT; stdcall;
+    function SetLinkAvailable(iob: LongInt; fAvailable: BOOL): HRESULT; stdcall;
+    function SetDvaspect(iob: LongInt; dvaspect: DWORD): HRESULT; stdcall;
+    function HandsOffStorage(iob: LongInt): HRESULT; stdcall;
+    function SaveCompleted(iob: LongInt; const stg: IStorage): HRESULT; stdcall;
+    function InPlaceDeactivate: HRESULT; stdcall;
+    function ContextSensitiveHelp(fEnterMode: BOOL): HRESULT; stdcall;
+    function GetClipboardData(const chrg: TCharRange; reco: DWORD;
+      out dataobj: IDataObject): HRESULT; stdcall;
+    function ImportDataObject(const dataobj: IDataObject; cf: TClipFormat;
+      hMetaPict: HGLOBAL): HRESULT; stdcall;
+  end;
+
+  IRichEditOleCallback = interface(IUnknown)
+    ['{00020D03-0000-0000-C000-000000000046}']
+    // *** IRichEditOleCallback methods ***
+    function GetNewStorage(out stg: IStorage): HRESULT; stdcall;
+    function GetInPlaceContext(out Frame: IOleInPlaceFrame;
+      out Doc: IOleInPlaceUIWindow;
+      lpFrameInfo: POleInPlaceFrameInfo): HRESULT; stdcall;
+    function ShowContainerUI(fShow: BOOL): HRESULT; stdcall;
+    function QueryInsertObject(const clsid: TCLSID; const stg: IStorage;
+      cp: LongInt): HRESULT; stdcall;
+    function DeleteObject(const oleobj: IOleObject): HRESULT; stdcall;
+    function QueryAcceptData(const dataobj: IDataObject;
+      var cfFormat: TClipFormat; reco: DWORD; fReally: BOOL;
+      hMetaPict: HGLOBAL): HRESULT; stdcall;
+    function ContextSensitiveHelp(fEnterMode: BOOL): HRESULT; stdcall;
+    function GetClipboardData(const chrg: TCharRange; reco: DWORD;
+      out dataobj: IDataObject): HRESULT; stdcall;
+    function GetDragDropEffect(fDrag: BOOL; grfKeyState: DWORD;
+      var dwEffect: DWORD): HRESULT; stdcall;
+    function GetContextMenu(seltype: Word; oleobj: IOleObject;
+      const chrg: TCharRange; var menu: HMENU): HRESULT; stdcall;
+  end;
+
 type
   { TRichEditManager }
 

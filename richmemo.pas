@@ -24,18 +24,37 @@ unit RichMemo;
 interface
 
 uses
-  Classes, SysUtils, Graphics, StdCtrls, 
-  WSRichMemo; 
+  Classes, SysUtils, Graphics, StdCtrls;
 
 type
+  TFontParams  = record
+    Name    : String;
+    Size    : Integer;
+    Color   : TColor;
+    Style   : TFontStyles;
+  end;
 
-  TFontParams     = WSRichMemo.TIntFontParams;
   TParaAlignment  = (paLeft, paRight, paCenter, paJustify);
-  TParaMetric     = WSRichMemo.TIntParaMetric;
-  TParaNumStyle   = WSRichMemo.TParaNumStyle;
-  TParaNumbering  = WSRichMemo.TIntParaNumbering;
+  TParaMetric = record
+    FirstLine   : Double; // in points
+    TailIndent  : Double; // in points
+    HeadIndent  : Double; // in points
+    SpaceBefore : Double; // in points
+    SpaceAfter  : Double; // in points
+    LineSpacing : Double; // multi
+  end;
+  TParaNumStyle   = (pnNone, pnBullet, pnNumber, pnLowLetter
+    , pnLowRoman, pnUpLetter, pnUpRoman, pnCustomChar);
+
+  TParaNumbering  = record
+    Numbering   : TParaNumStyle;
+    NumCustom   : WideChar;
+    NumIndent   : Double;
+  end;
 
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
+
+  TRichMemoObject = class(TObject);
 
   { TCustomRichMemo }
 
@@ -134,11 +153,15 @@ type
     property WantTabs;
     property WordWrap;
   end;
-  
+
+procedure InitFontParams(var p: TFontParams);
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
 function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
+
+procedure InitParaMatric(var m: TParaMetric);
+procedure InitParaNumbering(var n: TParaNumbering);
 
 var
   RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
@@ -146,8 +169,13 @@ var
 
 implementation
 
-const
-  ParaAlignCode : array [TParaAlignment] of Integer = (AL_LEFT, AL_RIGHT, AL_CENTER, AL_JUSTIFY);
+uses
+  WSRichMemo;
+
+procedure InitFontParams(var p: TFontParams);
+begin
+  FillChar(p, SizeOf(p), 0);
+end;
 
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
 begin 
@@ -166,10 +194,21 @@ end;
 
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
 begin
+  InitFontParams(Result);
   Result.Name := Name;
   Result.Size := Size;
   Result.Color := color;
   Result.Style := styles;
+end;
+
+procedure InitParaMatric(var m: TParaMetric);
+begin
+  FillChar(m, sizeof(m), 0);
+end;
+
+procedure InitParaNumbering(var n: TParaNumbering);
+begin
+  FillChar(n, sizeof(n), 0);
 end;
 
 { TCustomRichMemo }
@@ -247,24 +286,14 @@ var
   ac: Integer;
 begin
   Result := HandleAllocated and
-    TWSCustomRichMemoClass(WidgetSetClass).GetParaAlignment(Self, TextStart, ac);
-  if Result then begin
-    case ac of
-      AL_LEFT: AAlign:=paLeft;
-      AL_RIGHT: AAlign:=paRight;
-      AL_CENTER: AAlign:=paCenter;
-      AL_JUSTIFY: AAlign:=paJustify
-    else
-      AAlign:=paLeft;
-    end;
-  end;
+    TWSCustomRichMemoClass(WidgetSetClass).GetParaAlignment(Self, TextStart, AAlign);
 end;
 
 procedure TCustomRichMemo.SetParaAlignment(TextStart, TextLen: Integer;
   AAlign: TParaAlignment);
 begin
   if HandleAllocated then
-    TWSCustomRichMemoClass(WidgetSetClass).SetParaAlignment(Self, TextStart, TextLen, ParaAlignCode[AAlign]);
+    TWSCustomRichMemoClass(WidgetSetClass).SetParaAlignment(Self, TextStart, TextLen, AAlign);
 end;
 
 function TCustomRichMemo.GetParaMetric(TextStart: Integer;
@@ -377,7 +406,6 @@ begin
     inc(i, l);
   end;
 end;
-
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
 begin

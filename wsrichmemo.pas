@@ -25,44 +25,16 @@ interface
 
 uses
   Classes, SysUtils, 
-
   Graphics, Controls, StdCtrls,
-  
-  WSStdCtrls;  
-  
-type
-
-  TIntFontParams = record
-    Name    : String;
-    Size    : Integer;
-    Color   : TColor;
-    Style   : TFontStyles;
-  end;
-
-const
-  AL_LEFT    = 1;
-  AL_RIGHT   = 2;
-  AL_CENTER  = 3;
-  AL_JUSTIFY = 4;
+  WSStdCtrls, RichMemo;
 
 type
-  TIntParaMetric = record
-    FirstLine   : Double; // in points
-    TailIndent  : Double; // in points
-    HeadIndent  : Double; // in points
-    SpaceBefore : Double; // in points
-    SpaceAfter  : Double; // in points
-    LineSpacing : Double; // todo: ?
-  end;
+  TIntParaAlignment = RichMemo.TParaAlignment;
+  TIntFontParams = RichMemo.TFontParams;
 
-  TParaNumStyle = (pnNone, pnBullet, pnNumber, pnLowLetter
-    , pnLowRoman, pnUpLetter, pnUpRoman, pnCustomChar);
-
-  TIntParaNumbering = record
-    Numbering   : TParaNumStyle;
-    NumCustom   : WideChar;
-    NumIndent   : Double;
-  end;
+type
+  TIntParaMetric = RichMemo.TParaMetric;
+  TIntParaNumbering = RichMemo.TParaNumbering;
 
   TTabAlignment = (taLeft, taCenter, taRight, taDecimal, taWordBar);
 
@@ -75,7 +47,6 @@ type
     Count : Integer;
     Tabs  : array of TTabInfo;
   end;
-
 
   { TWSCustomRichMemo }
 
@@ -94,9 +65,9 @@ type
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); virtual;
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
-      var AAlign: Integer): Boolean; virtual;
+      var AAlign: TIntParaAlignment): Boolean; virtual;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
-      const AAlign: Integer); virtual;
+      const AAlign: TIntParaAlignment); virtual;
     class function GetParaMetric(const AWinControl: TWinControl; TextStart: Integer;
       var AMetric: TIntParaMetric): Boolean; virtual;
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
@@ -155,14 +126,15 @@ begin
 end;
 
 class function TWSCustomRichMemo.GetParaAlignment(
-  const AWinControl: TWinControl; TextStart: Integer; var AAlign: Integer
-  ): Boolean;
+  const AWinControl: TWinControl; TextStart: Integer;
+  var AAlign: TIntParaAlignment): Boolean;
 begin
   Result := false;
 end;
 
 class procedure TWSCustomRichMemo.SetParaAlignment(
-  const AWinControl: TWinControl; TextStart, TextLen: Integer; const AAlign: Integer);
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AAlign: TIntParaAlignment);
 begin
 
 end;

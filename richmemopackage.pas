@@ -7,7 +7,8 @@ unit richmemopackage;
 interface
 
 uses
-  RichMemoFactory, richmemoregister, RichMemoRTF, LazarusPackageIntf;
+  RichMemoFactory, richmemoregister, RichMemoRTF, RichMemoUtils, 
+  RichMemoHelpers, LazarusPackageIntf;
 
 implementation
 

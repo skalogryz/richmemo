@@ -79,7 +79,7 @@ type
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
     function GetStyleRange(CharOfs: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
 
-    function GetParaAllignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; virtual;
+    function GetParaAlignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; virtual;
     procedure SetParaAlignment(TextStart, TextLen: Integer; AAlign: TParaAlignment); virtual;
     function GetParaMetric(TextStart: Integer; var AMetric: TParaMetric): Boolean; virtual;
     procedure SetParaMetric(TextStart, TextLen: Integer; const AMetric: TParaMetric); virtual;
@@ -280,7 +280,7 @@ begin
   end;
 end;
 
-function TCustomRichMemo.GetParaAllignment(TextStart: Integer;
+function TCustomRichMemo.GetParaAlignment(TextStart: Integer;
   var AAlign: TParaAlignment): Boolean;
 var
   ac: Integer;

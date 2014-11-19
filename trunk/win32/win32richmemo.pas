@@ -34,7 +34,7 @@ uses
   // Win32WidgetSet
   Win32WSControls, Win32Int, 
   // RichMemo headers
-  WSRichMemo, Win32RichMemoProc;
+  RichMemo, WSRichMemo, Win32RichMemoProc;
 
 type  
 
@@ -62,9 +62,9 @@ type
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
 
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
-      var AAlign: Integer): Boolean; override;
+      var AAlign: TParaAlignment): Boolean; override;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
-      const AAlign: Integer); override;
+      const AAlign: TIntParaAlignment); override;
 
     class function GetParaMetric(const AWinControl: TWinControl; TextStart: Integer;
       var AMetrics: TIntParaMetric): Boolean; override;
@@ -346,7 +346,7 @@ begin
 end;
 
 class function TWin32WSCustomRichMemo.GetParaAlignment(
-  const AWinControl: TWinControl; TextStart: Integer; var AAlign: Integer
+  const AWinControl: TWinControl; TextStart: Integer; var AAlign: TParaAlignment
   ): Boolean;
 var
   para : PARAFORMAT2;
@@ -355,28 +355,27 @@ begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
   case para.wAlignment of
-    PFA_CENTER:  AAlign:=AL_CENTER;
-    PFA_RIGHT:   AAlign:=AL_RIGHT;
-    PFA_JUSTIFY: AAlign:=AL_JUSTIFY;
+    PFA_CENTER:  AAlign:=paCenter;
+    PFA_RIGHT:   AAlign:=paRight;
+    PFA_JUSTIFY: AAlign:=paJustify;
   else
-    AAlign:=AL_LEFT;
+    AAlign:=paLeft;
   end;
   Result:=true;
 end;
 
 class procedure TWin32WSCustomRichMemo.SetParaAlignment(
-  const AWinControl: TWinControl; TextStart, TextLen: Integer; const AAlign: Integer);
+  const AWinControl: TWinControl; TextStart, TextLen: Integer; const AAlign: TIntParaAlignment);
 var
   para : PARAFORMAT2;
 const
-  WinPara : array [AL_LEFT..AL_JUSTIFY] of word = (PFA_LEFT, PFA_RIGHT, PFA_CENTER, PFA_JUSTIFY);
+  WinPara : array [TIntParaAlignment] of word = (PFA_LEFT, PFA_RIGHT, PFA_CENTER, PFA_JUSTIFY);
 begin
-  if not Assigned(RichEditManager) or not Assigned(AWinControl)
-    or (AAlign<AL_LEFT) or (AAlign>AL_JUSTIFY) then Exit;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   FillChar(para, sizeof(para), 0);
   para.cbSize:=sizeof(para);
   para.dwMask:=PFM_ALIGNMENT;
-  para.wAlignment:=WinPara[byte(AAlign)];
+  para.wAlignment:=WinPara[AAlign];
   RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLen, para);
 end;
 

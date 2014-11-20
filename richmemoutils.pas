@@ -28,8 +28,6 @@ uses
 const
   NoResize : TSize = ( cx: 0; cy : 0 );
 
-type
-  TInsertOptions = set of (ioBelowBaseLine);
 var
   { Disclaimer: the function would insert an image file into RichMemo
     (if implemented by the widgetset) But in a very inefficient way.
@@ -44,29 +42,25 @@ var
     }
   InsertImageFromFile : function (const ARichMemo: TCustomRichMemo; APos: Integer;
      const FileNameUTF8: string;
-     const Options : TInsertOptions;
      const AImgSize: TSize
   ): Boolean = nil;
 
 function InsertImageFromFileNoResize (const ARichMemo: TCustomRichMemo; APos: Integer;
-     const FileNameUTF8: string;
-     const Options : TInsertOptions): Boolean;
+     const FileNameUTF8: string): Boolean;
 
 implementation
 
 function InsertImageFileDummy(const ARichMemo: TCustomRichMemo; APos: Integer;
      const FileNameUTF8: string;
-     const Options: TInsertOptions;
      const AImgSize: TSize): Boolean;
 begin
   Result:=false;
 end;
 
 function InsertImageFromFileNoResize (const ARichMemo: TCustomRichMemo; APos: Integer;
-     const FileNameUTF8: string;
-     const Options : TInsertOptions): Boolean;
+     const FileNameUTF8: string): Boolean;
 begin
-  Result:=InsertImageFromFile(ARichMemo, APos, FileNameUTF8, Options, NoResize);
+  Result:=InsertImageFromFile(ARichMemo, APos, FileNameUTF8, NoResize);
 end;
 
 initialization

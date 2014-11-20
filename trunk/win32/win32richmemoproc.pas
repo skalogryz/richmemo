@@ -538,7 +538,6 @@ end;
 
 function WinInsertImageFromFile (const ARichMemo: TCustomRichMemo; APos: Integer;
    const FileNameUTF8: string;
-   const Options: TInsertOptions;
    const AImgSize: TSize): Boolean;
 var
   hnd : THandle;
@@ -554,6 +553,10 @@ var
   ImageLink: IOleObject;
 
   sl, ss: Integer;
+const
+  PointSize     = 72.0;
+  RtfSizeToInch = 2.54 * 1000.0;
+  SizeFactor    = 1 / PointSize * RtfSizeToInch;
 begin
   Result:=false;
   if not Assigned(ARichMemo) then Exit;
@@ -593,11 +596,9 @@ begin
     if (AImgSize.cx<>0) or (AImgSize.cy<>0) then begin
       //http://msdn.microsoft.com/en-us/library/windows/desktop/bb787946%28v=vs.85%29.aspx
       //The size of the object. The unit of measure is 0.01 millimeters, which is a HIMETRIC measurement.
-      Obj.sizel.cx:=round(AImgSize.cx / 72 * 2.54 * 1000);
-      Obj.sizel.cy:=round(AImgSize.cy / 72 * 2.54 * 1000);
+      Obj.sizel.cx:=round(AImgSize.cx * SizeFactor);
+      Obj.sizel.cy:=round(AImgSize.cy * SizeFactor);
     end;
-    if ioBelowBaseLine in Options then
-      Obj.dwFlags:=Obj.dwFlags or REO_BELOWBASELINE;
 
     ARichMemo.SelStart:=APos;
     ARichMemo.SelLength:=0;

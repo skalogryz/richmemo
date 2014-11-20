@@ -32,16 +32,37 @@ uses
   LCLType, LCLIntf, LCLProc, WSLCLClasses,
   Graphics, Controls, StdCtrls, 
   // Win32WidgetSet
-  Win32WSControls, Win32Int, 
+  Win32WSControls, Win32Int, Win32WSStdCtrls, win32proc,
   // RichMemo headers
   RichMemo, WSRichMemo, Win32RichMemoProc;
 
 type  
 
+  { TWin32RichMemoStringsW }
+
+  TWin32RichMemoStringsW = class(TWin32MemoStrings)
+  protected
+    fHandle : HWND;
+    function GetTextStr: string; override;
+  public
+    constructor Create(AHandle: HWND; TheOwner: TWinControl);
+  end;
+
+  { TWin32RichMemoStringsA }
+
+  TWin32RichMemoStringsA = class(TWin32MemoStrings)
+  protected
+    fHandle : HWND;
+    function GetTextStr: string; override;
+  public
+    constructor Create(AHandle: HWND; TheOwner: TWinControl);
+  end;
+
   { TWin32WSCustomRichMemo }
 
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
+    class function GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
     class procedure SetColor(const AWinControl: TWinControl); override;
   
     class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
@@ -111,9 +132,79 @@ begin
     //Result := WindowProc(Window, Msg, WParam, LParam)
   end else
     Result := WindowProc(Window, Msg, WParam, LParam);
-end;  
+end;
+
+{ TWin32RichMemoStringsW }
+
+constructor TWin32RichMemoStringsW.Create(AHandle: HWND; TheOwner: TWinControl);
+begin
+  inherited Create(AHandle, TheOwner);
+  fHandle:=AHandle;
+end;
+
+function TWin32RichMemoStringsW.GetTextStr: string;
+var
+  p   : GETTEXTLENGTHEX;
+  t   : GETTEXTEX;
+  res : Integer;
+  w   : WideString;
+begin
+  fillchar(p, sizeof(p), 0);
+  p.flags:=GTL_DEFAULT or GTL_PRECISE or GTL_NUMCHARS;
+  res := SendMessageW(fHandle, EM_GETTEXTLENGTHEX, WPARAM(@P), CP_WINUNICODE);
+  if res>0 then begin
+    SetLength(w, res);
+    FillChar(t, sizeof(t), 0);
+    t.cb:=length(w)*sizeof(WideChar);
+    t.flags:=GT_DEFAULT;
+    t.codepage:=CP_WINUNICODE;
+    res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@w[1]));
+    Result:=UTF8Encode(w);
+  end else
+    Result:='';
+end;
+
+
+{ TWin32RichMemoStringsA }
+
+constructor TWin32RichMemoStringsA.Create(AHandle: HWND; TheOwner: TWinControl);
+begin
+  inherited Create(AHandle, TheOwner);
+  fHandle:=AHandle;
+end;
+
+function TWin32RichMemoStringsA.GetTextStr: string;
+var
+  p   : GETTEXTLENGTHEX;
+  t   : GETTEXTEX;
+  res : Integer;
+  s   : WideString;
+begin
+  fillchar(p, sizeof(p), 0);
+  p.flags:=GTL_DEFAULT or GTL_PRECISE or GTL_NUMBYTES;
+  res := SendMessageW(fHandle, EM_GETTEXTLENGTHEX, WPARAM(@P), CP_ACP);
+  if res>0 then begin
+    SetLength(s, res);
+    FillChar(t, sizeof(t), 0);
+    t.cb:=length(s);
+    t.flags:=GT_DEFAULT;
+    t.codepage:=CP_ACP;
+    res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@s[1]));
+    Result:=AnsiToUtf8(s);
+  end else
+    Result:='';
+end;
 
 { TWin32WSCustomRichMemo }
+
+class function TWin32WSCustomRichMemo.GetStrings(const ACustomMemo: TCustomMemo
+  ): TStrings;
+begin
+  if UnicodeEnabledOS then
+    Result := TWin32RichMemoStringsW.Create(ACustomMemo.Handle, ACustomMemo)
+  else
+    Result := TWin32RichMemoStringsA.Create(ACustomMemo.Handle, ACustomMemo);
+end;
 
 class procedure TWin32WSCustomRichMemo.SetColor(const AWinControl: TWinControl);  
 begin

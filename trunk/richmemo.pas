@@ -160,7 +160,7 @@ function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overloa
 function GetFontParams(const Name: String; color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
 
-procedure InitParaMatric(var m: TParaMetric);
+procedure InitParaMetric(var m: TParaMetric);
 procedure InitParaNumbering(var n: TParaNumbering);
 
 var
@@ -204,6 +204,7 @@ end;
 procedure InitParaMatric(var m: TParaMetric);
 begin
   FillChar(m, sizeof(m), 0);
+  m.LineSpacing:=1.0;
 end;
 
 procedure InitParaNumbering(var n: TParaNumbering);

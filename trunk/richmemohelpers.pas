@@ -20,10 +20,10 @@ unit RichMemoHelpers;
 
 interface
 
-uses
-  RichMemo, Graphics;
-
 {$IFDEF FPC_FULLVERSION >= 20600}
+uses
+  SysUtils, StrUtils, Graphics,
+  RichMemo;
 
 type
   TRichEditFromRichMemo = class(TObject);
@@ -79,10 +79,14 @@ type
 
   { TRichEditForMemo }
 
+  TSearchType = (stWholeWord, stMatchCase);
+  TSearchTypes = set of TSearchType;
+
   TRichEditForMemo = class helper for TCustomRichMemo
   public
     function SelAttributes: TTextAttributes;
     function Paragraph: TParaAttributes;
+    function FindText(const SearchStr: String; StartPos, Length: Integer; Options: TSearchTypes): Integer;
   end;
 {$ELSE}
   {$WARNING Class Helpers require FPC 2.6.0 or later, RichEdit compatible methods will not be available }
@@ -294,6 +298,25 @@ function TRichEditForMemo.Paragraph: TParaAttributes;
 begin
   Result:=TParaAttributes(TObject(Self));
 end;
+
+function TRichEditForMemo.FindText(const SearchStr: String; StartPos,
+  Length: Integer; Options: TSearchTypes): Integer;
+var
+  sub : WideString;
+  src : WideString;
+begin
+  src := UTF8Decode( TCustomRichMemo(Self).Text );
+  sub := UTF8Decode(SearchStr);
+  if not (stMatchCase in Options) then begin
+    src:=WideUpperCase(src);
+    sub:=WideUpperCase(sub);
+  end;
+  src:=Copy(src, StartPos+1, Length);
+  Result:=Pos(sub, src);
+  if Result<=0 then Result:=-1
+  else Result:=StartPos+Result-1;
+end;
+
 {$ENDIF}
 
 end.

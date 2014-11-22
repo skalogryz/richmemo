@@ -79,7 +79,8 @@ type
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
     function GetStyleRange(CharOfs: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
 
-    function GetParaAlignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; virtual;
+    function GetParaAlignment(TextStart: Integer; var AAlign: TParaAlignment): Boolean; overload; virtual;
+    function GetParaAlignment(TextStart: Integer): TParaAlignment; overload;
     procedure SetParaAlignment(TextStart, TextLen: Integer; AAlign: TParaAlignment); virtual;
     function GetParaMetric(TextStart: Integer; var AMetric: TParaMetric): Boolean; virtual;
     procedure SetParaMetric(TextStart, TextLen: Integer; const AMetric: TParaMetric); virtual;
@@ -288,6 +289,11 @@ var
 begin
   Result := HandleAllocated and
     TWSCustomRichMemoClass(WidgetSetClass).GetParaAlignment(Self, TextStart, AAlign);
+end;
+
+function TCustomRichMemo.GetParaAlignment(TextStart: Integer): TParaAlignment;
+begin
+  GetParaAlignment(TextStart, Result);
 end;
 
 procedure TCustomRichMemo.SetParaAlignment(TextStart, TextLen: Integer;

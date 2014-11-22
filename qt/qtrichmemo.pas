@@ -1,7 +1,10 @@
 unit QtRichMemo;
 
 interface
-
+//
+// Following class methods are need for the implementation
+//  QTextCharFormatH
+//  QTextBlockFormatH
 uses
   LCLType, Controls, StdCtrls,
   qt4, qtwidgets, qtprivate,

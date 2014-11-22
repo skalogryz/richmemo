@@ -333,7 +333,7 @@ begin
     AMetric.FirstLine:=attr^.indent*PixToPt;
     AMetric.HeadIndent:=attr^.left_margin*PixToPt;
     AMetric.TailIndent:=attr^.right_margin*PixToPt;
-    AMetric.LineSpacing:=(attr^.pixels_inside_wrap*PixToPt+fp.Size*1.2)/(fp.Size*1.2);
+    AMetric.LineSpacing:=(attr^.pixels_inside_wrap*PixToPt+fp.Size)/(fp.Size);
     gtk_text_attributes_unref(attr);
   end;
 end;
@@ -384,7 +384,7 @@ begin
       'right-margin-set',       gboolean(gTRUE),
       'indent',                 gint(round(fl*DPIFactor)),
       'indent-set',             gboolean(gTRUE),
-      'pixels-inside-wrap',     gint(round(fp.Size*1.2*(AMetric.LineSpacing-1)*DPIFactor)),
+      'pixels-inside-wrap',     gint(round(fp.Size*(AMetric.LineSpacing-1)*DPIFactor)),
       'pixels-inside_wrap-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);

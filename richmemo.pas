@@ -41,8 +41,14 @@ type
     HeadIndent  : Double; // in points
     SpaceBefore : Double; // in points
     SpaceAfter  : Double; // in points
-    LineSpacing : Double; // multi
+    LineSpacing : Double; // multiplier - matching CSS line-height by percentage/em
+                          // note, that normal LineSpacing is 1.2, not 1.0
   end;
+
+const
+  DefLineSpacing = 1.2;
+
+type
   TParaNumStyle   = (pnNone, pnBullet, pnNumber, pnLowLetter
     , pnLowRoman, pnUpLetter, pnUpRoman, pnCustomChar);
 
@@ -54,6 +60,8 @@ type
 
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
 
+
+type
   TRichMemoObject = class(TObject);
 
   { TCustomRichMemo }
@@ -205,7 +213,7 @@ end;
 procedure InitParaMetric(var m: TParaMetric);
 begin
   FillChar(m, sizeof(m), 0);
-  m.LineSpacing:=1.0;
+  m.LineSpacing:=DefLineSpacing;
 end;
 
 procedure InitParaNumbering(var n: TParaNumbering);

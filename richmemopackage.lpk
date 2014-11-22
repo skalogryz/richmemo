@@ -9,8 +9,8 @@
       <Version Value="11"/>
       <PathDelim Value="\"/>
       <SearchPaths>
-        <IncludeFiles Value="cocoa"/>
-        <OtherUnitFiles Value="win32;carbon;gtk2;cocoa"/>
+        <IncludeFiles Value="cocoa;qt"/>
+        <OtherUnitFiles Value="win32;carbon;gtk2;cocoa;qt"/>
         <UnitOutputDirectory Value="lib\$(TargetCPU)-$(TargetOS)"/>
       </SearchPaths>
       <Parsing>
@@ -28,7 +28,7 @@
 "/>
     <License Value="LGPL"/>
     <Version Major="1"/>
-    <Files Count="15">
+    <Files Count="16">
       <Item1>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
@@ -98,6 +98,10 @@
         <Filename Value="richmemohelpers.pas"/>
         <UnitName Value="RichMemoHelpers"/>
       </Item15>
+      <Item16>
+        <Filename Value="qt\qtrichmemo.pas"/>
+        <AddToUsesPkgSection Value="False"/>
+      </Item16>
     </Files>
     <Type Value="RunAndDesignTime"/>
     <RequiredPkgs Count="2">

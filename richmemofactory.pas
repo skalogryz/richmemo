@@ -9,6 +9,7 @@ interface
 {$ifdef LCLCarbon}{$undef NoRichMemo}{$endif}
 {$ifdef LCLGtk2}{$undef NoRichMemo}{$endif}
 {$ifdef LCLCocoa}{$undef NoRichMemo}{$endif}
+{$ifdef LCLQt}{$undef NoRichMemo}{$endif}
 
 uses
   WSLCLClasses,
@@ -26,6 +27,7 @@ uses
   ,RichMemoRTF, Gtk2RichMemo
   {$endif}
   {$ifdef LCLCocoa},CocoaRichMemo{$endif}
+  {$ifdef LCLQt},QtRichMemo{$endif}
   ;
 
 function RegisterCustomRichMemo: Boolean;
@@ -44,6 +46,7 @@ begin
   {$endif}
   {$endif}
   {$ifdef LCLCocoa}RegisterWSComponent(TCustomRichMemo, TCocoaWSCustomRichMemo);{$endif}
+  {$ifdef LCLQt}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
   {$ifdef NoRichMemo}RegisterWSComponent(TCustomRichMemo, TWSCustomRichMemo);{$endif}
 end;
 

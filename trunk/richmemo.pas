@@ -201,7 +201,7 @@ begin
   Result.Style := styles;
 end;
 
-procedure InitParaMatric(var m: TParaMetric);
+procedure InitParaMetric(var m: TParaMetric);
 begin
   FillChar(m, sizeof(m), 0);
   m.LineSpacing:=1.0;

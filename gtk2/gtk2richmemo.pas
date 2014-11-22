@@ -26,16 +26,16 @@ interface
 uses
   // Bindings
   gtk2, glib2, gdk2, pango,
-  // FCL
-  Classes, SysUtils,
+  // RTL/FCL
+  Types, Classes, SysUtils,
   // LCL
   LCLType, Controls, Graphics,
   // Gtk2 widget
   Gtk2Def,
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
-  Gtk2WSControls,
+  Gtk2WSControls, gdk2pixbuf,
   // RichMemo
-  RichMemo, WSRichMemo;
+  RichMemo, WSRichMemo, RichMemoUtils;
 
   { TGtk2WSCustomRichMemo }
 type
@@ -45,6 +45,7 @@ type
     class procedure GetWidgetBuffer(const AWinControl: TWinControl; var TextWidget: PGtkWidget; var Buffer: PGtkTextBuffer);
     class function GetAttrAtPos(const AWinControl: TWinControl; TextStart: Integer): PGtkTextAttributes;
     class procedure ApplyTag(abuffer: PGtkTextBuffer; tag: PGtkTextTag; TextStart, TextLen: Integer; ToParagraphs: Boolean = False);
+
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
 
@@ -56,10 +57,17 @@ type
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AAlign: TIntParaAlignment); override;
 
+    class function GetParaMetric(const AWinControl: TWinControl; TextStart: Integer;
+      var AMetric: TIntParaMetric): Boolean; override;
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AMetric: TIntParaMetric); override;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
+
+    class function ImageFromFile(const ARichMemo: TCustomRichMemo; APos: Integer;
+         const FileNameUTF8: string;
+         const AImgSize: TSize
+      ): Boolean;
   end;
 
 implementation
@@ -305,6 +313,31 @@ begin
   ApplyTag(buffer, tag, TextStart, TextLen, true);
 end;
 
+class function TGtk2WSCustomRichMemo.GetParaMetric(
+  const AWinControl: TWinControl; TextStart: Integer;
+  var AMetric: TIntParaMetric): Boolean;
+var
+  attr : PGtkTextAttributes;
+  fp   : TFontParams;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  PixToPt   = PageDPI / ScreenDPI;
+begin
+  attr:=GetAttrAtPos(AWinControl, TextStart);
+  GtkTextAttrToFontParams(attr^, fp);
+  Result := Assigned(attr);
+  if Result then begin
+    AMetric.SpaceAfter:=attr^.pixels_above_lines*PixToPt;
+    AMetric.SpaceBefore:=attr^.pixels_below_lines*PixToPt;
+    AMetric.FirstLine:=attr^.indent*PixToPt;
+    AMetric.HeadIndent:=attr^.left_margin*PixToPt;
+    AMetric.TailIndent:=attr^.right_margin*PixToPt;
+    AMetric.LineSpacing:=(attr^.pixels_inside_wrap*PixToPt+fp.Size*1.2)/(fp.Size*1.2);
+    gtk_text_attributes_unref(attr);
+  end;
+end;
+
 class procedure TGtk2WSCustomRichMemo.SetParaMetric(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;
   const AMetric: TIntParaMetric);
@@ -316,6 +349,8 @@ var
   fl     : double;
   t      : double;
   v      : Integer;
+  attr   : PGtkTextAttributes;
+  fp     : TFontParams;
 const
   ScreenDPI = 96; // todo: might change, should be received dynamically
   PageDPI   = 72; // not expected to be changed
@@ -333,6 +368,10 @@ begin
   end else
     fl:=fl-h;
 
+  attr:=GetAttrAtPos(AWinControl, TextStart);
+  GtkTextAttrToFontParams(attr^, fp);
+  gtk_text_attributes_unref(attr);
+
   GetWidgetBuffer(AWinControl, w, buffer);
   tag := gtk_text_buffer_create_tag (buffer, nil,
       'pixels-above-lines',   [ gint(round(AMetric.SpaceBefore*DPIFactor)),
@@ -345,9 +384,10 @@ begin
       'right-margin-set',       gboolean(gTRUE),
       'indent',                 gint(round(fl*DPIFactor)),
       'indent-set',             gboolean(gTRUE),
+      'pixels-inside-wrap',     gint(round(fp.Size*1.2*(AMetric.LineSpacing-1)*DPIFactor)),
+      'pixels-inside_wrap-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
-
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;
@@ -367,6 +407,40 @@ begin
     gtk_text_buffer_insert(b, @istart, @textUTF8[1], length(TextUTF8));
 end;
 
+class function TGtk2WSCustomRichMemo.ImageFromFile(
+  const ARichMemo: TCustomRichMemo; APos: Integer; const FileNameUTF8: string;
+  const AImgSize: TSize): Boolean;
+var
+  t: PGtkWidget;
+  b: PGtkTextBuffer;
+  istart: TGtkTextIter;
+  pix: PGdkPixbuf;
+  err: PGError;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  DPIFactor = ScreenDPI / PageDPI;
+begin
+  Result:=false;
+  GetWidgetBuffer(ARichMemo, t, b);
+  if not Assigned(b) then Exit;
+
+  err:=nil;
+
+  if (AImgSize.cx=0) and (AImgSize.cy=0) then
+    pix := gdk_pixbuf_new_from_file(PChar(FileNameUTF8), @err)
+  else
+    pix := gdk_pixbuf_new_from_file_at_size(PChar(FileNameUTF8),
+      round(AImgSize.cx * DPIFactor),  round(AImgSize.cy * DPIFactor), @err);
+
+  Result:=Assigned(pix);
+  if Result then begin
+    gtk_text_buffer_get_iter_at_offset(b, @istart, APos);
+    gtk_text_buffer_insert_pixbuf(b, @istart, pix);
+  end else
+    writeln(err^.message);
+end;
+
 
 class function TGtk2WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams): Boolean;
 var
@@ -379,6 +453,17 @@ begin
     gtk_text_attributes_unref(attr);
   end;
 end;
+
+function GtkInsertImageFromFile(const ARichMemo: TCustomRichMemo; APos: Integer;
+     const FileNameUTF8: string;
+     const AImgSize: TSize
+  ): Boolean;
+begin
+  Result:=TGtk2WSCustomRichMemo.ImageFromFile(ARichMemo, APos, FileNameUTF8, AImgSize);
+end;
+
+initialization
+  InsertImageFromFile := @GtkInsertImageFromFile;
 
 end.
 

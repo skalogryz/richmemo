@@ -23,7 +23,7 @@ interface
 {$mode objfpc}{$h+}
 
 uses
-  Types, RichMemo;
+  Types, SysUtils, Classes, LazFileUtils, RichMemo;
 
 const
   NoResize : TSize = ( cx: 0; cy : 0 );
@@ -48,6 +48,8 @@ var
 function InsertImageFromFileNoResize (const ARichMemo: TCustomRichMemo; APos: Integer;
      const FileNameUTF8: string): Boolean;
 
+procedure LoadRTFFile(const ARichMemo: TCustomRichMemo; const FileNameUTF8: string);
+
 implementation
 
 function InsertImageFileDummy(const ARichMemo: TCustomRichMemo; APos: Integer;
@@ -61,6 +63,22 @@ function InsertImageFromFileNoResize (const ARichMemo: TCustomRichMemo; APos: In
      const FileNameUTF8: string): Boolean;
 begin
   Result:=InsertImageFromFile(ARichMemo, APos, FileNameUTF8, NoResize);
+end;
+
+procedure LoadRTFFile(const ARichMemo: TCustomRichMemo; const FileNameUTF8: string);
+var
+  fs : THandleStream;
+  h  : THandle;
+begin
+  if not Assigned(ARichMemo) then Exit;
+  h:= FileOpenUTF8(FileNameUTF8, fmShareDenyNone or fmOpenRead);
+  fs := THandleStream.Create( h );
+  try
+    ARichMemo.LoadRichText(fs);
+  finally
+    fs.Free;
+  end;
+  FileClose(h);
 end;
 
 initialization

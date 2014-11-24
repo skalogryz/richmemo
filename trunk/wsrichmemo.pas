@@ -48,6 +48,12 @@ type
     Tabs  : array of TTabInfo;
   end;
 
+  TIntSearchOpt = record
+    start   : Integer;
+    len     : Integer;
+    Options : TSearchOptions;
+  end;
+
   { TWSCustomRichMemo }
 
   TWSCustomRichMemo = class(TWSCustomMemo)
@@ -80,6 +86,8 @@ type
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
+
+    class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; virtual;
   end;
   TWSCustomRichMemoClass = class of TWSCustomRichMemo;
 
@@ -184,6 +192,12 @@ end;
 class function TWSCustomRichMemo.SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean;
 begin
   Result := false;
+end;
+
+class function TWSCustomRichMemo.Search(const AWinControl: TWinControl; const ANiddle: string;
+  const SearchOpts: TIntSearchOpt): Integer;
+begin
+  Result:=-1;
 end;
 
 end.

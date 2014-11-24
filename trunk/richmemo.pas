@@ -24,7 +24,7 @@ unit RichMemo;
 interface
 
 uses
-  Classes, SysUtils, Graphics, StdCtrls;
+  Classes, SysUtils, Graphics, StdCtrls, LazUTF8;
 
 type
   TFontParams  = record
@@ -59,6 +59,9 @@ type
   end;
 
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
+
+  TSearchOption = (soMatchCase, soWholeWord, soBackward);
+  TSearchOptions = set of TSearchOption;
 
 
 type
@@ -102,6 +105,10 @@ type
 
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
+
+    procedure SetSelLengthFor(const aselstr: string);
+
+    function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer;
 
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
   end;
@@ -435,9 +442,9 @@ begin
       finally
         Self.Lines.EndUpdate;
       end;
-    end;
-    if not Result then
+    end else begin
       Result := TWSCustomRichMemoClass(WidgetSetClass).LoadRichText(Self, Source);
+    end;
   end;
 end;
 
@@ -449,6 +456,26 @@ begin
       Result:=RTFSaveStream(Self, Dest);
   end else
     Result := false;
+end;
+
+procedure TCustomRichMemo.SetSelLengthFor(const aselstr: string);
+begin
+  SelLength:=UTF8Length(aselstr);
+end;
+
+function TCustomRichMemo.Search(const ANiddle: string; Start, Len: Integer;
+  const SearchOpt: TSearchOptions): Integer;
+var
+  so : TIntSearchOpt;
+begin
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then begin
+    so.len:=Len;
+    so.start:=Start;
+    so.options:=SearchOpt;
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).Search(Self, ANiddle, so);
+  end else
+    Result:=-1;
 end;
 
 end.

@@ -98,6 +98,9 @@ type
       const ANumber: TIntParaNumbering); override;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
+
+    class function Search(const AWinControl: TWinControl; const ANiddle: string;
+      const SearchOpts: TIntSearchOpt): Integer; override;
   end;
   
 implementation
@@ -155,7 +158,7 @@ begin
   if res>0 then begin
     SetLength(w, res);
     FillChar(t, sizeof(t), 0);
-    t.cb:=length(w)*sizeof(WideChar);
+    t.cb:=(length(w)+1)*sizeof(WideChar);
     t.flags:=GT_DEFAULT;
     t.codepage:=CP_WINUNICODE;
     res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@w[1]));
@@ -186,7 +189,7 @@ begin
   if res>0 then begin
     SetLength(s, res);
     FillChar(t, sizeof(t), 0);
-    t.cb:=length(s);
+    t.cb:=length(s)+1;
     t.flags:=GT_DEFAULT;
     t.codepage:=CP_ACP;
     res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@s[1]));
@@ -586,7 +589,15 @@ end;
 class procedure TWin32WSCustomRichMemo.InDelText(const AWinControl:TWinControl;
   const TextUTF8:String;DstStart,DstLen:Integer);
 begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   RichEditManager.SetText(AWinControl.Handle,UTF8Decode(TextUTF8),DstStart,DstLen);
+end;
+
+class function TWin32WSCustomRichMemo.Search(const AWinControl: TWinControl;
+  const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer;
+begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+  Result:=RichEditManager.Find(AWinControl.Handle, UTF8Decode(ANiddle), SearchOpts);
 end;
  
 end.

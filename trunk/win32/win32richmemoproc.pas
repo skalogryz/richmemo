@@ -159,6 +159,7 @@ type
     class procedure SetText(RichEditWnd: Handle; const Text: WideString; TextStart, ReplaceLength: Integer); virtual;
     class procedure GetPara2(RichEditWnd: Handle; TextStart: Integer; var para: PARAFORMAT2); virtual;
     class procedure SetPara2(RichEditWnd: Handle; TextStart, TextLen: Integer; const para: PARAFORMAT2); virtual;
+    class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -187,11 +188,12 @@ end;
 function InitRichEdit: Boolean;
 begin
   if GlobalRichClass = '' then begin
-    if LoadLibrary('Msftedit.dll') <> 0 then begin 
+    if LoadLibrary('Msftedit.dll') <> 0 then begin
       GlobalRichClass := 'RichEdit50W';
     end else if LoadLibrary('RICHED20.DLL') <> 0 then begin
       if UnicodeEnabledOS then GlobalRichClass := 'RichEdit20W'
-      else GlobalRichClass := 'RichEdit20A'
+      else
+      GlobalRichClass := 'RichEdit20A'
     end else if LoadLibrary('RICHED32.DLL') <> 0 then begin
       GlobalRichClass := 'RichEdit';
     end;
@@ -536,6 +538,52 @@ begin
   SetSelection(RichEditWnd, s, l);
 end;
 
+class function TRichEditManager.Find(RichEditWnd: THandle;
+  const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer;
+var
+  fw: TFINDTEXTW;
+  fa: TFINDTEXTA;
+  opt: WParam;
+  txt: string;
+  mn, mx : Integer;
+begin
+  if ANiddle='' then begin
+    Result:=-1;
+    Exit;
+  end;
+  opt:=0;
+  if not (soBackward in ASearch.Options) then opt:=FR_DOWN; // if not set, then search is backward
+  if soMatchCase in ASearch.Options then opt := opt or FR_MATCHCASE;
+  if soWholeWord in ASearch.Options then opt := opt or FR_WHOLEWORD;
+  mn := ASearch.start;
+  if soBackward in ASearch.Options then begin
+    if ASearch.len<0 then mx := 0
+    else begin
+      mx := ASearch.start-ASearch.len;
+      if mx < 0 then mx:=0;
+    end;
+  end else begin
+    if ASearch.len<0 then fw.chrg.cpMax := -1
+    else begin
+      mx := ASearch.start+ASearch.len;
+      if mx < 0 then mx:=-1;
+    end;
+  end;
+
+  if UnicodeEnabledOS then begin
+    fw.chrg.cpMin := mn;
+    fw.chrg.cpMax := mx;
+    fw.lpstrText := PWideChar(@ANiddle[1]);
+    Result := SendMessage(RichEditWnd, EM_FINDTEXTW, opt, LParam(@fw));
+  end else begin
+    fa.chrg.cpMin := mn;
+    fa.chrg.cpMax := mx;
+    txt:=ANiddle;
+    fa.lpstrText := PAnsiChar(@txt[1]);
+    Result := SendMessage(RichEditWnd, EM_FINDTEXT, opt, LParam(@fa));
+  end;
+end;
+
 function WinInsertImageFromFile (const ARichMemo: TCustomRichMemo; APos: Integer;
    const FileNameUTF8: string;
    const AImgSize: TSize): Boolean;
@@ -549,8 +597,6 @@ var
   Storage: IStorage;
   Image: IOleObject;
   Obj: TREOBJECT;
-  id: TGUID;
-  ImageLink: IOleObject;
 
   sl, ss: Integer;
 const

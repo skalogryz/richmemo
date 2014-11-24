@@ -20,8 +20,9 @@
       </Parsing>
       <Other>
         <CompilerMessages>
-          <IgnoredMessages idx5060="True" idx5057="True" idx5024="True" idx4055="True"/>
+          <IgnoredMessages idx4055="True" idx5024="True" idx5057="True" idx5060="True"/>
         </CompilerMessages>
+        <CompilerPath Value="$(CompPath)"/>
       </Other>
     </CompilerOptions>
     <Description Value="RichMemo control. Implements cross-platfrom RichEdit control.
@@ -73,34 +74,34 @@
         <UnitName Value="gtk2richmemo"/>
       </Item9>
       <Item10>
-        <Filename Value="rtfparspre211.pp"/>
-        <AddToUsesPkgSection Value="False"/>
-        <UnitName Value="RTFParsPre211"/>
-      </Item10>
-      <Item11>
         <Filename Value="richmemortf.pas"/>
         <UnitName Value="RichMemoRTF"/>
-      </Item11>
-      <Item12>
+      </Item10>
+      <Item11>
         <Filename Value="rtfdata.inc"/>
         <Type Value="Include"/>
-      </Item12>
-      <Item13>
+      </Item11>
+      <Item12>
         <Filename Value="cocoa\cocoarichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="cocoarichmemo"/>
-      </Item13>
-      <Item14>
+      </Item12>
+      <Item13>
         <Filename Value="richmemoutils.pas"/>
         <UnitName Value="RichMemoUtils"/>
-      </Item14>
-      <Item15>
+      </Item13>
+      <Item14>
         <Filename Value="richmemohelpers.pas"/>
         <UnitName Value="RichMemoHelpers"/>
-      </Item15>
-      <Item16>
+      </Item14>
+      <Item15>
         <Filename Value="qt\qtrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
+        <UnitName Value="qtrichmemo"/>
+      </Item15>
+      <Item16>
+        <Filename Value="rtfparspre211.pas"/>
+        <UnitName Value="RTFParsPre211"/>
       </Item16>
     </Files>
     <Type Value="RunAndDesignTime"/>

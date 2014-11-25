@@ -5,7 +5,6 @@ unit mainform;
 interface
 
 uses
-  Windows, RichEdit,
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
   RichMemo, RichMemoUtils, LazUTF8;
 
@@ -50,7 +49,6 @@ end;
 procedure TForm1.Button2Click(Sender: TObject);
 var
   s : Integer;
-  fw: TFINDTEXT;
   w: AnsiString;
   l : Integer;
   st: Integer;

@@ -49,7 +49,6 @@ end;
 procedure TForm1.Button2Click(Sender: TObject);
 var
   s : Integer;
-  w: AnsiString;
   l : Integer;
   st: Integer;
   opt: TSearchOptions;

@@ -65,6 +65,7 @@ begin
   Result:=InsertImageFromFile(ARichMemo, APos, FileNameUTF8, NoResize);
 end;
 
+{$IFDEF USELCLUtf8}
 procedure LoadRTFFile(const ARichMemo: TCustomRichMemo; const FileNameUTF8: string);
 var
   fs : THandleStream;
@@ -80,6 +81,21 @@ begin
   end;
   FileClose(h);
 end;
+{$ENDIF}
+
+procedure LoadRTFFile(const ARichMemo: TCustomRichMemo; const FileNameUTF8: string);
+var
+  fs : TFileStream;
+begin
+  if not Assigned(ARichMemo) then Exit;
+  fs:= TFileStream.Create( UTF8Decode(FileNameUTF8), fmShareDenyNone or fmOpenRead);
+  try
+    ARichMemo.LoadRichText(fs);
+  finally
+    fs.Free;
+  end;
+end;
+
 
 initialization
   if not Assigned(InsertImageFromFile)  then

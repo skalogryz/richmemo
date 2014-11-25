@@ -29,7 +29,7 @@ uses
   // RTL/FCL
   Types, Classes, SysUtils,
   // LCL
-  LCLType, Controls, Graphics,
+  LCLType, Controls, Graphics, LazUTF8,
   // Gtk2 widget
   Gtk2Def,
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
@@ -63,6 +63,8 @@ type
       const AMetric: TIntParaMetric); override;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
+
+    class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; override;
 
     class function ImageFromFile(const ARichMemo: TCustomRichMemo; APos: Integer;
          const FileNameUTF8: string;
@@ -348,7 +350,6 @@ var
   h      : double;
   fl     : double;
   t      : double;
-  v      : Integer;
   attr   : PGtkTextAttributes;
   fp     : TFontParams;
 const
@@ -405,6 +406,91 @@ begin
   gtk_text_buffer_delete(b, @istart, @iend);
   if length(TextUTF8)>0 then
     gtk_text_buffer_insert(b, @istart, @textUTF8[1], length(TextUTF8));
+end;
+
+procedure UTF8CharsToWideString(const p: Pchar; var w: WideString);
+var
+  slen : Integer;
+  cnt: Integer;
+  sz: SizeUInt;
+begin
+  if not Assigned(p) then begin
+    w:='';
+    Exit;
+  end;
+  slen:=strlen(p);
+  if slen=0 then begin
+    w:='';
+    Exit;
+  end;
+  cnt:=UTF8Length(p, slen);
+  SetLength(w, cnt);
+  if cnt>0 then
+   ConvertUTF8ToUTF16( @w[1], length(w), p, slen, [toInvalidCharToSymbol], sz);
+  SetLength(w, sz);
+end;
+
+class function TGtk2WSCustomRichMemo.Search(const AWinControl: TWinControl;
+  const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer;
+var
+  TextWidget   : PGtkWidget;
+  buffer       : PGtkTextBuffer;
+  istart       : TGtkTextIter;
+  iend         : TGtkTextIter;
+  start_match  : TGtkTextIter;
+  end_match    : TGtkTextIter;
+  Found        : Boolean;
+  opt          : TGtkTextSearchFlags;
+  gstr         : PChar;
+  txt          : WideString;
+  sub          : WIdeString;
+const
+  GTK_TEXT_SEARCH_VISIBLE_ONLY     = 1 shl 0;  (* values of TGtkTextSearchFlags *)
+  {%H-}GTK_TEXT_SEARCH_TEXT_ONLY        = 1 shl 1;
+  GTK_TEXT_SEARCH_CASE_INSENSITIVE = 1 shl 2;
+begin
+  Result := -1;
+  GetWidgetBuffer(AWinControl, TextWidget, buffer);
+  if not Assigned(buffer) then Exit;
+
+  opt:=GTK_TEXT_SEARCH_VISIBLE_ONLY;
+  if not (soMatchCase in SearchOpts.Options) then begin
+    opt:=opt or GTK_TEXT_SEARCH_CASE_INSENSITIVE; // doesn't work anyway! it works in gtk3 only
+
+    gtk_text_buffer_get_iter_at_offset (buffer, @istart, SearchOpts.start);
+    gtk_text_buffer_get_iter_at_offset (buffer, @iend, SearchOpts.start+SearchOpts.len);
+
+    gtk_text_buffer_get_text(buffer, @istart, @iend, false);
+    gstr := gtk_text_buffer_get_text(Buffer, @istart, @iend, False);
+    if Assigned(gstr) then begin
+      UTF8CharsToWideString(gstr, txt);
+      g_free(gstr);
+      txt:=WideUpperCase(txt);
+      sub:=WideUpperCase(UTF8Decode(ANiddle));
+      Result:=Pos(sub,txt);
+      if Result>0 then
+        Result:=Result-1+SearchOpts.start
+      else
+        Result:=-1;
+    end else
+      Result:=-1;
+  end else begin
+    gtk_text_buffer_get_iter_at_offset(buffer, @istart, SearchOpts.start );
+    if not (soBackward in SearchOpts.Options) then
+    begin
+      gtk_text_buffer_get_iter_at_offset(buffer, @iend, SearchOpts.start+SearchOpts.len );
+      Found := gtk_text_iter_forward_search(@istart, PgChar(ANiddle), opt,
+          @start_match, @end_match, @iend)
+    end else begin
+      gtk_text_buffer_get_iter_at_offset(buffer, @iend, SearchOpts.start-SearchOpts.len);
+      Found := gtk_text_iter_backward_search(@istart, PgChar(ANiddle), opt,
+          @start_match, @end_match, @iend)
+    end;
+
+    if Found
+      then Result := gtk_text_iter_get_offset(@start_match)
+      else Result := -1;
+  end;
 end;
 
 class function TGtk2WSCustomRichMemo.ImageFromFile(

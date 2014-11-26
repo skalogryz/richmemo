@@ -20,8 +20,8 @@ object Form1: TForm1
   end
   object RichMemo1: TRichMemo
     Left = 8
-    Height = 280
-    Top = 48
+    Height = 224
+    Top = 104
     Width = 599
     Anchors = [akTop, akLeft, akRight, akBottom]
     HideSelection = False
@@ -186,6 +186,57 @@ object Form1: TForm1
     }
     GroupIndex = 1
     OnClick = btnJAClick
+  end
+  object edtFL: TSpinEdit
+    Left = 72
+    Height = 21
+    Top = 48
+    Width = 88
+    MaxValue = 1000
+    OnChange = edtFLChange
+    TabOrder = 3
+  end
+  object edtHI: TSpinEdit
+    Left = 72
+    Height = 21
+    Top = 72
+    Width = 88
+    MaxValue = 1000
+    OnChange = edtHIChange
+    TabOrder = 4
+  end
+  object edtTI: TSpinEdit
+    Left = 240
+    Height = 21
+    Top = 48
+    Width = 88
+    MaxValue = 1000
+    OnChange = edtTIChange
+    TabOrder = 5
+  end
+  object Label1: TLabel
+    Left = 8
+    Height = 13
+    Top = 48
+    Width = 43
+    Caption = 'First Line'
+    ParentColor = False
+  end
+  object Label2: TLabel
+    Left = 8
+    Height = 13
+    Top = 72
+    Width = 32
+    Caption = 'Indent'
+    ParentColor = False
+  end
+  object Label3: TLabel
+    Left = 176
+    Height = 13
+    Top = 48
+    Width = 51
+    Caption = 'Tail Indent'
+    ParentColor = False
   end
   object OpenDialog1: TOpenDialog
     left = 488

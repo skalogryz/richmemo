@@ -5,8 +5,8 @@ interface
 {$mode objfpc}{$h+}
 
 uses
-  Classes, SysUtils, LCLProc, LCLIntf, LConvEncoding,
-  RichMemo, RTFParsPre211, Graphics;
+  Classes, SysUtils, LCLProc, LCLIntf, LConvEncoding, Graphics,
+  RichMemo, RTFParsPre211;
 
 function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream): Boolean;
 procedure RegisterRTFLoader;
@@ -16,6 +16,17 @@ type
 
 procedure LangConvAdd(lang: Integer; convproc: TEncConvProc);
 function LangConvGet(lang: Integer; var convproc: TEncConvProc): Boolean;
+
+type
+  TSaveParams = record // reserved
+  end;
+
+// the function depends on GetStyleRange and to be implemented properly
+// if GetStyleRange, GetParaMetric, GetParaAlignment is not working properly
+// the resulting RTF would not contain any styles or the text styles would be wrong
+procedure IntSaveStream(ARich: TcustomRichMemo; SaveParams: TSaveParams; Dst: TStream);
+function SaveStream(ARich: TcustomRichMemo; Dst: TStream): Boolean;
+procedure RegisterRTFSaver;
 
 implementation
 
@@ -452,6 +463,248 @@ procedure RegisterRTFLoader;
 begin
   RTFLoadStream:=@MVCParserLoadStream;
   LangConvInit;
+end;
+
+function SaveStream(ARich: TcustomRichMemo; Dst: TStream): Boolean;
+var
+  p : TSaveParams;
+begin
+  FillChar(p, sizeof(p), 0);
+  IntSaveStream(ARich, p, Dst);
+  Result:=True;
+end;
+
+procedure RegisterRTFSaver;
+begin
+  RTFSaveStream:=@SaveStream;
+end;
+
+type
+  TStyleRange = class(TObject)
+    font       : TFontParams;
+    fontId     : Integer; // assigned font ID
+    colorId    : Integer;
+    textStart  : Integer;
+    textLength : Integer;
+    next       : TStyleRange;
+  end;
+
+procedure FreeStyleList(var root: TStyleRange);
+var
+  t: TStyleRange;
+begin
+  while Assigned(root) do begin
+    t:=root.next;
+    root.Free;
+    root:=t;
+  end;
+end;
+
+procedure PrepareFontTable(styleslist: TStyleRange; afontTable: TStringList);
+var
+  rng : TStyleRange;
+  i   : integer;
+begin
+  rng:=styleslist;
+  while Assigned(rng) do begin
+    i:=afontTable.IndexOf(rng.font.Name);
+    if i<0 then
+      i:=afontTable.Add(rng.font.Name);
+    rng.fontId:=i;
+    rng:=rng.next;
+  end;
+  // {\f0\fswiss\fcharset0 Arial;}
+end;
+
+function ColorToRtfText(const cl: TColor): string;
+var
+  r: integer;
+begin
+  r:=ColorToRGB(cl);
+  Result:=
+    '\red'+IntToStR( byte( (r and clRed) shr 0) )
+    +'\green'+IntToStR( byte( (r and clLime) shr 8) )
+    +'\blue'+IntToStR( byte( (r and clBlue) shr 16) );
+end;
+
+procedure PrepareColorTable(styleslist: TStyleRange; acolorTable: TStringList);
+var
+  rng : TStyleRange;
+  i   : integer;
+  t   : string;
+begin
+  rng:=styleslist;
+  acolorTable.Add('');
+  while Assigned(rng) do begin
+    if rng.font.Color=clBlack then
+      rng.colorId:=0
+    else begin
+      t:=ColorToRtfText(rng.font.Color);
+      i:=acolorTable.IndexOf(t);
+      if i<0 then i:=acolorTable.Add(t);
+      rng.colorId:=i;
+    end;
+    rng:=rng.next;
+  end;
+  // {\f0\fswiss\fcharset0 Arial;}
+end;
+
+function GetRTFWriteText(const u: UnicodeString; var idx : integer; var isNewPara: Boolean): string;
+var
+  i : integer;
+begin
+  Result:='';
+  i:=idx;
+  isNewPara:=false;
+  while i<=length(u) do begin
+    if u[i]='\' then Result:=Result+'\\'
+    else if u[i]=#13 then begin
+      Result:=Result+'\par ';
+      isNewPara:=true;
+      inc(i);
+      Break;
+    end else if u[i]<#127 then Result:=Result+char(byte(u[i]))
+    else Result:=Result+'\u'+IntToStr(word(u[i]))+' ';
+    inc(i);
+  end;
+  idx:=i;
+end;
+
+procedure IntSaveStream(ARich: TCustomRichMemo; SaveParams: TSaveParams; Dst: TStream);
+var
+  ofs     : Integer;
+  root    : TStyleRange; // first in the list
+  last    : TStyleRange; // last in the list
+  rng     : TStyleRange; // temproray
+  st, len : Integer;
+  u       : UnicodeString;
+  fontTable  : TStringList;
+  colorTable : TStringList;
+  i         : Integer;
+  isnewpara : Boolean;
+  s         : string;
+
+  isbold    : Boolean;
+  isitalic  : Boolean;
+  isuline   : Boolean;
+  isColor   : integer;
+
+  procedure WriteOut(const s: string);
+  begin
+    write(s);
+    Dst.Write(s[1], length(s));
+  end;
+
+begin
+  ofs:=0;
+  root:=nil;
+  last:=nil;
+
+  while ARich.GetStyleRange(ofs, st, len) do begin
+    rng:=TStyleRange.Create;
+    rng.textStart:=st;
+    rng.textLength:=len;
+    ARich.GetTextAttributes(ofs, rng.font);
+
+    if not Assigned(root) then root:=rng;
+    if Assigned(last) then last.next:=rng;
+    last:=rng;
+
+    inc(ofs, len);
+  end;
+
+  if root=nil then begin
+    // GetStyleRange failed - fallback to simple style export!
+    root:=TStyleRange.Create;
+    root.textStart:=0;
+    root.textLength:=MaxInt;
+    root.font.Name:=ARich.Font.Name;
+    root.font.Size:=ARich.Font.Size;
+  end;
+
+  fontTable:=TStringList.Create;
+  colorTable:=TStringList.Create;
+  try
+    PrepareFontTable(root, fontTable);
+    PrepareColorTable(root, colorTable);
+
+    WriteOut('{\rtf1\ansi\ansicp1252\deff0\deflan1033');
+
+    // start of RTF
+    if fontTable.Count>0 then begin
+      // at least on font should be present anyway.
+      WriteOut('{\fonttbl');
+      for i:=0 to fontTable.Count-1 do begin
+        // setting font id, charset to 0 and name
+        WriteOut('{\f'+IntToStR(i)+'\fcharset0 '+fontTable[i]+';}');
+      end;
+      WriteOut('}');
+    end;
+    if colorTable.Count>1 then begin
+      WriteOut('{\colortbl');
+      for i:=0 to colorTable.Count-1 do begin
+        WriteOut( colortable[i] );
+        WriteOut( ';');
+      end;
+      WriteOut('}');
+    end;
+
+    isnewpara := true;
+    rng:=root;
+    isbold:=false;
+    isitalic:=false;
+    iscolor:=0;
+    while Assigned(rng) do begin
+      ARich.SelStart:=rng.textStart;
+      ARich.SelLength:=rng.textLength;
+      u:=UTF8Decode(ARich.SelText);
+      WriteOut('\f'+IntToStr(rng.fontId));
+      WriteOut('\fs'+IntToStr(rng.font.Size*2));
+      if (fsBold in rng.font.Style) then begin
+        WriteOut('\b');
+        isbold:=true;
+      end else begin
+        if isbold then WriteOut('\b0');
+        isbold:=false;
+      end;
+      if (fsUnderline in rng.font.Style) then begin
+        WriteOut('\ul');
+        isuline:=true
+      end else begin
+        if isuline then Write('\ulnone');
+        isuline:=false;
+      end;
+      if isColor<>rng.colorId then begin
+        WriteOut('\cf'+IntToStR(rng.colorId));
+        isColor:=rng.ColorId;
+      end;
+      if (fsItalic in rng.font.Style) then begin
+        WriteOut('\i');
+        isitalic:=true;
+      end else begin
+        if isitalic then WriteOut('\i0');
+        isitalic:=false;
+      end;
+      WriteOut(' ');
+
+      i:=1;
+      while i<=length(u) do begin
+        if isNewPara then begin
+          //todo: WriteOut() paragraph info
+        end;
+        s:=GetRTFWriteText(u, i, isnewpara);
+        WriteOut(s);
+      end;
+      rng:=rng.next;
+    end;
+
+    // end of RTF
+    WriteOut('}');
+  finally
+    fontTable.Free;
+    colorTable.Free;
+  end;
+  FreeStyleList(root);
 end;
 
 initialization

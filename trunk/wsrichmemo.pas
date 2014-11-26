@@ -80,6 +80,7 @@ type
       const AMetric: TIntParaMetric); virtual;
     class function GetParaNumbering(const AWinControl: TWinControl; TextStart: Integer;
       var ANumber: TIntParaNumbering): Boolean; virtual;
+    class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; virtual;
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); virtual;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
@@ -165,6 +166,12 @@ class function TWSCustomRichMemo.GetParaNumbering(
   var ANumber: TIntParaNumbering): Boolean;
 begin
   Result := false;
+end;
+
+class function TWSCustomRichMemo.GetParaRange(const AWinControl: TWinControl;
+  TextStart: Integer; var rng: TParaRange): Boolean;
+begin
+  Result:=False;
 end;
 
 class procedure TWSCustomRichMemo.SetParaNumbering(

@@ -63,6 +63,14 @@ type
   TSearchOption = (soMatchCase, soWholeWord, soBackward);
   TSearchOptions = set of TSearchOption;
 
+  TParaRange = record
+    start      : Integer; // the first character in the paragraph
+    lenghtNoBr : Integer; // the length of the paragraph, excluding the line break character
+    length     : Integer; // the length of the paragrpah, including the line break, if present
+    // the last line in the control doesn't contain a line break character,
+    // thus length = lengthNoBr
+  end;
+
 
 type
   TRichMemoObject = class(TObject);
@@ -97,6 +105,8 @@ type
     procedure SetParaMetric(TextStart, TextLen: Integer; const AMetric: TParaMetric); virtual;
     function GetParaNumbering(TextStart: Integer; var ANumber: TParaNumbering): Boolean; virtual;
     procedure SetParaNumbering(TextStart, TextLen: Integer; const ANumber: TParaNumbering); virtual;
+    function GetParaRange(CharOfs: Integer; var ParaRange: TParaRange): Boolean; virtual;
+    function GetParaRange(CharOfs: Integer; var TextStart, TextLength: Integer): Boolean;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
@@ -348,6 +358,25 @@ procedure TCustomRichMemo.SetParaNumbering(TextStart, TextLen: Integer;
 begin
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).SetParaNumbering(Self, TextStart, TextLen, ANumber);
+end;
+
+function TCustomRichMemo.GetParaRange(CharOfs: Integer;
+  var ParaRange: TParaRange): Boolean;
+begin
+  Result:=false;
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).GetParaRange(Self, CharOfs, ParaRange);
+end;
+
+function TCustomRichMemo.GetParaRange(CharOfs: Integer; var TextStart,
+  TextLength: Integer): Boolean;
+var
+  p : TParaRange;
+begin
+  Result:=GetParaRange(CharOfs, p);
+  TextStart:=p.start;
+  TextLength:=p.length;
 end;
 
 function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;

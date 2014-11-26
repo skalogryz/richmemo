@@ -91,6 +91,8 @@ type
       var AMetrics: TIntParaMetric): Boolean; override;
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLength: Integer;
       const AMetrics: TIntParaMetric); override;
+    class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer;
+      var ParaRange: TParaRange): Boolean; override;
 
     class function GetParaNumbering(const AWinControl: TWinControl; TextStart: Integer;
       var ANumber: TIntParaNumbering): Boolean; override;
@@ -517,6 +519,17 @@ begin
     para.bLineSpacingRule:=5; // always line spacing?
   end;
   RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLength, para);
+end;
+
+class function TWin32WSCustomRichMemo.GetParaRange(const AWinControl: TWinControl;
+  TextStart: Integer; var ParaRange: TParaRange): Boolean;
+begin
+  if not Assigned(AWinControl) then
+    Result:=False
+  else begin
+    RichEditManager.GetParaRange(AWinControl.Handle, TextStart, ParaRange);
+    Result:=true;
+  end;
 end;
 
 const

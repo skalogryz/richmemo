@@ -23,7 +23,7 @@ interface
 {$mode objfpc}{$h+}
 
 uses
-  Types, SysUtils, Classes, LazFileUtils, RichMemo;
+  Types, SysUtils, Classes, Graphics, LazFileUtils, LazUTF8, RichMemo;
 
 const
   NoResize : TSize = ( cx: 0; cy : 0 );
@@ -50,7 +50,49 @@ function InsertImageFromFileNoResize (const ARichMemo: TCustomRichMemo; APos: In
 
 procedure LoadRTFFile(const ARichMemo: TCustomRichMemo; const FileNameUTF8: string);
 
+procedure InsertStyledText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; AStyle: TFontStyles;
+  InsPos : Integer = -1 );
+procedure InsertColorStyledText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; AColor: TColor; AStyle: TFontStyles;
+  InsPos : Integer = -1 );
+procedure InsertFontText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; prms: TFontParams;
+  InsPos : Integer = -1 );
+
 implementation
+
+procedure InsertFontText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; prms: TFontParams;
+  InsPos : Integer = -1 );
+var
+  len : Integer;
+begin
+  if InsPos<0 then InsPos:=UTF8Length(ARichMemo.Text);
+  len:=ARichMemo.InDelText(TextUTF8, InsPos, 0);
+  ARichMemo.SetTextAttributes(InsPos, len, prms);
+end;
+
+procedure InsertColorStyledText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; AColor: TColor; AStyle: TFontStyles;
+  InsPos : Integer = -1 );
+var
+  sel: Integer;
+  ft : TFontParams;
+begin
+  if InsPos<0 then InsPos:=UTF8Length(ARichMemo.Text);
+  ARichMemo.GetTextAttributes(InsPos, ft);
+  ft.Style:=AStyle;
+  ft.Color:=AColor;
+  InsertFontText(ARichMemo, TextUTF8, ft, InsPos);
+end;
+
+procedure InsertStyledText(const ARichMemo: TCustomRichMemo; const TextUTF8: String; AStyle: TFontStyles;
+  InsPos : Integer );
+var
+  sel: Integer;
+  ft : TFontParams;
+begin
+  if InsPos<0 then InsPos:=UTF8Length(ARichMemo.Text);
+  ARichMemo.GetTextAttributes(InsPos, ft);
+  ft.Style:=AStyle;
+  InsertFontText(ARichMemo, TextUTF8, ft, InsPos);
+end;
 
 function InsertImageFileDummy(const ARichMemo: TCustomRichMemo; APos: Integer;
      const FileNameUTF8: string;

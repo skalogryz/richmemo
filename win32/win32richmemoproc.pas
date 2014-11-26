@@ -33,7 +33,7 @@ uses
   // RichMemoUnits
   RichMemo, WSRichMemo, RichMemoUtils,
   // Win32 widgetset units  
-  win32proc,ActiveX, ComObj;
+  win32proc, ActiveX, ComObj;
 
 const
   IID_IRichEditOle: TGUID = '{00020D00-0000-0000-C000-000000000046}';
@@ -148,6 +148,7 @@ type
 
   TRichEditManager = class(TObject)
   public
+    class function GetTextLength(RichEditWnd: Handle): Integer;
     class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
     class function GetStyleRange(RichEditWnd: Handle; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual; 
@@ -160,6 +161,7 @@ type
     class procedure GetPara2(RichEditWnd: Handle; TextStart: Integer; var para: PARAFORMAT2); virtual;
     class procedure SetPara2(RichEditWnd: Handle; TextStart, TextLen: Integer; const para: PARAFORMAT2); virtual;
     class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; virtual;
+    class procedure GetParaRange(RichEditWnd: Handle; TextStart: integer; var para: TParaRange); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -171,6 +173,10 @@ function GetRichEditClass: AnsiString;
 procedure CopyStringToCharArray(const s: String; var Chrs: array of Char; ChrsSize: integer);
 function FontStylesToEffects(Styles: TFontStyles): LongWord;
 function EffectsToFontStyles(Effects: LongWord): TFontStyles;
+
+const
+  CP_UNICODE = 1200;
+  HardBreak  = #13;
 
 implementation
 
@@ -239,6 +245,16 @@ begin
 end;
 
 { TRichEditManager }
+
+class function TRichEditManager.GetTextLength(RichEditWnd: Handle): Integer;
+var
+  textlen : TGETTEXTEX;
+begin
+  FillChar(textlen, sizeof(textlen), 0);
+  textlen.flags := GTL_NUMCHARS or GTL_PRECISE;
+  textlen.codepage := CP_UNICODE;
+  Result := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
+end;
 
 class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle; 
   Params: TIntFontParams): Boolean;
@@ -314,7 +330,6 @@ var
   last    : Integer;
   
 const
-  CP_UNICODE = 1200;  
   ALL_MASK = CFM_BOLD or CFM_ITALIC or CFM_STRIKEOUT or CFM_UNDERLINE or 
              CFM_SIZE or CFM_COLOR or CFM_FACE;
 begin
@@ -322,7 +337,7 @@ begin
   if (RichEditWnd = 0) then Exit;
   
   FillChar(textlen, sizeof(textlen), 0);
-  textlen.flags := GTL_NUMCHARS or GTL_USECRLF or GTL_PRECISE;
+  textlen.flags := GTL_NUMCHARS or GTL_PRECISE;
   textlen.codepage := CP_UNICODE;
   len := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
   Result := TextStart < len;
@@ -582,6 +597,58 @@ begin
     fa.lpstrText := PAnsiChar(@txt[1]);
     Result := SendMessage(RichEditWnd, EM_FINDTEXT, opt, LParam(@fa));
   end;
+end;
+
+class procedure TRichEditManager.GetParaRange(RichEditWnd: Handle; TextStart: integer;
+  var para: TParaRange);
+var
+  line: Integer;
+  txtlen: Integer;
+  st: Integer;
+  ln: Integer;
+  toend: Integer;
+  tost: Integer;
+  buf : string[16];
+  rng : TTEXTRANGEA;
+  res : Integer;
+begin
+  txtlen:=GetTextLength(RichEditWnd);
+  // lines are NOT paragraphs, but wordwrapped lines
+  line:=SendMessage(RichEditWnd, EM_EXLINEFROMCHAR, 0, TextStart);
+  st:=SendMessage(RichEditWnd, EM_LINEINDEX, line, 0);
+  tost:=st;
+  toend:=0;
+
+  while tost>0 do begin
+    rng.lpstrText:=@buf[1];
+    rng.chrg.cpMin:=tost-1;
+    rng.chrg.cpMax:=tost;
+    buf[1]:=#0;
+    res:=SendMessageA(RichEditWnd, EM_GETTEXTRANGE, 0, LPARAM(@rng));
+    if (buf[1]=HardBreak) then
+      Break // found the beggining of the paragraph
+    else begin
+      line:=SendMessage(RichEditWnd, EM_EXLINEFROMCHAR, 0, tost-2); // getting the line before the linebreak
+      tost:=SendMessage(RichEditWnd, EM_LINEINDEX, line, 0);
+      inc(toend, SendMessage(RichEditWnd, EM_LINELENGTH, line, 0));
+    end;
+  end;
+
+  repeat
+    ln:=SendMessage(RichEditWnd, EM_LINELENGTH, st, 0);
+    inc(toend, ln);
+    inc(st, ln);
+    rng.lpstrText:=@buf[1];
+    rng.chrg.cpMin:=st;
+    rng.chrg.cpMax:=st+1;
+    buf[1]:=#0;
+    res:=SendMessage(RichEditWnd, EM_GETTEXTRANGE, 0, LPARAM(@rng));
+  until (res=0) or (buf[1] = HardBreak);
+
+  para.start:=tost;
+  para.lenghtNoBr:=toend;
+  if res>0 then inc(toend); // there's a line break character - add it to the range
+  para.length:=toend;
 end;
 
 function WinInsertImageFromFile (const ARichMemo: TCustomRichMemo; APos: Integer;

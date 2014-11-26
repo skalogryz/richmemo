@@ -6,7 +6,7 @@ interface
 
 uses
   Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls,
-  Buttons, ComCtrls, RichMemo, RichMemoUtils, Win32RichMemo;
+  Buttons, ComCtrls, Spin, RichMemo, RichMemoUtils;
 
 type
 
@@ -16,12 +16,18 @@ type
     Button1: TButton;
     Button2: TButton;
     ImageList1: TImageList;
+    Label1: TLabel;
+    Label2: TLabel;
+    Label3: TLabel;
     OpenDialog1: TOpenDialog;
     RichMemo1: TRichMemo;
     btnLA: TSpeedButton;
     btnCA: TSpeedButton;
     btnRA: TSpeedButton;
     btnJA: TSpeedButton;
+    edtFL: TSpinEdit;
+    edtHI: TSpinEdit;
+    edtTI: TSpinEdit;
     procedure btnCAClick(Sender: TObject);
     procedure btnJAClick(Sender: TObject);
     procedure btnLAClick(Sender: TObject);
@@ -29,6 +35,9 @@ type
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
+    procedure edtFLChange(Sender: TObject);
+    procedure edtHIChange(Sender: TObject);
+    procedure edtTIChange(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure RichMemo1Click(Sender: TObject);
     procedure RichMemo1KeyDown(Sender: TObject; var Key: Word;
@@ -92,6 +101,36 @@ procedure TForm1.Button3Click(Sender: TObject);
 begin
 end;
 
+procedure TForm1.edtFLChange(Sender: TObject);
+var
+  m  : TParaMetric;
+begin
+  InitParaMetric(m);
+  m.FirstLine:=edtFL.Value;
+  RichMemo1.SetRangeParaParams(RichMemo1.SelStart, RichMemo1.SelLength,
+    [pmm_FirstLine], m);
+end;
+
+procedure TForm1.edtHIChange(Sender: TObject);
+var
+  m  :TParaMetric;
+begin
+  InitParaMetric(m);
+  m.HeadIndent:=edtHI.Value;
+  RichMemo1.SetRangeParaParams(RichMemo1.SelStart, RichMemo1.SelLength,
+    [pmm_HeadIndent], m);
+end;
+
+procedure TForm1.edtTIChange(Sender: TObject);
+var
+  m  :TParaMetric;
+begin
+  InitParaMetric(m);
+  m.TailIndent:=edtTI.Value;
+  RichMemo1.SetRangeParaParams(RichMemo1.SelStart, RichMemo1.SelLength,
+    [pmm_TailIndent], m);
+end;
+
 procedure TForm1.FormShow(Sender: TObject);
 begin
   SelectionChanged;
@@ -111,6 +150,7 @@ end;
 procedure TForm1.SelectionChanged;
 var
   pa : TParaAlignment;
+  m  : TParaMetric;
 begin
   pa:=RichMemo1.GetParaAlignment(RichMemo1.SelStart);
   case pa of
@@ -119,6 +159,16 @@ begin
     paCenter:  btnCA.Down:=true;
     paJustify:  btnJA.Down:=true;
   end;
+  edtFL.OnChange:=nil;
+  edtHI.OnChange:=nil;
+  edtTI.OnChange:=nil;
+  RichMemo1.GetParaMetric(RichMemo1.SelStart, m);
+  edtFL.Value:=round(m.FirstLine);
+  edtHI.Value:=round(m.HeadIndent);
+  edtTI.Value:=round(m.TailIndent);
+  edtFL.OnChange:=@edtFLChange;
+  edtHI.OnChange:=@edtHIChange;
+  edtTI.OnChange:=@edtTIChange;
 end;
 
 procedure TForm1.SetRichAlign(a: TParaAlignment);

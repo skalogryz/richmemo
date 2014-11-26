@@ -59,6 +59,7 @@ type
   end;
 
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
+  TParaModifyMask = set of (pmm_FirstLine, pmm_HeadIndent, pmm_TailIndent, pmm_SpaceBefore, pmm_SpaceAfter, pmm_LineSpacing);
 
   TSearchOption = (soMatchCase, soWholeWord, soBackward);
   TSearchOptions = set of TSearchOption;
@@ -112,6 +113,8 @@ type
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
     procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
       const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
+    procedure SetRangeParaParams(TextStart, TextLength: INteger; ModifyMask: TParaModifyMask;
+      const ParaMetric: TParaMetric);
 
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
@@ -456,6 +459,31 @@ begin
     SetTextAttributes(i, l, p);
     inc(i, l);
   end;
+end;
+
+procedure TCustomRichMemo.SetRangeParaParams(TextStart, TextLength: INteger;
+  ModifyMask: TParaModifyMask; const ParaMetric: TParaMetric);
+var
+  i : integer;
+  st, ln: Integer;
+  m : TParaMetric;
+begin
+  repeat
+    GetParaRange(TextStart, TextStart, ln);
+    GetParaMetric(TextStart, m);
+
+    if pmm_FirstLine in ModifyMask   then m.FirstLine:=ParaMetric.FirstLine;
+    if pmm_HeadIndent in ModifyMask  then m.HeadIndent:=ParaMetric.HeadIndent;
+    if pmm_TailIndent in ModifyMask  then m.TailIndent:=ParaMetric.TailIndent;
+    if pmm_SpaceBefore in ModifyMask then m.SpaceBefore:=ParaMetric.SpaceBefore;
+    if pmm_SpaceAfter in ModifyMask  then m.SpaceAfter:=ParaMetric.SpaceAfter;
+    if pmm_LineSpacing in ModifyMask then m.LineSpacing:=ParaMetric.LineSpacing;
+    SetParaMetric(TextStart, 1, m);
+
+    inc(TextStart, ln);
+    dec(TextLength, ln);
+
+  until TextLength<=0;
 end;
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;

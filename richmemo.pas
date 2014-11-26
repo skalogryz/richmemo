@@ -119,6 +119,8 @@ type
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
 
+    function InDelText(const UTF8Text: string; InsStartChar, ReplaceLength: Integer): Integer; virtual;
+
     procedure SetSelLengthFor(const aselstr: string);
 
     function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer;
@@ -513,6 +515,16 @@ begin
       Result:=RTFSaveStream(Self, Dest);
   end else
     Result := false;
+end;
+
+function TCustomRichMemo.InDelText(const UTF8Text: string; InsStartChar, ReplaceLength: Integer): Integer;
+begin
+  Result:=0;
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then begin
+    TWSCustomRichMemoClass(WidgetSetClass).InDelText(Self, UTF8Text, InsStartChar, ReplaceLength);
+    Result:=UTF8length(UTF8Text);
+  end;
 end;
 
 procedure TCustomRichMemo.SetSelLengthFor(const aselstr: string);

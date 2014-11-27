@@ -43,7 +43,7 @@ type
   protected
     class procedure SetCallbacks(const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
     class procedure GetWidgetBuffer(const AWinControl: TWinControl; var TextWidget: PGtkWidget; var Buffer: PGtkTextBuffer);
-    class function GetAttrAtPos(const AWinControl: TWinControl; TextStart: Integer): PGtkTextAttributes;
+    class function GetAttrAtPos(const AWinControl: TWinControl; TextStart: Integer; APara: Boolean = false): PGtkTextAttributes;
     class procedure ApplyTag(abuffer: PGtkTextBuffer; tag: PGtkTextTag; TextStart, TextLen: Integer; ToParagraphs: Boolean = False);
 
   published
@@ -155,7 +155,7 @@ begin
 end;
 
 class function TGtk2WSCustomRichMemo.GetAttrAtPos(
-  const AWinControl: TWinControl; TextStart: Integer): PGtkTextAttributes;
+  const AWinControl: TWinControl; TextStart: Integer; APara: Boolean ): PGtkTextAttributes;
 var
   TextWidget : PGtkWidget;
   buffer     : PGtkTextBuffer;
@@ -169,6 +169,7 @@ begin
   if not Assigned(attr) then Exit;
 
   gtk_text_buffer_get_iter_at_offset(buffer, @iter, TextStart);
+  if APara then gtk_text_iter_set_line_offset(@iter, 0);
   gtk_text_iter_get_attributes(@iter, attr);
   Result:=attr;
 end;
@@ -306,7 +307,7 @@ class function TGtk2WSCustomRichMemo.GetParaAlignment(
 var
   attr       : PGtkTextAttributes;
 begin
-  attr:=GetAttrAtPos(AWinControl, TextStart);
+  attr:=GetAttrAtPos(AWinControl, TextStart, true);
   Result := Assigned(attr);
   if Result then begin
     case attr^.justification of
@@ -356,7 +357,7 @@ const
   PageDPI   = 72; // not expected to be changed
   PixToPt   = PageDPI / ScreenDPI;
 begin
-  attr:=GetAttrAtPos(AWinControl, TextStart);
+  attr:=GetAttrAtPos(AWinControl, TextStart, true);
   GtkTextAttrToFontParams(attr^, fp);
   Result := Assigned(attr);
   if Result then begin

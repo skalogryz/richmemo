@@ -360,11 +360,17 @@ begin
   GtkTextAttrToFontParams(attr^, fp);
   Result := Assigned(attr);
   if Result then begin
+    if attr^.indent<0 then begin
+      AMetric.FirstLine:=(attr^.left_margin)*PixToPt;
+      AMetric.HeadIndent:=(-attr^.indent+attr^.left_margin)*PixToPt;
+    end else begin
+      AMetric.FirstLine:=(attr^.left_margin+attr^.indent)*PixToPt;
+      AMetric.HeadIndent:=attr^.left_margin*PixToPt;
+    end;
+    AMetric.TailIndent:=attr^.right_margin*PixToPt;
+
     AMetric.SpaceAfter:=attr^.pixels_above_lines*PixToPt;
     AMetric.SpaceBefore:=attr^.pixels_below_lines*PixToPt;
-    AMetric.FirstLine:=attr^.indent*PixToPt;
-    AMetric.HeadIndent:=attr^.left_margin*PixToPt;
-    AMetric.TailIndent:=attr^.right_margin*PixToPt;
     AMetric.LineSpacing:=(attr^.pixels_inside_wrap*PixToPt+fp.Size)/(fp.Size);
     gtk_text_attributes_unref(attr);
   end;
@@ -431,7 +437,10 @@ var
   iend   : TGtkTextIter;
 begin
   GetWidgetBuffer(AWinControl, w, b);
-  if not Assigned(b) then Exit;
+  if not Assigned(b) then begin
+    Result:=false;
+    Exit;
+  end;
   gtk_text_buffer_get_iter_at_offset (b, @istart, TextStart);
   gtk_text_buffer_get_iter_at_offset (b, @iend, TextStart);
   gtk_text_iter_set_line_offset(@istart, 0);
@@ -439,8 +448,10 @@ begin
   rng.start:=gtk_text_iter_get_offset(@istart);
   rng.lenghtNoBr:=gtk_text_iter_get_offset(@iend)-rng.start;
 
-  gtk_text_iter_forward_char(@iend); // if there's a character to move, then it's end of line, if not then it won't change!
+  // if there's a character to move, then it's end of line, if not then it won't change!
+  gtk_text_iter_forward_char(@iend);
   rng.length:=gtk_text_iter_get_offset(@iend)-rng.start;
+  Result:=true;
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;

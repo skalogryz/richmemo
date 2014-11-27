@@ -589,6 +589,8 @@ var
   isuline   : Boolean;
   isColor   : integer;
 
+  pm : TParaMetric;
+
   procedure WriteOut(const s: string);
   begin
     write(s);
@@ -691,6 +693,21 @@ begin
       while i<=length(u) do begin
         if isNewPara then begin
           //todo: WriteOut() paragraph info
+          ARich.GetParaMetric(i+rng.textStart, pm);
+          WriteOut('\pard');
+          case ARich.GetParaAlignment(i+rng.TextStart) of
+            paRight:   WriteOut('\qr');
+            paCenter:  WriteOut('\qc');
+            paJustify: WriteOut('\qj');
+          else
+          end;
+          WriteOut('\li'+IntToStr(round(pm.HeadIndent*20)));
+          if pm.FirstLine-pm.HeadIndent<>0 then
+            WriteOut('\fi'+IntToStr(round((pm.FirstLine-pm.HeadIndent)*20)));
+          if pm.TailIndent<>0 then WriteOut('\ri'+IntToStr(round(pm.TailIndent*20)));
+          if pm.SpaceAfter<>0 then WriteOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
+          if pm.SpaceBefore<>0 then WriteOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
+          WriteOut(' ');
         end;
         s:=GetRTFWriteText(u, i, isnewpara);
         WriteOut(s);

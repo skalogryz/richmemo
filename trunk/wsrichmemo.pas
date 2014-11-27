@@ -84,7 +84,7 @@ type
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); virtual;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
-    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
+    //class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
 
@@ -186,10 +186,10 @@ begin
 
 end;
 
-class procedure TWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); 
+{class procedure TWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean);
 begin
 
-end;
+end;}
 
 class function TWSCustomRichMemo.LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean;
 begin

@@ -49,9 +49,12 @@ type
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
 
-    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams): Boolean; override;
-    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams); override;
-
+    class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
+      var RangeStart, RangeLen: Integer): Boolean; override;
+    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
+      var Params: TIntFontParams): Boolean; override;
+    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const Params: TIntFontParams); override;
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
       var AAlign: TIntParaAlignment): Boolean; override;
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
@@ -62,6 +65,7 @@ type
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AMetric: TIntParaMetric); override;
 
+    class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; override;
@@ -233,6 +237,32 @@ begin
   SetCallbacks(Widget, WidgetInfo);
 end;
 
+class function TGtk2WSCustomRichMemo.GetStyleRange(
+  const AWinControl: TWinControl; TextStart: Integer; var RangeStart,
+  RangeLen: Integer): Boolean;
+var
+  w : PGtkWidget;
+  b : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+begin
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(b) then begin
+    Result:=false;
+    Exit;
+  end;
+
+  gtk_text_buffer_get_iter_at_offset (b, @istart, TextStart+1);
+  gtk_text_iter_backward_to_tag_toggle(@istart, nil);
+  RangeStart:=gtk_text_iter_get_offset(@istart);
+
+  gtk_text_buffer_get_iter_at_offset (b, @iend, TextStart);
+  gtk_text_iter_forward_to_tag_toggle(@iend, nil);
+
+  RangeLen:=gtk_text_iter_get_offset(@iend)-RangeStart;
+  Result:=true;
+end;
+
 class procedure TGtk2WSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams);
 var
   TextWidget: PGtkWidget;
@@ -389,6 +419,28 @@ begin
       'pixels-inside_wrap-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
+end;
+
+class function TGtk2WSCustomRichMemo.GetParaRange(
+  const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange
+  ): Boolean;
+var
+  w : PGtkWidget;
+  b : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+begin
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(b) then Exit;
+  gtk_text_buffer_get_iter_at_offset (b, @istart, TextStart);
+  gtk_text_buffer_get_iter_at_offset (b, @iend, TextStart);
+  gtk_text_iter_set_line_offset(@istart, 0);
+  gtk_text_iter_forward_to_line_end(@iend);
+  rng.start:=gtk_text_iter_get_offset(@istart);
+  rng.lenghtNoBr:=gtk_text_iter_get_offset(@iend)-rng.start;
+
+  gtk_text_iter_forward_char(@iend); // if there's a character to move, then it's end of line, if not then it won't change!
+  rng.length:=gtk_text_iter_get_offset(@iend)-rng.start;
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;

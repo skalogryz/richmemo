@@ -43,6 +43,7 @@ begin
   RegisterWSComponent(TCustomRichMemo, TGtk2WSCustomRichMemo);
   {$ifndef RichMemoNoDefaultRTFLoader}
   RegisterRTFLoader;
+  RegisterRTFSaver;
   {$endif}
   {$endif}
   {$ifdef LCLCocoa}RegisterWSComponent(TCustomRichMemo, TCocoaWSCustomRichMemo);{$endif}

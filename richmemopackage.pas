@@ -8,7 +8,7 @@ interface
 
 uses
   RichMemoFactory, richmemoregister, RichMemoRTF, RichMemoUtils, 
-  RichMemoHelpers, LazarusPackageIntf;
+  RichMemoHelpers, RTFParsPre211, LazarusPackageIntf;
 
 implementation
 

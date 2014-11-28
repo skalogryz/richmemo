@@ -130,7 +130,15 @@ type
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
   end;
   
+  { TRichMemo }
+
   TRichMemo = class(TCustomRichMemo)
+  protected
+    // this is "design-time" property
+    fRtf: string; // initial RichText
+    function GetRTF: string; virtual;
+    procedure SetRTF(const AValue: string); virtual;
+    procedure UpdateRichMemo; override;
   published
     property Align;
     property Alignment;
@@ -178,6 +186,7 @@ type
     property PopupMenu;
     property ParentShowHint;
     property ReadOnly;
+    property Rtf: string read GetRTF write SetRTF;
     property ScrollBars;
     property ShowHint;
     property TabOrder;
@@ -244,6 +253,59 @@ end;
 procedure InitParaNumbering(var n: TParaNumbering);
 begin
   FillChar(n, sizeof(n), 0);
+end;
+
+{ TRichMemo }
+
+function TRichMemo.GetRTF: string;
+var
+  st : TStringStream;
+begin
+  if (csDesigning in ComponentState) or not HandleAllocated then
+    Result:=fRTF
+  else begin
+    try
+      st := TStringStream.Create('');
+      try
+        SaveRichText(st);
+        Result:=st.DataString;
+      finally
+        st.Free;
+      end;
+    except
+      Result:='';
+    end;
+  end;
+end;
+
+procedure TRichMemo.SetRTF(const AValue: string);
+var
+  st : TStringStream;
+begin
+  if (csDesigning in ComponentState) or not HandleAllocated then
+    fRTF:=AValue;
+
+  if HandleAllocated then
+    try
+      st := TStringStream.Create(AValue);
+      try
+        LoadRichText(st);
+      finally
+        st.Free;
+      end;
+    except
+    end;
+
+  if ([csDesigning, csLoading] * ComponentState = []) and HandleAllocated then begin
+    fRTF:=''; // reduce memory usage in run-time
+  end;
+end;
+
+procedure TRichMemo.UpdateRichMemo;
+begin
+  inherited UpdateRichMemo;
+  // if fRTF is blank, Text property would be used
+  if fRTF<>'' then SetRTF(fRTF);
 end;
 
 { TCustomRichMemo }

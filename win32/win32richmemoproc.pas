@@ -178,6 +178,10 @@ const
   CP_UNICODE = 1200;
   HardBreak  = #13;
 
+const
+  CFM_BACKCOLOR = $04000000;
+  CFE_AUTOBACKCOLOR = CFM_BACKCOLOR;
+
 implementation
 
 const
@@ -244,6 +248,19 @@ begin
   Params.Style := EffectsToFontStyles(fmt.dwEffects);
 end;
 
+procedure CharFormatToFontParams(const fmt: TCHARFORMAT2; var Params: TIntFontParams);
+begin
+  Params.Name := fmt.szFaceName;
+  Params.Size := Round(fmt.yHeight/TwipsInFontSize);
+  Params.Color := fmt.crTextColor;
+  Params.Style := EffectsToFontStyles(fmt.dwEffects);
+  if fmt.cbSize > sizeof(CHARFORMAT) then begin
+    Params.HasBkClr:=(fmt.dwEffects and CFE_AUTOBACKCOLOR) = 0;
+    if Params.HasBkClr then Params.Color:=Params.Color;
+  end;
+end;
+
+
 { TRichEditManager }
 
 class function TRichEditManager.GetTextLength(RichEditWnd: Handle): Integer;
@@ -260,8 +277,7 @@ class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle;
   Params: TIntFontParams): Boolean;
 var
   w : WPARAM;
-  fmt : TCHARFORMAT;
-  
+  fmt : TCHARFORMAT2;
 begin
   if RichEditWnd = 0 then begin
     Result := false;
@@ -273,11 +289,10 @@ begin
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
   
-
   fmt.dwMask := fmt.dwMask or CFM_COLOR;
   fmt.crTextColor := Params.Color;
 
-  fmt.dwMask := fmt.dwMask or CFM_FACE ;
+  fmt.dwMask := fmt.dwMask or CFM_FACE;
   // keep last char for Null-termination?
   CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1); 
   
@@ -286,7 +301,15 @@ begin
   
   fmt.dwMask := fmt.dwMask or CFM_EFFECTS;
   fmt.dwEffects := FontStylesToEffects(Params.Style);
-  
+
+  if Params.HasBkClr then begin
+    fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
+    fmt.crBackColor := Params.BkColor;
+  end else begin
+    fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
+    fmt.dwEffects := fmt.dwEffects or CFE_AUTOBACKCOLOR;
+  end;
+
   Result := SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt))>0;
 end;
 
@@ -294,7 +317,7 @@ class function TRichEditManager.GetSelectedTextStyle(RichEditWnd: Handle;
   var Params: TIntFontParams): Boolean; 
 var
   w     : WPARAM;
-  fmt   : TCHARFORMAT;
+  fmt   : TCHARFORMAT2;
   
 begin
   Result := false;
@@ -304,7 +327,7 @@ begin
     
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
-  fmt.dwMask := CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS;
+  fmt.dwMask := CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS or CFM_BACKCOLOR;
   
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
   

@@ -28,10 +28,12 @@ uses
 
 type
   TFontParams  = record
-    Name    : String;
-    Size    : Integer;
-    Color   : TColor;
-    Style   : TFontStyles;
+    Name      : String;
+    Size      : Integer;
+    Color     : TColor;
+    Style     : TFontStyles;
+    HasBkClr  : Boolean;
+    BkColor   : TColor;
   end;
 
   TParaAlignment  = (paLeft, paRight, paCenter, paJustify);
@@ -58,7 +60,7 @@ type
     NumIndent   : Double;
   end;
 
-  TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles);
+  TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles, tmm_BackColor);
   TParaModifyMask = set of (pmm_FirstLine, pmm_HeadIndent, pmm_TailIndent, pmm_SpaceBefore, pmm_SpaceAfter, pmm_LineSpacing);
 
   TSearchOption = (soMatchCase, soWholeWord, soBackward);
@@ -113,7 +115,9 @@ type
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
     procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
-      const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
+      const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles); overload;
+    procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
+      const fnt: TFontParams; AddFontStyle, RemoveFontStyle: TFontStyles); overload;
     procedure SetRangeParaParams(TextStart, TextLength: INteger; ModifyMask: TParaModifyMask;
       const ParaMetric: TParaMetric);
 
@@ -384,8 +388,6 @@ end;
 
 function TCustomRichMemo.GetParaAlignment(TextStart: Integer;
   var AAlign: TParaAlignment): Boolean;
-var
-  ac: Integer;
 begin
   Result := HandleAllocated and
     TWSCustomRichMemoClass(WidgetSetClass).GetParaAlignment(Self, TextStart, AAlign);
@@ -507,6 +509,19 @@ end;
 procedure TCustomRichMemo.SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
       const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles);
 var
+  fnt : TFontParams;
+begin
+  InitFontParams(fnt);
+  fnt.Name:=FontName;
+  fnt.Size:=FontSize;
+  fnt.Color:=FontColor;
+  SetRangeParams(TextStart, TextLength, ModifyMask, fnt, AddFontStyle, RemoveFontStyle);
+end;
+
+procedure TCustomRichMemo.SetRangeParams(TextStart, TextLength: Integer;
+  ModifyMask: TTextModifyMask; const fnt: TFontParams; AddFontStyle,
+  RemoveFontStyle: TFontStyles);
+var
   i : Integer;
   j : Integer;
   l : Integer;
@@ -521,11 +536,14 @@ begin
   while i < j do begin
     GetTextAttributes(i, p);
 
-    if tmm_Name in ModifyMask then p.Name := FontName;
-    if tmm_Color in ModifyMask then p.Color := FontColor;
-    if tmm_Size in ModifyMask then p.Size := FontSize;
+    if tmm_Name in ModifyMask   then p.Name := fnt.Name;
+    if tmm_Color in ModifyMask  then p.Color := fnt.Color;
+    if tmm_Size in ModifyMask   then p.Size := fnt.Size;
     if tmm_Styles in ModifyMask then p.Style := p.Style + AddFontStyle - RemoveFontStyle;
-
+    if tmm_BackColor in ModifyMask then begin
+      p.HasBkClr:=fnt.HasBkClr;
+      p.BkColor:=fnt.BkColor;
+    end;
     l := GetContStyleLength(i);
     if i + l > j then l := j - i;
     if l = 0 then l := 1;
@@ -537,8 +555,7 @@ end;
 procedure TCustomRichMemo.SetRangeParaParams(TextStart, TextLength: INteger;
   ModifyMask: TParaModifyMask; const ParaMetric: TParaMetric);
 var
-  i : integer;
-  st, ln: Integer;
+  ln: Integer;
   m : TParaMetric;
 begin
   repeat

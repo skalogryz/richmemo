@@ -81,7 +81,9 @@ type
   TCustomRichMemo = class(TCustomMemo)
   private
     fHideSelection  : Boolean;
+    fOnSelectionChange: TNotifyEvent;
   protected
+    procedure DoSelectionChange;
     class procedure WSRegisterClass; override;
     procedure CreateWnd; override;    
     procedure UpdateRichMemo; virtual;
@@ -89,7 +91,6 @@ type
     function GetContStyleLength(TextStart: Integer): Integer;
     
     procedure SetSelText(const SelTextUTF8: string); override;
-    
   public
     procedure CopyToClipboard; override;
     procedure CutToClipboard; override;
@@ -126,6 +127,7 @@ type
     function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer;
 
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
+    property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
   end;
   
   TRichMemo = class(TCustomRichMemo)
@@ -167,6 +169,7 @@ type
     property OnMouseWheel;
     property OnMouseWheelDown;
     property OnMouseWheelUp;
+    property OnSelectionChange;
     property OnStartDrag;
     property OnUTF8KeyPress;
     property ParentBidiMode;
@@ -250,6 +253,11 @@ begin
   if HandleAllocated then 
     TWSCustomRichMemoClass(WidgetSetClass).SetHideSelection(Self, AValue);
   fHideSelection := AValue;   
+end;
+
+procedure TCustomRichMemo.DoSelectionChange;
+begin
+  if Assigned(fOnSelectionChange) then fOnSelectionChange(Self);
 end;
 
 class procedure TCustomRichMemo.WSRegisterClass;  
@@ -409,6 +417,7 @@ begin
     Lines.EndUpdate;
   end;
 end;
+
 
 procedure TCustomRichMemo.CopyToClipboard;  
 begin

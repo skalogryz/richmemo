@@ -334,6 +334,7 @@ const
     rtfForeColor            = 20;
     rtfBackColor            = 21;
     rtfGray                 = 22;
+    rtfHighlight            = 23;
 
   rtfPictAttr     = 13;
     rtfMacQD                = 0;
@@ -468,7 +469,7 @@ type
   ---------------------------------------------------------------------}
 
 const
-  rtfKey : Array [0..283] of TRTFKey =
+  rtfKey : Array [0..284] of TRTFKey =
   (
     ( rtfKMajor: RTFSPECIALCHAR; rtfKMinor : rtfCURHEADPICT; rtfKStr  : 'chpict'; rtfKhash :        0),
     ( rtfKMajor: rtfSpecialChar; rtfKMinor:         rtfCurHeadDate; rtfKstr : 'chdate'; rtfkHash : 0),
@@ -532,6 +533,7 @@ const
     ( rtfKMajor: rtfCharAttr; rtfKMinor:    rtfForeColor; rtfKstr : 'cf'; rtfkHash : 0),
     ( rtfKMajor: rtfCharAttr; rtfKMinor:    rtfBackColor; rtfKstr : 'cb'; rtfkHash : 0),
     ( rtfKMajor: rtfCharAttr; rtfKMinor:    rtfGray; rtfKstr : 'gray'; rtfkHash : 0),
+    ( rtfKMajor: rtfCharAttr; rtfKMinor:    rtfHighlight; rtfKstr : 'highlight'; rtfkHash : 0),
 
     ( rtfKMajor: rtfParAttr; rtfKMinor:     rtfParDef; rtfKstr : 'pard'; rtfkHash : 0),
     ( rtfKMajor: rtfParAttr; rtfKMinor:     rtfStyleNum; rtfKstr : 's'; rtfkHash : 0),

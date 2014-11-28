@@ -29,7 +29,7 @@ uses
   // RTL/FCL
   Types, Classes, SysUtils,
   // LCL
-  LCLType, Controls, Graphics, LazUTF8,
+  LCLType, Controls, Graphics, LazUTF8, StdCtrls,
   // Gtk2 widget
   Gtk2Def,
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
@@ -74,6 +74,8 @@ type
          const FileNameUTF8: string;
          const AImgSize: TSize
       ): Boolean;
+    class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
+    class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
   end;
 
 implementation
@@ -252,8 +254,12 @@ begin
     Result:=false;
     Exit;
   end;
-
   gtk_text_buffer_get_iter_at_offset (b, @istart, TextStart+1);
+  if gtk_text_iter_get_offset(@istart)<>TextStart+1 then begin
+    Result:=false; // TextStart is beyoned the end of text
+    Exit;
+  end;
+
   gtk_text_iter_backward_to_tag_toggle(@istart, nil);
   RangeStart:=gtk_text_iter_get_offset(@istart);
 
@@ -589,6 +595,54 @@ begin
     gtk_text_buffer_insert_pixbuf(b, @istart, pix);
   end else
     writeln(err^.message);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);
+var
+  TextMark: PGtkTextMark;
+  CursorIter: TGtkTextIter;
+  w      : PGtkWidget;
+  b      : PGtkTextBuffer;
+begin
+  GetWidgetBuffer(ACustomEdit, w, b);
+  if not Assigned(b) then Exit;
+
+  if NewStart = -1 then
+  begin
+    // always scroll so the cursor is visible
+    TextMark := gtk_text_buffer_get_insert(b);
+    gtk_text_buffer_get_iter_at_mark(b, @CursorIter, TextMark);
+  end
+  else begin
+    // SelStart was used and we should move to that location
+    gtk_text_buffer_get_iter_at_offset(b, @CursorIter, NewStart);
+    gtk_text_buffer_place_cursor(b, @CursorIter); // needed to move the cursor
+    TextMark := gtk_text_buffer_get_insert(b);
+  end;
+  gtk_text_view_scroll_to_mark(PGtkTextView(w), TextMark, 0, True, 0, 1);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetSelLength(
+  const ACustomEdit: TCustomEdit; NewLength: integer);
+var
+  TextMark: PGtkTextMark;
+  StartIter,
+  EndIter: TGtkTextIter;
+  Offset: Integer;
+  w      : PGtkWidget;
+  b      : PGtkTextBuffer;
+begin
+  GetWidgetBuffer(ACustomEdit, w, b);
+  if not Assigned(b) then Exit;
+
+  TextMark := gtk_text_buffer_get_insert(b);
+  gtk_text_buffer_get_iter_at_mark(b, @StartIter, TextMark);
+
+  Offset := gtk_text_iter_get_offset(@StartIter);
+
+  gtk_text_buffer_get_iter_at_offset(b, @EndIter, Offset+NewLength);
+
+  gtk_text_buffer_select_range(b, @StartIter, @EndIter);
 end;
 
 

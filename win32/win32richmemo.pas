@@ -107,6 +107,9 @@ type
   
 implementation
 
+type
+  TIntCustomRichMemo = class(TCustomRichMemo);
+
 const
   AlignmentToEditFlags: array[TAlignment] of DWord =
   (
@@ -126,17 +129,42 @@ begin
   SendMessage(AHandle, WM_SETREDRAW, 1, 0);
   if NeedInvalidate then 
     Windows.InvalidateRect(AHandle, nil, true);
-end;  
+end;
+
+function RichEditNotifyProc(const AWinControl: TWinControl; Window: HWnd;
+      Msg: UInt; WParam: Windows.WParam; LParam: Windows.LParam;
+      var MsgResult: Windows.LResult; var WinProcess: Boolean): Boolean;
+var
+  sch : PSELCHANGE;
+begin
+  Result:=false; // we need to catch just notifications,
+    // any other message should be handled in a "Default" manner
+    // So, default result is false;
+  case Msg of
+    WM_NOTIFY: begin
+      sch:=PSELCHANGE(LPARAM);
+      if sch^.nmhdr.code=EN_SELCHANGE then
+      begin
+        if Assigned(AWinControl) and (AWinControl is TCustomRichMemo) then
+          TIntCustomRichMemo(AWinControl).DoSelectionChange;
+        Result:=true;
+      end;
+    end;
+  end;
+end;
 
 function RichEditProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
    LParam: Windows.LParam): LResult; stdcall;
 begin 
-  if Msg = WM_PAINT then begin
-    //todo: LCL WM_PAINT handling prevents richedit from drawing correctly
-    Result := CallDefaultWindowProc(Window, Msg, WParam, LParam)
-    //Result := WindowProc(Window, Msg, WParam, LParam)
-  end else
+  case Msg of
+    WM_PAINT : begin
+      //todo: LCL WM_PAINT handling prevents richedit from drawing correctly
+      Result := CallDefaultWindowProc(Window, Msg, WParam, LParam)
+      //Result := WindowProc(Window, Msg, WParam, LParam)
+      end;
+  else
     Result := WindowProc(Window, Msg, WParam, LParam);
+  end;
 end;
 
 { TWin32RichMemoStringsW }
@@ -221,21 +249,33 @@ end;
 class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  
 var
   range : Tcharrange;
+  eventmask : LParam;
 begin
+  eventmask := SendMessage(ACustomEdit.Handle, EM_GETEVENTMASK, 0, 0);
+  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, 0);
+
   range.cpMin := NewStart;
   range.cpMax := NewStart;
   SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
-  InvalidateRect(ACustomEdit.Handle, nil, false);  
+  InvalidateRect(ACustomEdit.Handle, nil, false);
+
+  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, eventmask);
 end;
 
 class procedure TWin32WSCustomRichMemo.SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer);  
 var
   range : Tcharrange;
+  eventmask : LParam;
 begin
+  eventmask := SendMessage(ACustomEdit.Handle, EM_GETEVENTMASK, 0, 0);
+  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, 0);
+
   SendMessage(ACustomEdit.Handle, EM_EXGETSEL, 0, LPARAM(@range));
   range.cpMax := range.cpMin + NewLength;
   SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
   InvalidateRect(ACustomEdit.Handle, nil, false);
+
+  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, eventmask);
 end;
 
 class procedure TWin32WSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl);  
@@ -259,6 +299,7 @@ var
   Params      : TCreateWindowExParams;
   RichClass   : AnsiString;
   ACustomMemo : TCustomMemo;
+  eventmask   : LPARAM;
 begin
   InitRichEdit;
   RichClass := GetRichEditClass;
@@ -269,7 +310,7 @@ begin
 
   // general initialization of Params
 
-  // if you're using 0.9.28.2 compiler, uncomment the line,
+  // if you're using 0.9.28.2 lazarus, uncomment the line,
   // PrepareCreateWindow(AWinControl, Params);
   // and comment the following like (it's for 0.9.30 compatiblity):
   PrepareCreateWindow(AWinControl, AParams, Params);
@@ -306,7 +347,13 @@ begin
   end;
   // create window
   FinishCreateWindow(AWinControl, Params, false);
+
+  eventmask := SendMessage(AWinControl.Handle, EM_GETEVENTMASK, 0, 0);
+  eventmask := eventmask or ENM_SELCHANGE;
+  SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
+
   // memo is not a transparent control -> no need for parentpainting
+  PArams.WindowInfo^.ParentMsgHandler := @RichEditNotifyProc;
   Params.WindowInfo^.needParentPaint := false;
   Result := Params.Window;
 end;

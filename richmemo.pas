@@ -598,9 +598,11 @@ end;
 function TCustomRichMemo.SaveRichText(Dest: TStream): Boolean;
 begin
   if Assigned(Dest) and HandleAllocated then begin
-    Result := TWSCustomRichMemoClass(WidgetSetClass).SaveRichText(Self, Dest);
-    if not Result and Assigned(RTFSaveStream) then
-      Result:=RTFSaveStream(Self, Dest);
+
+    if Assigned(RTFSaveStream) then begin
+      Result := RTFSaveStream(Self, Dest)
+    end else
+      Result := TWSCustomRichMemoClass(WidgetSetClass).SaveRichText(Self, Dest);
   end else
     Result := false;
 end;

@@ -249,33 +249,21 @@ end;
 class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  
 var
   range : Tcharrange;
-  eventmask : LParam;
 begin
-  eventmask := SendMessage(ACustomEdit.Handle, EM_GETEVENTMASK, 0, 0);
-  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, 0);
-
   range.cpMin := NewStart;
   range.cpMax := NewStart;
   SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
   InvalidateRect(ACustomEdit.Handle, nil, false);
-
-  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, eventmask);
 end;
 
 class procedure TWin32WSCustomRichMemo.SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer);  
 var
   range : Tcharrange;
-  eventmask : LParam;
 begin
-  eventmask := SendMessage(ACustomEdit.Handle, EM_GETEVENTMASK, 0, 0);
-  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, 0);
-
   SendMessage(ACustomEdit.Handle, EM_EXGETSEL, 0, LPARAM(@range));
   range.cpMax := range.cpMin + NewLength;
   SendMessage(ACustomEdit.Handle, EM_EXSETSEL, 0, LPARAM(@range));
   InvalidateRect(ACustomEdit.Handle, nil, false);
-
-  SendMessage(ACustomEdit.Handle, EM_SETEVENTMASK, 0, eventmask);
 end;
 
 class procedure TWin32WSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl);  

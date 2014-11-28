@@ -19,13 +19,15 @@ function LangConvGet(lang: Integer; var convproc: TEncConvProc): Boolean;
 
 type
   TSaveParams = record // reserved
+    start  : Integer; // the first character for the extract
+    len    : Integer; // the number of characters to extract
   end;
 
 // the function depends on GetStyleRange and to be implemented properly
 // if GetStyleRange, GetParaMetric, GetParaAlignment is not working properly
 // the resulting RTF would not contain any styles or the text styles would be wrong
 procedure IntSaveStream(ARich: TcustomRichMemo; SaveParams: TSaveParams; Dst: TStream);
-function SaveStream(ARich: TcustomRichMemo; Dst: TStream): Boolean;
+function SaveStream(ARich: TCustomRichMemo; Dst: TStream): Boolean;
 procedure RegisterRTFSaver;
 
 implementation
@@ -470,6 +472,8 @@ var
   p : TSaveParams;
 begin
   FillChar(p, sizeof(p), 0);
+  p.start:=-1;
+  p.len:=-1;
   IntSaveStream(ARich, p, Dst);
   Result:=True;
 end;
@@ -558,7 +562,12 @@ begin
   isNewPara:=false;
   while i<=length(u) do begin
     if u[i]='\' then Result:=Result+'\\'
-    else if u[i]=#13 then begin
+    else if u[i]=#10 then begin
+      Result:=Result+'\par ';
+      isNewPara:=true;
+      inc(i);
+      Break;
+    end else if u[i]=#13 then begin
       Result:=Result+'\par ';
       isNewPara:=true;
       inc(i);
@@ -573,6 +582,8 @@ end;
 procedure IntSaveStream(ARich: TCustomRichMemo; SaveParams: TSaveParams; Dst: TStream);
 var
   ofs     : Integer;
+  needlen : Integer;
+  endless : Boolean;
   root    : TStyleRange; // first in the list
   last    : TStyleRange; // last in the list
   rng     : TStyleRange; // temproray
@@ -591,21 +602,28 @@ var
 
   pm : TParaMetric;
 
-  procedure WriteOut(const s: string);
+  procedure RtfOut(const s: string);
   begin
-    write(s);
     Dst.Write(s[1], length(s));
   end;
 
 begin
-  ofs:=0;
+  if SaveParams.start<0 then ofs:=0
+  else ofs:=SaveParams.start;
   root:=nil;
   last:=nil;
+  needlen:=SaveParams.len;
+  endless:=needlen<0;
 
   while ARich.GetStyleRange(ofs, st, len) do begin
     rng:=TStyleRange.Create;
     rng.textStart:=st;
-    rng.textLength:=len;
+    if not endless then begin
+      if needlen<len then rng.textLength:=needlen
+      else rng.textLength:=len;
+      dec(needLen, len);
+    end else
+      rng.textLength:=len;
     ARich.GetTextAttributes(ofs, rng.font);
 
     if not Assigned(root) then root:=rng;
@@ -613,6 +631,7 @@ begin
     last:=rng;
 
     inc(ofs, len);
+    if not endless and (needLen<=0) then break;
   end;
 
   if root=nil then begin
@@ -630,25 +649,25 @@ begin
     PrepareFontTable(root, fontTable);
     PrepareColorTable(root, colorTable);
 
-    WriteOut('{\rtf1\ansi\ansicp1252\deff0\deflan1033');
+    RtfOut('{\rtf1\ansi\ansicp1252\deff0\deflan1033');
 
     // start of RTF
     if fontTable.Count>0 then begin
       // at least on font should be present anyway.
-      WriteOut('{\fonttbl');
+      RtfOut('{\fonttbl');
       for i:=0 to fontTable.Count-1 do begin
         // setting font id, charset to 0 and name
-        WriteOut('{\f'+IntToStR(i)+'\fcharset0 '+fontTable[i]+';}');
+        RtfOut('{\f'+IntToStR(i)+'\fcharset0 '+fontTable[i]+';}');
       end;
-      WriteOut('}');
+      RtfOut('}');
     end;
     if colorTable.Count>1 then begin
-      WriteOut('{\colortbl');
+      RtfOut('{\colortbl');
       for i:=0 to colorTable.Count-1 do begin
-        WriteOut( colortable[i] );
-        WriteOut( ';');
+        RtfOut( colortable[i] );
+        RtfOut( ';');
       end;
-      WriteOut('}');
+      RtfOut('}');
     end;
 
     isnewpara := true;
@@ -660,63 +679,62 @@ begin
       ARich.SelStart:=rng.textStart;
       ARich.SelLength:=rng.textLength;
       u:=UTF8Decode(ARich.SelText);
-      WriteOut('\f'+IntToStr(rng.fontId));
-      WriteOut('\fs'+IntToStr(rng.font.Size*2));
+      RtfOut('\f'+IntToStr(rng.fontId));
+      RtfOut('\fs'+IntToStr(rng.font.Size*2));
       if (fsBold in rng.font.Style) then begin
-        WriteOut('\b');
+        RtfOut('\b');
         isbold:=true;
       end else begin
-        if isbold then WriteOut('\b0');
+        if isbold then RtfOut('\b0');
         isbold:=false;
       end;
       if (fsUnderline in rng.font.Style) then begin
-        WriteOut('\ul');
+        RtfOut('\ul');
         isuline:=true
       end else begin
-        if isuline then Write('\ulnone');
+        if isuline then RtfOut('\ulnone');
         isuline:=false;
       end;
       if isColor<>rng.colorId then begin
-        WriteOut('\cf'+IntToStR(rng.colorId));
+        RtfOut('\cf'+IntToStR(rng.colorId));
         isColor:=rng.ColorId;
       end;
       if (fsItalic in rng.font.Style) then begin
-        WriteOut('\i');
+        RtfOut('\i');
         isitalic:=true;
       end else begin
-        if isitalic then WriteOut('\i0');
+        if isitalic then RtfOut('\i0');
         isitalic:=false;
       end;
-      WriteOut(' ');
+      RtfOut(' ');
 
       i:=1;
       while i<=length(u) do begin
         if isNewPara then begin
-          //todo: WriteOut() paragraph info
           ARich.GetParaMetric(i+rng.textStart, pm);
-          WriteOut('\pard');
+          RtfOut('\pard');
           case ARich.GetParaAlignment(i+rng.TextStart) of
-            paRight:   WriteOut('\qr');
-            paCenter:  WriteOut('\qc');
-            paJustify: WriteOut('\qj');
+            paRight:   RtfOut('\qr');
+            paCenter:  RtfOut('\qc');
+            paJustify: RtfOut('\qj');
           else
           end;
-          WriteOut('\li'+IntToStr(round(pm.HeadIndent*20)));
+          RtfOut('\li'+IntToStr(round(pm.HeadIndent*20)));
           if pm.FirstLine-pm.HeadIndent<>0 then
-            WriteOut('\fi'+IntToStr(round((pm.FirstLine-pm.HeadIndent)*20)));
-          if pm.TailIndent<>0 then WriteOut('\ri'+IntToStr(round(pm.TailIndent*20)));
-          if pm.SpaceAfter<>0 then WriteOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
-          if pm.SpaceBefore<>0 then WriteOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
-          WriteOut(' ');
+            RtfOut('\fi'+IntToStr(round((pm.FirstLine-pm.HeadIndent)*20)));
+          if pm.TailIndent<>0 then RtfOut('\ri'+IntToStr(round(pm.TailIndent*20)));
+          if pm.SpaceAfter<>0 then RtfOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
+          if pm.SpaceBefore<>0 then RtfOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
+          RtfOut(' ');
         end;
         s:=GetRTFWriteText(u, i, isnewpara);
-        WriteOut(s);
+        RtfOut(s);
       end;
       rng:=rng.next;
     end;
 
     // end of RTF
-    WriteOut('}');
+    RtfOut('}');
   finally
     fontTable.Free;
     colorTable.Free;

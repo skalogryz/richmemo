@@ -148,6 +148,8 @@ type
 
   TRichEditManager = class(TObject)
   public
+    class function SetEventMask(RichEditWnd: Handle; eventmask: integer): Integer;
+
     class function GetTextLength(RichEditWnd: Handle): Integer;
     class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
@@ -263,6 +265,12 @@ end;
 
 { TRichEditManager }
 
+class function TRichEditManager.SetEventMask(RichEditWnd: Handle; eventmask: integer): Integer;
+begin
+  Result := SendMessage(RichEditWnd, EM_GETEVENTMASK, 0, 0);
+  SendMessage(RichEditWnd, EM_SETEVENTMASK, 0, eventmask);
+end;
+
 class function TRichEditManager.GetTextLength(RichEditWnd: Handle): Integer;
 var
   textlen : TGETTEXTEX;
@@ -351,7 +359,7 @@ var
   sel     : TCHARRANGE;
   d       : Integer;
   last    : Integer;
-  
+
 const
   ALL_MASK = CFM_BOLD or CFM_ITALIC or CFM_STRIKEOUT or CFM_UNDERLINE or 
              CFM_SIZE or CFM_COLOR or CFM_FACE;
@@ -434,6 +442,7 @@ begin
  
   RangeStart := sel.cpMin;
   RangeLen := last - sel.cpMin - 1;
+
   Result := true;  
 end;
 
@@ -554,6 +563,7 @@ var
   s, l     : Integer;
 begin
   GetSelection(RichEditWnd, s, l);
+
   SetSelection(RichEditWnd, TextStart, 0);
 
   FillChar(para, sizeof(para), 0);

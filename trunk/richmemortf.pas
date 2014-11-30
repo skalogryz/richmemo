@@ -363,7 +363,9 @@ begin
     rtfRightIndent:  prm.pm.TailIndent  := aparam / 20;
     rtfSpaceBefore:  prm.pm.SpaceBefore := aparam / 20;
     rtfSpaceAfter:   prm.pm.SpaceAfter  := aparam / 20;
-    rtfSpaceBetween: prm.pm.LineSpacing := aparam / 240;
+    rtfSpaceBetween: prm.pm.LineSpacing := aparam / 200;
+      // \slN - surprise! the "line spacing" is actually a multiplier based on the FONT size, not linesize
+      // where linesize = fontsize * 1.2
     rtfLanguage: begin
       lang:=rtfParam;
       langproc:=nil;
@@ -547,7 +549,6 @@ function SaveStream(ARich: TcustomRichMemo; Dst: TStream): Boolean;
 var
   p : TSaveParams;
 begin
-  writeln('saving stream!');
   FillChar(p, sizeof(p), 0);
   p.start:=-1;
   p.len:=-1;
@@ -802,6 +803,7 @@ begin
           if pm.TailIndent<>0 then RtfOut('\ri'+IntToStr(round(pm.TailIndent*20)));
           if pm.SpaceAfter<>0 then RtfOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
           if pm.SpaceBefore<>0 then RtfOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
+          if pm.LineSpacing<>0 then RtfOut('\sl'+IntToStr(round(pm.LineSpacing*200))+'\slmult1');
           RtfOut(' ');
         end;
         s:=GetRTFWriteText(u, i, isnewpara);

@@ -48,7 +48,11 @@ type
   end;
 
 const
-  DefLineSpacing = 1.2;
+  DefLineSpacing     = 1.2;
+  SingleLineSpacing  = DefLineSpacing;
+  OneHalfLineSpacing = DefLineSpacing * 1.5;
+  DoubleLineSpacing  = DefLineSpacing * 2.0;
+
 
 type
   TParaNumStyle   = (pnNone, pnBullet, pnNumber, pnLowLetter

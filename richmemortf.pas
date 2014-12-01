@@ -74,11 +74,15 @@ type
   TRTFMemoParser = class(TRTFParser)
   private
     txtbuf   : String; // keep it UTF8 encoded!
-
     txtlen    : Integer;
+
+    HLFromCTable : Boolean;
+
     prm       : TRTFParams;
     lang      : Integer;
     langproc  : TEncConvProc;
+
+    procedure AddText(const atext: string);
   protected
     procedure classUnk;
     procedure classText;
@@ -254,18 +258,39 @@ end;
 
 { TRTFMemoParserr }
 
+procedure TRTFMemoParser.AddText(const atext: string);
+var
+  nl : Integer;
+  l  : Integer;
+begin
+  nl:=txtlen+length(atext);
+  if nl>length(txtbuf) then begin
+    l:=length(txtbuf);
+    while l<nl do
+      if l=0 then l:=256
+      else l:=l*2;
+    SetLength(txtbuf, l);
+  end;
+  Move(atext[1], txtbuf[txtlen+1], length(atext));
+  inc(txtlen, length(atext));
+end;
+
 procedure TRTFMemoParser.classUnk;
 var
   txt : string;
   ws : UnicodeString;
 begin
-  //writelN('unk: ', rtfMajor, ' ',rtfMinor,' ', rtfParam,' ', GetRtfText);
+  if not Assigned(prm) then exit;
+
   txt:=GetRtfText;
+  if (txt='\object') then begin
+    SkipGroup;
+    Exit;
+  end;
   if (length(txt)>2) and (txt[1]='\') and (txt[2]='u') and (txt[3] in ['0'..'9']) then begin
     SetLength(Ws,1);
     ws[1]:=UnicodeChar(rtfParam);
-    txtbuf:=txtbuf+UTF8Encode(ws);
-    txtlen:=length(txtbuf);
+    AddText( UTF8Encode(ws) );
   end; 
 end;
 
@@ -288,27 +313,28 @@ var
   txt : string;
   bt  : Char;
 begin
+  if not Assigned(prm) then exit;
+
   txt:=Self.GetRtfText;
-  //writeln('txt:  ', rtfMajor, ' ',rtfMinor,' ', rtfParam,' ',);
+
   if (length(txt)=4) and (txt[1]='\') and (txt[2]=#39) then begin
     if Assigned(langproc) then begin
       bt:=char(RTFCharToByte(txt));
-      txtbuf:=txtbuf+langproc(bt);
-      txtlen:=length(txtbuf);
+
+      AddText( langproc(bt) );
     end;
-  end else
-    case rtfMinor of
-      rtfOptDest: {skipping option generator};
-    else
-      txtbuf:=txtbuf+txt;
-      txtlen:=length(txtbuf);
-    end;
+  end else begin
+    AddText(txt);
+  end;
 end;
 
 procedure TRTFMemoParser.classControl;
 begin
-  if txtbuf<>'' then
+  if not Assigned(prm) then exit;
+
+  if txtlen>0 then begin
     PushText;
+  end;
   //writeln('ctrl: ', rtfClass,' ', rtfMajor, ' ', Self.GetRtfText, ' ',rtfMinor,' ', rtfParam);
   case rtfMajor of
     rtfSpecialChar: doSpecialChar;
@@ -321,6 +347,8 @@ procedure TRTFMemoParser.classGroup;
 var
   t : TRTFParams;
 begin
+  if not Assigned(prm) then exit;
+
   //todo:
   Exit;
   case rtfMajor of
@@ -354,11 +382,9 @@ begin
     rtfQuadCenter:  prm.pa:=paCenter;
     rtfFirstIndent: begin
       prm.pm.FirstLine:=aparam / 20;
-      prm.pm.FirstLine:=prm.pm.FirstLine+prm.pm.HeadIndent;
     end;
     rtfLeftIndent: begin
       prm.pm.HeadIndent:=aparam / 20;
-      prm.pm.FirstLine:=prm.pm.FirstLine+prm.pm.HeadIndent;
     end;
     rtfRightIndent:  prm.pm.TailIndent  := aparam / 20;
     rtfSpaceBefore:  prm.pm.SpaceBefore := aparam / 20;
@@ -385,9 +411,10 @@ const
   CharLine = #13;
 begin
   case rtfMinor of
-    rtfLine: txtbuf:=txtbuf+CharLine;
-    rtfPar:  txtbuf:=txtbuf+CharPara;
-    rtfTab:  txtbuf:=txtbuf+CharTab;
+    rtfOptDest: SkipGroup;
+    rtfLine: AddText(CharLine);
+    rtfPar:  AddText(CharPara);
+    rtfTab:  AddText(CharTab);
   end;
 end;
 
@@ -414,8 +441,6 @@ const
     ,clSilver //clLightGray
   );
 begin
-  if txtbuf<>'' then PushText;
-
   case aminor of
     rtfPlain: prm.fnt.Style:=[];
     rtfBold: if aparam=0 then Exclude(prm.fnt.Style,fsBold)  else Include(prm.fnt.Style, fsBold);
@@ -427,7 +452,15 @@ begin
     rtfNoUnderline: Exclude(prm.fnt.Style, fsUnderline);
     rtfHighlight: begin
       prm.fnt.HasBkClr := (aparam>0) and (aparam<=high(HColor));
-      if prm.fnt.HasBkClr then  prm.fnt.BkColor:=HColor[aparam];
+      if prm.fnt.HasBkClr then begin
+        if HLFromCTable then prm.fnt.BkColor:=HColor[aparam]
+        else begin
+          p:=Colors[aparam];
+          if Assigned(p) then prm.fnt.BkColor:=RGBToColor(p^.rtfCRed, p^.rtfCGreen, p^.rtfCBlue)
+          // fallback?
+          else prm.fnt.BkColor:=HColor[aparam];
+        end;
+      end;
     end;
     rtfForeColor: begin
       if rtfParam<>0 then p:=Colors[rtfParam]
@@ -450,8 +483,16 @@ var
   len   : Integer;
   pf    : PRTFFONT;
   selst : Integer;
+  b     : string;
 begin
-  len:=UTF8Length(txtbuf);
+  if not Assigned(prm) then exit;
+  if txtlen=0 then Exit;
+
+  b:=Copy(txtbuf, 1, txtlen);
+  len:=UTF8Length(b);
+
+  txtlen:=0;
+  txtbuf:='';
   if len=0 then Exit;
 
   Memo.SelStart:=MaxInt;
@@ -464,10 +505,13 @@ begin
 
   Memo.SelStart:=selst;
   Memo.SelLength:=0;
-  Memo.SelText:=txtbuf;
+  Memo.SelText:=b;
 
   if Assigned(prm) then begin
+    prm.pm.FirstLine:=prm.pm.HeadIndent+prm.pm.FirstLine;
     Memo.SetParaMetric(selst, 1, prm.pm );
+    prm.pm.FirstLine:=prm.pm.FirstLine-prm.pm.HeadIndent;
+
     Memo.SetParaAlignment(selst, 1, prm.pa );
   end;
 
@@ -481,7 +525,6 @@ begin
   //prm.fnt.HasBkClr:=hasbk;
   //prm.fnt.BkColor:=bcolor;
   Memo.SetTextAttributes(selst, len, prm.fnt);
-  txtbuf:='';
 end;
 
 constructor TRTFMemoParser.Create(AMemo:TCustomRichMemo;AStream:TStream);

@@ -33,7 +33,7 @@ uses
   // Gtk2 widget
   Gtk2Def,
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
-  Gtk2WSControls, gdk2pixbuf,
+  gdk2pixbuf, Gtk2WSStdCtrls,
   // RichMemo
   RichMemo, WSRichMemo, RichMemoUtils;
 
@@ -129,11 +129,28 @@ begin
   if gtktextattr_strikethrough(textAttr.appearance) then Include(FontParams.Style, fsStrikeOut);
 end;
 
+type
+  TGtk2WSCustomMemoInt = class(TGtk2WSCustomMemo);
+  TCustomRichMemoInt   = class(TCustomRichMemo);
+
+procedure Gtk2WS_MemoSelChanged (Textbuffer: PGtkTextBuffer;
+   StartIter: PGtkTextIter; mark: PGtkTextMark; WidgetInfo: PWidgetInfo); cdecl;
+begin
+  if TControl(WidgetInfo^.LCLObject) is TCustomRichMemo then
+  begin
+    TCustomRichMemoInt(WidgetInfo^.LCLObject).DoSelectionChange;
+  end;
+end;
 
 class procedure TGtk2WSCustomRichMemo.SetCallbacks(
   const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
+var
+  TextBuf: PGtkTextBuffer;
 begin
-   TGtk2WSWinControl.SetCallbacks(PGtkObject(AGtkWidget), TComponent(AWidgetInfo^.LCLObject));
+  TGtk2WSCustomMemoInt.SetCallbacks(AGtkWidget, AWidgetInfo);
+
+  TextBuf := gtk_text_view_get_buffer(PGtkTextView(AWidgetInfo^.CoreWidget));
+  SignalConnect(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
 end;
 
 class procedure TGtk2WSCustomRichMemo.GetWidgetBuffer(const AWinControl: TWinControl;
@@ -221,17 +238,9 @@ begin
   SetMainWidget(Widget, TempWidget);
   GetWidgetInfo(Widget, True)^.CoreWidget := TempWidget;
 
-  // gtk_text_buffer_set_text(gtk_text_view_get_buffer(PGtkTextView(TempWidget)), PChar(TCustomMemo(AWinControl).Text), -1);
   gtk_text_view_set_editable(PGtkTextView(TempWidget), True);
-{  //gtk_text_view_set_editable(PGtkTextView(TempWidget), not TCustomMemo(AWinControl).ReadOnly);
-  //gtk_text_view_set_justification(PGtkTextView(TempWidget), aGtkJustification[TCustomMemo(AWinControl).Alignment]);
-  if TCustomMemo(AWinControl).WordWrap then
-    gtk_text_view_set_wrap_mode(PGtkTextView(TempWidget), GTK_WRAP_WORD)
-  else
-    gtk_text_view_set_wrap_mode(PGtkTextView(TempWidget), GTK_WRAP_NONE);}
   gtk_text_view_set_wrap_mode(PGtkTextView(TempWidget), GTK_WRAP_WORD);
 
-  //gtk_text_view_set_accepts_tab(PGtkTextView(TempWidget), TCustomMemo(AWinControl).WantTabs);
   gtk_text_view_set_accepts_tab(PGtkTextView(TempWidget), True);
 
   gtk_widget_show_all(Widget);

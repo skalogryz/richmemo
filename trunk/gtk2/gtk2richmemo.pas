@@ -276,6 +276,7 @@ var
   buffer  : PGtkTextBuffer;
   tag     : Pointer;
   gcolor  : TGdkColor;
+  bgcolor : TGdkColor;
   nm      : string;
 const
   pu: array [Boolean] of gint = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
@@ -286,12 +287,16 @@ begin
   if not Assigned(buffer) then Exit;
 
   gcolor := TColortoTGDKColor(Params.Color);
+  bgcolor := TColortoTGDKColor(Params.BkColor);
   nm := Params.Name;
   if nm = '' then nm := #0;
   tag := gtk_text_buffer_create_tag (buffer, nil,
       'family-set',     [gboolean(gTRUE),
       'family',         @nm[1],
       'foreground-gdk', @gcolor,
+      'foreground-set', gboolean(gTRUE),
+      'background-gdk', @bgcolor,
+      'background-set', gboolean(Params.HasBkClr),
       'size-set',       gboolean(gTRUE),
       'size-points',    gdouble(Params.Size),
       'underline-set',  gboolean(gTRUE),
@@ -428,7 +433,7 @@ begin
       'right-margin-set',       gboolean(gTRUE),
       'indent',                 gint(round(fl*DPIFactor)),
       'indent-set',             gboolean(gTRUE),
-      'pixels-inside-wrap',     gint(round(fp.Size*(AMetric.LineSpacing-1)*DPIFactor)),
+      'pixels-inside-wrap',     gint((round(fp.Size*(AMetric.LineSpacing-DefLineSpacing)*DPIFactor))),
       'pixels-inside_wrap-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);

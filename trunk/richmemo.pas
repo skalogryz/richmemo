@@ -464,9 +464,9 @@ function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;
 var
   ofs, len  : Integer;
 begin
-  if GetStyleRange(TextStart, ofs, len) then Result := len - (TextStart-ofs)
-  else Result := 1;
-  if Result = 0 then Result := 1;
+  if GetStyleRange(TextStart, ofs, len)
+    then Result := len - (TextStart-ofs)
+    else Result := 0;
 end;
 
 procedure TCustomRichMemo.SetSelText(const SelTextUTF8: string);  
@@ -550,7 +550,7 @@ begin
     end;
     l := GetContStyleLength(i);
     if i + l > j then l := j - i;
-    if l = 0 then l := 1;
+    if l = 0 then Break;
     SetTextAttributes(i, l, p);
     inc(i, l);
   end;
@@ -563,7 +563,8 @@ var
   m : TParaMetric;
 begin
   repeat
-    GetParaRange(TextStart, TextStart, ln);
+    if not GetParaRange(TextStart, TextStart, ln) then Break;
+    if ln=0 then Break;
     GetParaMetric(TextStart, m);
 
     if pmm_FirstLine in ModifyMask   then m.FirstLine:=ParaMetric.FirstLine;

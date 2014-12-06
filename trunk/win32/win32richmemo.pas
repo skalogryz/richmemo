@@ -103,6 +103,8 @@ type
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string;
       const SearchOpts: TIntSearchOpt): Integer; override;
+
+    class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
   end;
   
 implementation
@@ -680,6 +682,16 @@ class function TWin32WSCustomRichMemo.Search(const AWinControl: TWinControl;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   Result:=RichEditManager.Find(AWinControl.Handle, UTF8Decode(ANiddle), SearchOpts);
+end;
+
+class procedure TWin32WSCustomRichMemo.SetZoomFactor(
+  const AWinControl: TWinControl; AZoomFactor: Double);
+var
+  DN : WParam;
+begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+  DN := 1000;
+  SendMessage( AWinControl.Handle, EM_SETZOOM, round(AZoomFactor * DN), DN);
 end;
  
 end.

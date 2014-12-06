@@ -88,6 +88,7 @@ type
   private
     fHideSelection  : Boolean;
     fOnSelectionChange: TNotifyEvent;
+    fZoomFactor : Double;
   protected
     procedure DoSelectionChange;
     class procedure WSRegisterClass; override;
@@ -97,7 +98,10 @@ type
     function GetContStyleLength(TextStart: Integer): Integer;
     
     procedure SetSelText(const SelTextUTF8: string); override;
+    function GetZoomFactor: Double; virtual;
+    procedure SetZoomFactor(AValue: Double); virtual;
   public
+    constructor Create(AOwner: TComponent); override;
     procedure CopyToClipboard; override;
     procedure CutToClipboard; override;
     procedure PasteFromClipboard; override;
@@ -136,6 +140,7 @@ type
 
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
+    property ZoomFactor: Double read GetZoomFactor write SetZoomFactor;
   end;
   
   { TRichMemo }
@@ -203,6 +208,7 @@ type
     property WantReturns;
     property WantTabs;
     property WordWrap;
+    property ZoomFactor;
   end;
 
 procedure InitFontParams(var p: TFontParams);
@@ -325,6 +331,19 @@ begin
   fHideSelection := AValue;   
 end;
 
+function TCustomRichMemo.GetZoomFactor: Double;
+begin
+  Result:=fZoomFactor;
+end;
+
+procedure TCustomRichMemo.SetZoomFactor(AValue: Double);
+begin
+  if AValue=0 then AValue:=1.0;
+  fZoomFactor:=AValue;
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).SetZoomFactor(Self, AValue);
+end;
+
 procedure TCustomRichMemo.DoSelectionChange;
 begin
   if Assigned(fOnSelectionChange) then fOnSelectionChange(Self);
@@ -346,6 +365,7 @@ procedure TCustomRichMemo.UpdateRichMemo;
 begin
   if not HandleAllocated then Exit;
   TWSCustomRichMemoClass(WidgetSetClass).SetHideSelection(Self, fHideSelection);
+  TWSCustomRichMemoClass(WidgetSetClass).SetZoomFactor(Self, fZoomFactor);
 end;
 
 procedure TCustomRichMemo.SetTextAttributes(TextStart, TextLen: Integer;  
@@ -484,6 +504,12 @@ begin
   finally
     Lines.EndUpdate;
   end;
+end;
+
+constructor TCustomRichMemo.Create(AOwner: TComponent);
+begin
+  inherited Create(AOwner);
+  fZoomFactor:=1;
 end;
 
 

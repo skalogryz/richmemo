@@ -89,6 +89,8 @@ type
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; virtual;
+
+    class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); virtual;
   end;
   TWSCustomRichMemoClass = class of TWSCustomRichMemo;
 
@@ -205,6 +207,12 @@ class function TWSCustomRichMemo.Search(const AWinControl: TWinControl; const AN
   const SearchOpts: TIntSearchOpt): Integer;
 begin
   Result:=-1;
+end;
+
+class procedure TWSCustomRichMemo.SetZoomFactor(const AWinControl: TWinControl;
+  AZoomFactor: Double);
+begin
+
 end;
 
 end.

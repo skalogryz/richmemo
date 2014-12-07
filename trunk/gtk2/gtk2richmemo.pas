@@ -76,6 +76,8 @@ type
       ): Boolean;
     class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
+
+    class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
   end;
 
 implementation
@@ -142,6 +144,39 @@ begin
   end;
 end;
 
+procedure Gtk2WS_RichMemoInsert(Textbuffer: PGtkTextBuffer;
+   StartIter: PGtkTextIter; text: PChar; len: gint; WidgetInfo: PWidgetInfo); cdecl;
+var
+  rm : TCustomRichMemo;
+  iter : PGtkTextIter;
+  tag  : PGtkTextTag;
+  w    : PGtkWidget;
+  b    : PGtkTextBuffer;
+  attr : PGtkTextAttributes;
+begin
+  if TControl(WidgetInfo^.LCLObject) is TCustomRichMemo then
+  begin
+    rm := TCustomRichMemo(WidgetInfo^.LCLObject);
+    // re-zooming any newly entered (pasted, manually inserted text)
+    if (rm.ZoomFactor<>1) then begin
+      TGtk2WSCustomRichMemo.GetWidgetBuffer(rm, w, b);
+      iter:=gtk_text_iter_copy(StartIter);
+      gtk_text_iter_backward_chars(iter, len);
+      attr := gtk_text_view_get_default_attributes(PGtkTextView(w));
+      gtk_text_iter_get_attributes(iter, attr);
+
+      if attr^.font_scale<>rm.ZoomFactor then begin
+        tag := gtk_text_buffer_create_tag(b, nil,
+            'scale', [   gdouble(rm.ZoomFactor),
+            'scale-set', gboolean(gTRUE),
+            nil]);
+        gtk_text_buffer_apply_tag(b, tag, iter, StartIter);
+      end;
+      gtk_text_attributes_unref(attr);
+    end;
+  end;
+end;
+
 class procedure TGtk2WSCustomRichMemo.SetCallbacks(
   const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
 var
@@ -150,7 +185,8 @@ begin
   TGtk2WSCustomMemoInt.SetCallbacks(AGtkWidget, AWidgetInfo);
 
   TextBuf := gtk_text_view_get_buffer(PGtkTextView(AWidgetInfo^.CoreWidget));
-  SignalConnect(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
+  SignalConnectAfter(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
+  SignalConnectAfter(PGtkWidget(TextBuf), 'insert-text', @Gtk2WS_RichMemoInsert, AWidgetInfo);
 end;
 
 class procedure TGtk2WSCustomRichMemo.GetWidgetBuffer(const AWinControl: TWinControl;
@@ -657,6 +693,42 @@ begin
   gtk_text_buffer_get_iter_at_offset(b, @EndIter, Offset+NewLength);
 
   gtk_text_buffer_select_range(b, @StartIter, @EndIter);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetZoomFactor(
+  const AWinControl: TWinControl; AZoomFactor: Double);
+var
+  w      : PGtkWidget;
+  b      : PGtkTextBuffer;
+  tag    : PGtkTextTag;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+  p      : PGtkTextAttributes;
+  sc     : gdouble;
+begin
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(b) then Exit;
+
+  p:=GetAttrAtPos(AWinControl, 0);
+  sc:=p^.font_scale;
+  if sc=0 then sc:=1;
+  gtk_text_attributes_unref(p);
+  // restore the scale.
+  // for whatever reason, scale is always assumed as a multiplier!
+  // thus it is necessary to "unscale" the previous value as well
+  sc:=1/sc*AZoomFactor;
+
+  tag := gtk_text_buffer_create_tag(b, nil,
+      'scale', [   gdouble(sc),
+      'scale-set', gboolean(gTRUE),
+      nil]);
+
+  //gtk_text_buffer_get_start_iter(b, @istart);
+  gtk_text_buffer_get_iter_at_offset(b, @istart, 0);
+  gtk_text_buffer_get_end_iter(b, @iend);
+  gtk_text_buffer_apply_tag(b, tag, @istart, @iend);
+
+  //todo: set default font with scale
 end;
 
 

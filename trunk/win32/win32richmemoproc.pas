@@ -184,6 +184,14 @@ const
   CFM_BACKCOLOR = $04000000;
   CFE_AUTOBACKCOLOR = CFM_BACKCOLOR;
 
+const
+  PFNS_PAREN      = $0000;
+  PFNS_PARENS     = $0100;
+  PFNS_PERIOD     = $0200;
+  PFNS_PLAIN      = $0300;
+  PFNS_NONUMBER   = $0400;
+  PFNS_NEWNUMBER  = $8000;
+
 implementation
 
 const

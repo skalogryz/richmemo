@@ -615,20 +615,20 @@ begin
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 
   case para.wNumbering of
-    PFN_BULLET:   ANumber.Numbering:=pnBullet;
-    PFN_ARABIC:   ANumber.Numbering:=pnNumber;
-    PFN_LCLETTER: ANumber.Numbering:=pnLowLetter;
-    PFN_LCROMAN:  ANumber.Numbering:=pnLowRoman;
-    PFN_UCLETTER: ANumber.Numbering:=pnUpLetter;
-    PFN_UCROMAN:  ANumber.Numbering:=pnUpRoman;
+    PFN_BULLET:   ANumber.Style:=pnBullet;
+    PFN_ARABIC:   ANumber.Style:=pnNumber;
+    PFN_LCLETTER: ANumber.Style:=pnLowLetter;
+    PFN_LCROMAN:  ANumber.Style:=pnLowRoman;
+    PFN_UCLETTER: ANumber.Style:=pnUpLetter;
+    PFN_UCROMAN:  ANumber.Style:=pnUpRoman;
     PFN_CUSTOM:   begin
-      ANumber.Numbering:=pnCustomChar;
-      ANumber.NumCustom:=WideChar(para.wNumberingStart);
+      ANumber.Style:=pnCustomChar;
+      ANumber.CustomChar:=WideChar(para.wNumberingStart);
     end;
   else
-    ANumber.Numbering:=pnNone;
+    ANumber.Style:=pnNone;
   end;
-  ANumber.NumIndent:=para.wNumberingTab/20;
+  ANumber.Indent:=para.wNumberingTab/20;
   Result:=true
 end;
 
@@ -645,22 +645,27 @@ begin
   para.cbSize:=sizeof(para);
   para.dwMask:=
      PFM_NUMBERING or PFM_NUMBERINGTAB;
-  case ANumber.Numbering of
+  case ANumber.Style of
     pnNone:       para.wNumbering:=0;
     pnBullet:     para.wNumbering:=PFN_BULLET;
-    pnNumber:     para.wNumbering:=PFN_ARABIC;
+    pnNumber: begin
+      para.wNumbering:=PFN_ARABIC;
+      para.dwMask:=para.dwMask or PFM_NUMBERINGSTART;
+      para.wNumberingStart:=ANumber.NumberStart;
+      para.wNumberingStyle:=PFNS_NEWNUMBER;
+    end;
     pnLowLetter:  para.wNumbering:=PFN_LCLETTER;
     pnLowRoman:   para.wNumbering:=PFN_LCROMAN;
     pnUpLetter:   para.wNumbering:=PFN_UCLETTER;
     pnUpRoman:    para.wNumbering:=PFN_UCROMAN;
     pnCustomChar: begin
       para.wNumbering:=PFN_CUSTOM;
-      para.wNumberingStart:=Word(ANumber.NumCustom);
+      para.wNumberingStart:=Word(ANumber.CustomChar);
       para.dwMask:=para.dwMask or PFM_NUMBERINGSTART;
     end;
   end;
 
-  para.wNumberingTab:=round(ANumber.NumIndent*20);
+  para.wNumberingTab:=round(ANumber.Indent*20);
   eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLen, para);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask)

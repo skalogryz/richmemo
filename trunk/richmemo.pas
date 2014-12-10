@@ -59,11 +59,20 @@ type
     , pnLowRoman, pnUpLetter, pnUpRoman, pnCustomChar);
 
   TParaNumbering  = record
-    Numbering   : TParaNumStyle;
-    NumCustom   : WideChar;
-    NumIndent   : Double;
+    Style       : TParaNumStyle;
+    Indent      : Double;
+    CustomChar  : WideChar;
+    NumberStart : Integer; // must be negative one to continue numbering, used for pnNumber only
+    SepChar     : WideChar;
   end;
 
+const
+  SepNone : WideChar = #0;
+  SepPar  : WideChar = ')';
+  SepDot  : WideChar = '.';
+
+
+type
   TTextModifyMask  = set of (tmm_Color, tmm_Name, tmm_Size, tmm_Styles, tmm_BackColor);
   TParaModifyMask = set of (pmm_FirstLine, pmm_HeadIndent, pmm_TailIndent, pmm_SpaceBefore, pmm_SpaceAfter, pmm_LineSpacing);
 

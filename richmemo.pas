@@ -62,14 +62,15 @@ type
     Style       : TParaNumStyle;
     Indent      : Double;
     CustomChar  : WideChar;
-    NumberStart : Integer; // must be negative one to continue numbering, used for pnNumber only
+    NumberStart : Integer;  // used for pnNumber only
     SepChar     : WideChar;
+    ForceNewNum : Boolean;  // if true and Style is pnNumber, NumberStart is used for the new numbering
   end;
 
 const
-  SepNone : WideChar = #0;
-  SepPar  : WideChar = ')';
-  SepDot  : WideChar = '.';
+  SepNone = #0;
+  SepPar  = ')';
+  SepDot  = '.';
 
 
 type
@@ -228,6 +229,8 @@ function GetFontParams(const Name: String; Size: Integer; color: TColor; styles:
 
 procedure InitParaMetric(var m: TParaMetric);
 procedure InitParaNumbering(var n: TParaNumbering);
+procedure InitParaNumber(var n: TParaNumbering; ASepChar: WideChar = SepPar; StartNum: Integer = 1);
+procedure InitParaBullet(var n: TParaNumbering);
 
 var
   RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
@@ -276,6 +279,20 @@ end;
 procedure InitParaNumbering(var n: TParaNumbering);
 begin
   FillChar(n, sizeof(n), 0);
+end;
+
+procedure InitParaNumber(var n: TParaNumbering; ASepChar: WideChar; StartNum: Integer);
+begin
+  InitParaNumbering(n);
+  n.Style:=pnNumber;
+  n.NumberStart:=StartNum;
+  n.SepChar:=ASepChar;
+end;
+
+procedure InitParaBullet(var n: TParaNumbering);
+begin
+  InitParaNumbering(n);
+  n.Style:=pnBullet;
 end;
 
 { TRichMemo }

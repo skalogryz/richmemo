@@ -191,6 +191,8 @@ const
   PFNS_PLAIN      = $0300;
   PFNS_NONUMBER   = $0400;
   PFNS_NEWNUMBER  = $8000;
+  PFNS_SOMESEPCHAR = PFNS_PARENS or PFNS_PERIOD or PFNS_PLAIN;
+
 
 implementation
 

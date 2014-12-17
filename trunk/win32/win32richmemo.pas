@@ -610,6 +610,7 @@ begin
   Result:=False;
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
 
+  InitParaNumbering(ANumber);
   eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
@@ -628,8 +629,14 @@ begin
   else
     ANumber.Style:=pnNone;
   end;
+  if para.wNumberingStyle or PFNS_PLAIN > 0 then
+    ANumber.SepChar:=SepNone
+  else if para.wNumberingStyle or PFNS_PERIOD > 0 then
+    ANumber.SepChar:=SepDot
+  else if (ANumber.Style<>pnNone) and ((para.wNumberingStyle and PFNS_SOMESEPCHAR)= 0) then
+    ANumber.SepChar:=SepPar;
   ANumber.Indent:=para.wNumberingTab/20;
-  Result:=true
+  Result:=true;
 end;
 
 class procedure TWin32WSCustomRichMemo.SetParaNumbering(
@@ -637,7 +644,8 @@ class procedure TWin32WSCustomRichMemo.SetParaNumbering(
   const ANumber: TIntParaNumbering);
 var
   para : PARAFORMAT2;
-  eventmask: INteger;
+  eventmask: Integer;
+  numbstyle: Integer;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   FillChar(para, SizeOf(para), 0);
@@ -645,6 +653,13 @@ begin
   para.cbSize:=sizeof(para);
   para.dwMask:=
      PFM_NUMBERING or PFM_NUMBERINGTAB;
+
+  numbstyle:=0;
+  case ANumber.SepChar of
+    SepPar: numbstyle:=numbstyle or PFNS_PAREN;
+    SepDot: numbstyle:=numbstyle or PFNS_PERIOD;
+    SepNone: numbstyle:=numbstyle or PFNS_PLAIN;
+  end;
   case ANumber.Style of
     pnNone:       para.wNumbering:=0;
     pnBullet:     para.wNumbering:=PFN_BULLET;
@@ -652,7 +667,7 @@ begin
       para.wNumbering:=PFN_ARABIC;
       para.dwMask:=para.dwMask or PFM_NUMBERINGSTART;
       para.wNumberingStart:=ANumber.NumberStart;
-      para.wNumberingStyle:=PFNS_NEWNUMBER;
+      if ANumber.ForceNewNum then numbstyle:=numbstyle or PFNS_NEWNUMBER;
     end;
     pnLowLetter:  para.wNumbering:=PFN_LCLETTER;
     pnLowRoman:   para.wNumbering:=PFN_LCROMAN;
@@ -663,6 +678,10 @@ begin
       para.wNumberingStart:=Word(ANumber.CustomChar);
       para.dwMask:=para.dwMask or PFM_NUMBERINGSTART;
     end;
+  end;
+  if numbstyle<> 0 then begin
+    para.dwMask:=para.dwMask or PFM_NUMBERINGSTYLE;
+    para.wNumberingStyle:=numbstyle;
   end;
 
   para.wNumberingTab:=round(ANumber.Indent*20);

@@ -25,7 +25,7 @@ interface
 
 uses
   // Win32 headers  
-  Windows, RichEdit,
+  Windows, RichEdit, ActiveX,
   // RTL headers
   Classes, SysUtils, 
   // LCL headers
@@ -34,7 +34,7 @@ uses
   // Win32WidgetSet
   Win32WSControls, Win32Int, Win32WSStdCtrls, win32proc,
   // RichMemo headers
-  RichMemo, WSRichMemo, Win32RichMemoProc;
+  RichMemo, WSRichMemo, Win32RichMemoProc, Win32RichMemoOle;
 
 type  
 
@@ -105,7 +105,27 @@ type
       const SearchOpts: TIntSearchOpt): Integer; override;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
+
+    class function InlineInsert(const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
+      const ASize: TSize; AHandler: TRichMemoInline; var wsObj: TRichMemoInlineWSObject): Boolean; override;
+    class procedure InlineInvalidate(const AWinControl: TWinControl;
+       AHandler: TRichMemoInline; wsObj: TRichMemoInlineWSObject); override;
   end;
+
+  { TWin32Inline }
+
+  TWin32Inline = class(TCustomDataViewObject, IOleObject, IDataObject, IViewObject)
+  public
+    richMemo : TCustomRichMemo;
+    canvas   : TCanvas;
+    rminline : TRichMemoInline;
+    isvis    : Boolean;
+    function Draw(dwDrawAspect:DWord;LIndex:Long;pvaspect:pointer;ptd:PDVTARGETDEVICE;hdcTargetDev:HDC; hdcDraw:HDC;lprcBounds:PRECTL;lprcWBounds:PRECTL;pfncontinue:TContinueCallback;dwcontinue:ULONG_PTR):HResult; stdcall;
+    function GetExtent(dwDrawAspect: DWORD; out size: TPoint): HResult;StdCall;
+    function Close(dwSaveOption: DWORD): HResult;StdCall;
+    destructor Destroy; override;
+  end;
+
   
 implementation
 
@@ -167,6 +187,64 @@ begin
   else
     Result := WindowProc(Window, Msg, WParam, LParam);
   end;
+end;
+
+{ TWin32Inline }
+
+function TWin32Inline.Draw(dwDrawAspect: DWord; LIndex: Long;
+  pvaspect: pointer; ptd: PDVTARGETDEVICE; hdcTargetDev: HDC; hdcDraw: HDC;
+  lprcBounds: PRECTL; lprcWBounds: PRECTL; pfncontinue: TContinueCallback;
+  dwcontinue: ULONG_PTR): HResult; stdcall;
+var
+  rst : Boolean;
+  pts : Windows.TPOINT;
+  sz  : TSize;
+begin
+  if not isvis then begin
+    isvis:=true;
+    rminline.SetVisible(isvis);
+  end;
+  canvas.Handle:=hdcDraw;
+
+  rst:= Assigned(lprcBounds);
+  if rst then begin
+    Windows.OffsetViewportOrgEx(hdcDraw, lprcBounds^.left, lprcBounds^.top, @pts);
+    sz.cx:=lprcBounds^.right - lprcBounds^.left;
+    sz.cy:=lprcBounds^.bottom - lprcBounds^.top;
+  end else begin
+    sz.cx:=0;
+    sz.cy:=0;
+  end;
+
+  rminline.Draw(canvas, sz);
+  if rst then Windows.OffsetViewportOrgEx(hdcDraw, pts.x, pts.y, nil);
+
+  Result:=S_OK;
+end;
+
+function TWin32Inline.GetExtent(dwDrawAspect: DWORD; out size: TPoint
+  ): HResult; StdCall;
+begin
+  if not isvis then begin
+    rminline.SetVisible(true);
+    isvis:=true;
+  end;
+  Result:=inherited GetExtent(dwDrawAspect, size);
+end;
+
+function TWin32Inline.Close(dwSaveOption: DWORD): HResult; StdCall;
+begin
+  if isvis then begin
+    rminline.SetVisible(false);
+    isvis:=false;
+  end;
+  Result:=inherited Close(dwSaveOption);
+end;
+
+destructor TWin32Inline.Destroy;
+begin
+  rminline.Free;
+  inherited Destroy;
 end;
 
 { TWin32RichMemoStringsW }
@@ -716,6 +794,81 @@ begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   DN := 1000;
   SendMessage( AWinControl.Handle, EM_SETZOOM, round(AZoomFactor * DN), DN);
+end;
+
+class function TWin32WSCustomRichMemo.InlineInsert(
+  const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
+  const ASize: TSize; AHandler: TRichMemoInline;
+  var wsObj: TRichMemoInlineWSObject): Boolean;
+var
+  hnd : THandle;
+  rch : IRichEditOle;
+  Fmt : FORMATETC;
+  LockBytes: ILockBytes;
+  ClientSite: IOleClientSite;
+  Storage: IStorage;
+  Image: IOleObject;
+  c: TWin32Inline;
+  Obj: TREOBJECT;
+  sl, ss: Integer;
+const
+  PointSize     = 72.0;
+  RtfSizeToInch = 2.54 * 1000.0;
+  SizeFactor    = 1 / PointSize * RtfSizeToInch;
+begin
+  Result:=False;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+
+  hnd:=(AWinControl.Handle);
+
+  RichEditManager.GetSelection(hnd, ss, sl);
+  try
+    SendMessage(hnd, EM_GETOLEINTERFACE, 0, LPARAM(@rch));
+
+    FillChar(Fmt, sizeoF(Fmt), 0);
+    Fmt.dwAspect:=DVASPECT_CONTENT;
+    Fmt.lindex:=-1;
+
+    CreateILockBytesOnHGlobal(0, True, LockBytes);
+    StgCreateDocfileOnILockBytes(LockBytes, STGM_SHARE_EXCLUSIVE or STGM_CREATE or STGM_READWRITE, 0, Storage);
+    rch.GetClientSite(ClientSite);
+
+    c:=TWin32Inline.Create;
+    c.richMemo:=TCustomRichMemo(AWinControl);
+    c.canvas:=TCanvas.Create;
+    c.rminline:=AHandler;
+
+    Image:=c;
+    OleSetContainedObject(Image, True);
+
+    FillChar(Obj, sizeof(Obj),0);
+    Obj.cbStruct := SizeOf(Obj);
+    Obj.cp := REO_CP_SELECTION;
+    Image.GetUserClassID(Obj.clsid);
+    Obj.poleobj := Image;
+    Obj.pstg := Storage;
+    Obj.polesite := ClientSite;
+    Obj.dvaspect := DVASPECT_CONTENT;
+    Obj.dwFlags := REO_OWNERDRAWSELECT;
+
+    Obj.sizel.cx:=round(ASize.cx * SizeFactor);
+    Obj.sizel.cy:=round(ASize.cy * SizeFactor);
+
+    Result:= Succeeded(rch.InsertObject(obj));
+    if Result then wsObj:=c;
+  finally
+    RichEditManager.SetSelection(hnd, ss, sl);
+  end;
+end;
+
+class procedure TWin32WSCustomRichMemo.InlineInvalidate(
+  const AWinControl: TWinControl; AHandler: TRichMemoInline;
+  wsObj: TRichMemoInlineWSObject);
+begin
+  //inherited InlineInvalidate(AWinControl, AHandler, wsObj);
+  if not Assigned(AHandler) or not Assigned(wsObj) or (not (wsObj is TWin32Inline)) then Exit;
+  if not Assigned(TWin32Inline(wsObj).fSink) then Exit;
+  TWin32Inline(wsObj).fSink.OnViewChange(DVASPECT_CONTENT, -1);
 end;
  
 end.

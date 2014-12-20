@@ -24,7 +24,7 @@ unit RichMemo;
 interface
 
 uses
-  Classes, SysUtils, Graphics, StdCtrls, LazUTF8;
+  Types, Classes, SysUtils, Graphics, StdCtrls, LazUTF8;
 
 type
   TFontParams  = record
@@ -91,6 +91,22 @@ type
 
 type
   TRichMemoObject = class(TObject);
+  TCustomRichMemo = class;
+
+  TRichMemoInlineWSObject = TObject;
+
+  { TRichMemoInline }
+
+  TRichMemoInline = class(TObject)
+  private
+    WSObj    : TRichMemoInlineWSObject;
+    fOwner   : TCustomRichMemo;
+  public
+    procedure Draw(Canvas: TCanvas; const ASize: TSize); virtual;
+    procedure SetVisible(AVisible: Boolean); virtual;
+    procedure Invalidate;
+    property Owner: TCustomRichMemo read fOwner;
+  end;
 
   { TCustomRichMemo }
 
@@ -99,6 +115,8 @@ type
     fHideSelection  : Boolean;
     fOnSelectionChange: TNotifyEvent;
     fZoomFactor : Double;
+  private
+    procedure InlineInvalidate(handler: TRichMemoInline);
   protected
     procedure DoSelectionChange;
     class procedure WSRegisterClass; override;
@@ -143,6 +161,7 @@ type
     function SaveRichText(Dest: TStream): Boolean; virtual;
 
     function InDelText(const UTF8Text: string; InsStartChar, ReplaceLength: Integer): Integer; virtual;
+    function InDelInline(inlineobj: TRichMemoInline; InsStartChar, ReplaceLength: Integer; const ASize: TSize): Integer; virtual;
 
     procedure SetSelLengthFor(const aselstr: string);
 
@@ -295,6 +314,24 @@ begin
   n.Style:=pnBullet;
 end;
 
+{ TRichMemoInline }
+
+procedure TRichMemoInline.Draw(Canvas: TCanvas; const ASize: TSize);
+begin
+
+end;
+
+procedure TRichMemoInline.SetVisible(AVisible: Boolean);
+begin
+
+end;
+
+procedure TRichMemoInline.Invalidate;
+begin
+  if not Assigned(fOwner) then Exit;
+  Owner.InlineInvalidate( Self );
+end;
+
 { TRichMemo }
 
 function TRichMemo.GetRTF: string;
@@ -368,6 +405,14 @@ begin
   fZoomFactor:=AValue;
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).SetZoomFactor(Self, AValue);
+end;
+
+procedure TCustomRichMemo.InlineInvalidate(handler: TRichMemoInline);
+begin
+  if not Assigned(handler) then Exit;
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).InlineInvalidate(Self, handler, handler.WSObj);
 end;
 
 procedure TCustomRichMemo.DoSelectionChange;
@@ -672,6 +717,30 @@ begin
     TWSCustomRichMemoClass(WidgetSetClass).InDelText(Self, UTF8Text, InsStartChar, ReplaceLength);
     Result:=UTF8length(UTF8Text);
   end;
+end;
+
+function TCustomRichMemo.InDelInline(inlineobj: TRichMemoInline; InsStartChar,
+  ReplaceLength: Integer; const ASize: TSize): Integer;
+var
+  obj : TRichMemoInlineWSObject;
+begin
+  Result:=0;
+  if not Assigned(inlineObj) then Exit;
+  if Assigned(inlineobj.fOwner) and (inlineobj.fOwner<>Self) then Exit;
+
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then begin
+    obj:=nil;
+    if not TWSCustomRichMemoClass(WidgetSetClass).InlineInsert(Self, InsStartChar
+      , ReplaceLength, ASize, inlineObj, obj) then begin
+      inlineObj.Free;
+      Result:=0;
+    end;
+    if not Assigned(inlineObj.fOwner) then inlineObj.fOwner:=Self;
+    inlineObj.WSObj:=obj;
+    Result:=ReplaceLength;
+  end else
+    inlineObj.Free;
 end;
 
 procedure TCustomRichMemo.SetSelLengthFor(const aselstr: string);

@@ -823,6 +823,7 @@ begin
 
   RichEditManager.GetSelection(hnd, ss, sl);
   try
+    RichEditManager.SetSelection(hnd, ATextStart, ATextLength);
     SendMessage(hnd, EM_GETOLEINTERFACE, 0, LPARAM(@rch));
 
     FillChar(Fmt, sizeoF(Fmt), 0);

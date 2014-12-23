@@ -40,7 +40,6 @@
       <Unit0>
         <Filename Value="testinline.lpr"/>
         <IsPartOfProject Value="True"/>
-        <UnitName Value="testinline"/>
       </Unit0>
       <Unit1>
         <Filename Value="mainform.pas"/>
@@ -69,12 +68,6 @@
         </Win32>
       </Options>
     </Linking>
-    <Other>
-      <CompilerMessages>
-        <MsgFileName Value=""/>
-      </CompilerMessages>
-      <CompilerPath Value="$(CompPath)"/>
-    </Other>
   </CompilerOptions>
   <Debugging>
     <Exceptions Count="3">

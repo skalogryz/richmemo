@@ -11,6 +11,9 @@ unit mainform;
  *  You're free to copy and modify the file. No need to keep the refernce    *
  *  to the origin of the file.                                               *
  *                                                                           *
+ *  Cheetah logo image has been aquired from freepascal site.                *
+ *  http://www.freepascal.org/pic/logo.gif                                   *
+ *                                                                           *
  *****************************************************************************
 }
 
@@ -116,13 +119,14 @@ end;
 procedure TForm1.Button3Click(Sender: TObject);
 var
   inlineimg : TInlineImage;
-  i : integer;
+const
+  ScreenToDocDPI = 72 / 96;
 begin
   inlineimg := TInlineImage.Create;
   inlineimg.imageList:=ImageList1;
   inlineimg.startTime:=GetTickCount;
   anims.add(inlineimg);
-  RichMemo1.InDelInline(inlineimg, RichMemo1.SelStart, 0, Size(round(ImageList1.Width*72/96),round(ImageList1.Height*72/96)));
+  RichMemo1.InDelInline(inlineimg, RichMemo1.SelStart, 0, Size(round(ImageList1.Width*ScreenToDocDPI),round(ImageList1.Height*ScreenToDocDPI)));
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

@@ -37,6 +37,11 @@ uses
   // RichMemo
   RichMemo, WSRichMemo, RichMemoUtils;
 
+const
+  TagNameNumeric = 'numeric';
+  BulletChar     = #$E2#$80#$A2;
+  TabChar        = #$09;
+
   { TGtk2WSCustomRichMemo }
 type
   TGtk2WSCustomRichMemo = class(TWSCustomRichMemo)
@@ -64,6 +69,9 @@ type
       var AMetric: TIntParaMetric): Boolean; override;
     class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AMetric: TIntParaMetric); override;
+
+    class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart,
+      TextLen: Integer; const ANumber: TIntParaNumbering); override;
 
     class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
@@ -135,6 +143,28 @@ type
   TGtk2WSCustomMemoInt = class(TGtk2WSCustomMemo);
   TCustomRichMemoInt   = class(TCustomRichMemo);
 
+procedure Gtk2WS_MemoSelChanged_Before(Textbuffer: PGtkTextBuffer;
+   StartIter: PGtkTextIter; mark: PGtkTextMark; WidgetInfo: PWidgetInfo); cdecl;
+var
+  tag : PGtkTextTag;
+begin
+  tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(TextBuffer)
+    , TagNameNumeric);
+  if gtk_text_iter_has_tag( StartIter, tag) then begin
+    if gtk_text_iter_begins_tag(StartIter, tag) then begin
+      gtk_text_iter_forward_to_tag_toggle(StartIter, nil);
+      gtk_text_buffer_move_mark(TextBuffer, mark, StartIter);
+    end else begin
+      gtk_text_iter_forward_char(StartIter);
+      if gtk_text_iter_ends_tag(StartIter, tag) then begin
+        gtk_text_iter_backward_to_tag_toggle(StartIter, nil);
+        gtk_text_iter_backward_char(StartIter);
+        gtk_text_buffer_move_mark(TextBuffer, mark, StartIter);
+      end;
+    end;
+  end;
+end;
+
 procedure Gtk2WS_MemoSelChanged (Textbuffer: PGtkTextBuffer;
    StartIter: PGtkTextIter; mark: PGtkTextMark; WidgetInfo: PWidgetInfo); cdecl;
 begin
@@ -185,6 +215,7 @@ begin
   TGtk2WSCustomMemoInt.SetCallbacks(AGtkWidget, AWidgetInfo);
 
   TextBuf := gtk_text_view_get_buffer(PGtkTextView(AWidgetInfo^.CoreWidget));
+  SignalConnect(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged_Before, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'insert-text', @Gtk2WS_RichMemoInsert, AWidgetInfo);
 end;
@@ -249,6 +280,7 @@ var
   Widget,
   TempWidget: PGtkWidget;
   WidgetInfo: PWidgetInfo;
+  buffer: PGtkTextBuffer;
 begin
   Widget := gtk_scrolled_window_new(nil, nil);
   Result := TLCLIntfHandle(PtrUInt(Widget));
@@ -280,6 +312,13 @@ begin
   gtk_text_view_set_accepts_tab(PGtkTextView(TempWidget), True);
 
   gtk_widget_show_all(Widget);
+
+  buffer := gtk_text_view_get_buffer (PGtkTextView(TempWidget));
+  //tag:=gtk_text_tag_new(TagNameNumeric);
+  gtk_text_buffer_create_tag (buffer, TagNameNumeric,
+      'editable',   [ gboolean(gFALSE),
+      'editable-set', gboolean(gTRUE),
+      nil]);
 
   Set_RC_Name(AWinControl, Widget);
   SetCallbacks(Widget, WidgetInfo);
@@ -482,6 +521,88 @@ begin
       'pixels-inside_wrap-set', gboolean(gTRUE),
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen, true);
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetParaNumbering(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const ANumber: TIntParaNumbering);
+var
+  w      : PGtkWidget;
+  b      : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+  txt    : String;
+  len    : Integer;
+  ln     : Integer;
+  ls     : Integer;
+  ofs    : Integer;
+  numidx : Integer;
+  tag    : PGtkTextTag;
+begin
+  inherited SetParaNumbering(AWinControl, TextStart, TextLen, ANumber);
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(w) or not Assigned(b) then Exit;
+
+  tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(b)
+    , TagNameNumeric);
+
+  gtk_text_buffer_get_iter_at_offset (b, @istart, TextStart);
+  iend:=istart;
+  gtk_text_iter_forward_chars(@iend, TextLen);
+  ln:=gtk_text_iter_get_line(@istart);
+  ls:=gtk_text_iter_get_line(@iend);
+
+
+  numidx:=1;
+  if ANumber.Style=pnNumber then numidx:=ANumber.NumberStart;
+
+  repeat
+    gtk_text_iter_set_line_offset(@istart, 0);
+    case ANumber.Style of
+      pnBullet: txt := BulletChar;
+      pnNumber: txt := IntToStr(numidx);
+      pnLowLetter: txt := 'a';
+      pnLowRoman:  txt := 'i';
+      pnUpLetter:  txt := 'A';
+      pnUpRoman:   txt := 'I';
+      pnCustomChar: txt:= UTF8Encode(ANumber.CustomChar);
+    end;
+    if not (ANumber.Style in [pnBullet, pnCustomChar]) and (ANumber.SepChar<>#0) then
+      txt:=txt+UTF8Encode(ANumber.SepChar);
+    txt:=txt+TabChar;
+
+    //gtk_text_buffer_get_iter_at_offset (b, @iend, TextStart);
+    //gtk_text_buffer_move
+    ofs:=gtk_text_iter_get_offset(@istart);
+
+    // remove existing number
+    if gtk_text_iter_begins_tag(@istart, tag) then begin
+      iend:=istart;
+      gtk_text_iter_forward_to_tag_toggle(@iend, nil);
+      gtk_text_buffer_delete(b, @istart, @iend);
+      gtk_text_buffer_get_iter_at_offset (b, @istart, ofs);
+    end;
+    // insert new number
+    gtk_text_buffer_insert(b, @istart, @txt[1], length(txt));
+
+    // restoring iterators
+    gtk_text_buffer_get_iter_at_offset (b, @istart, ofs);
+    gtk_text_iter_set_line_offset(@istart, 0);
+    iend := istart;
+
+    len:=UTF8Length(txt);
+    gtk_text_iter_forward_chars(@iend, len);
+    // aplying tag
+    gtk_text_buffer_apply_tag_by_name(b, TagNameNumeric, @istart, @iend);
+
+    // next line!
+    gtk_text_iter_forward_line(@istart);
+
+    inc(ln);
+    inc(numidx);
+  until ln>ls;
+
+
 end;
 
 class function TGtk2WSCustomRichMemo.GetParaRange(

@@ -150,7 +150,10 @@ var
 begin
   tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(TextBuffer)
     , TagNameNumeric);
+
+  // navigate "through" numbering characters
   if gtk_text_iter_has_tag( StartIter, tag) then begin
+    // if tried to move at the "endo
     if gtk_text_iter_begins_tag(StartIter, tag) then begin
       gtk_text_iter_forward_to_tag_toggle(StartIter, nil);
       gtk_text_buffer_move_mark(TextBuffer, mark, StartIter);
@@ -207,14 +210,50 @@ begin
   end;
 end;
 
+procedure Gtk2WS_Backspace(view: PGtkTextView; WidgetInfo: PWidgetInfo); cdecl;
+var
+  buf    : PGtkTextBuffer;
+  mark   : PGtkTextMark;
+  iend   : TGtkTextIter;
+  istart : TGtkTextIter;
+  tag    : PGtkTextTag;
+begin
+  // this handler checks, if the "numbering" should be erarsed
+  buf:=gtk_text_view_get_buffer(view);
+  if not Assigned(buf) then Exit;
+  mark := gtk_text_buffer_get_mark(buf, 'insert');
+  if not Assigned(mark) then Exit;
+  tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(buf)
+    , TagNameNumeric);
+  if not Assigned(tag) then Exit;
+
+  // first, check if cursor is right "after" the "numbering characters"
+  gtk_text_buffer_get_iter_at_mark(buf, @iend, mark);
+
+  if gtk_text_iter_ends_tag(@iend, tag) then begin
+    // cursor position is at the beginning of the line - erase all
+    // characters that belong to the numbering.
+    istart:=iend;
+    gtk_text_iter_backward_to_tag_toggle(@istart, tag);
+    gtk_text_buffer_delete(buf, @istart, @iend);
+    // prevent default backspace
+    g_signal_stop_emission_by_name(view, 'backspace');
+  end;
+
+end;
+
+
 class procedure TGtk2WSCustomRichMemo.SetCallbacks(
   const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
 var
   TextBuf: PGtkTextBuffer;
+  view   : PGtkTextView;
 begin
   TGtk2WSCustomMemoInt.SetCallbacks(AGtkWidget, AWidgetInfo);
 
-  TextBuf := gtk_text_view_get_buffer(PGtkTextView(AWidgetInfo^.CoreWidget));
+  view:=PGtkTextView(AWidgetInfo^.CoreWidget);
+  TextBuf := gtk_text_view_get_buffer(view);
+  SignalConnect(PGtkWidget(view), 'backspace', @Gtk2WS_Backspace, AWidgetInfo);
   SignalConnect(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged_Before, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'insert-text', @Gtk2WS_RichMemoInsert, AWidgetInfo);

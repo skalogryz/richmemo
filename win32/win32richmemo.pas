@@ -811,6 +811,7 @@ var
   c: TWin32Inline;
   Obj: TREOBJECT;
   sl, ss: Integer;
+  eventmask: Integer;
 const
   PointSize     = 72.0;
   RtfSizeToInch = 2.54 * 1000.0;
@@ -822,6 +823,7 @@ begin
   hnd:=(AWinControl.Handle);
 
   RichEditManager.GetSelection(hnd, ss, sl);
+  eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
   try
     RichEditManager.SetSelection(hnd, ATextStart, ATextLength);
     SendMessage(hnd, EM_GETOLEINTERFACE, 0, LPARAM(@rch));
@@ -859,6 +861,7 @@ begin
     if Result then wsObj:=c;
   finally
     RichEditManager.SetSelection(hnd, ss, sl);
+    RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
   end;
 end;
 

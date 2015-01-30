@@ -29,7 +29,7 @@ uses
   // RTL/FCL
   Types, Classes, SysUtils,
   // LCL
-  LCLType, Controls, Graphics, LazUTF8, StdCtrls,
+  LCLType, Controls, Graphics, LazUTF8, StdCtrls, LCLProc,
   // Gtk2 widget
   Gtk2Def,
   GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
@@ -53,6 +53,9 @@ type
 
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
+    class procedure DestroyHandle(const AWinControl: TWinControl); override;
+
+    class function  GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
 
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
       var RangeStart, RangeLen: Integer): Boolean; override;
@@ -86,6 +89,30 @@ type
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
+  end;
+
+type
+
+  { TGtk2RichMemoStrings }
+
+  TGtk2RichMemoStrings = class(TStrings)
+  protected
+    FGtkText : PGtkTextView;
+    FGtkBuf: PGtkTextBuffer;
+    FOwner: TWinControl;
+    function GetTextStr: string; override;
+    function GetCount: integer; override;
+    function Get(Index : Integer) : string; override;
+  public
+    constructor Create(TextView : PGtkTextView; TheOwner: TWinControl);
+    destructor Destroy; override;
+    procedure Assign(Source : TPersistent); override;
+    procedure AddStrings(TheStrings: TStrings); override;
+    procedure Clear; override;
+    procedure Delete(Index : integer); override;
+    procedure Insert(Index : integer; const S: string); override;
+    procedure SetTextStr(const Value: string); override;
+    property Owner: TWinControl read FOwner;
   end;
 
 implementation
@@ -239,9 +266,220 @@ begin
     // prevent default backspace
     g_signal_stop_emission_by_name(view, 'backspace');
   end;
-
 end;
 
+function GatherNumeirc(buf: PGtkTextBuffer; const istart: TGtkTextIter; var num: TIntParaNumbering): Boolean;
+var
+  iend : TGtkTextIter;
+  ch   : Pgchar;
+  s    : string;
+  i    : Integer;
+  err  : Integer;
+begin
+  iend:=istart;
+  gtk_text_iter_forward_to_tag_toggle(@iend, nil);
+  ch:=gtk_text_iter_get_text(@istart, @iend);
+  Result:=Assigned(ch);
+  if not Result then Exit;
+  s:=ch;
+  g_free(ch);
+  Result:=length(s)>1;
+  if not Result then Exit;
+
+  if Pos(BulletChar, s[1]) = 1 then num.Style:=pnBullet
+  else if s[1] in ['0'..'9'] then begin
+    num.Style:=pnNumber;
+    i:=1;
+    while (i<=length(s)) and (s[i] in ['0'..'9']) do inc(i);
+    Val( Copy(s, 1, i-1), num.NumberStart, err);
+  end else begin
+    num.Style:=pnCustomChar;
+
+  end;
+
+  //ch.
+  //gtk_text_buffer_insert_range
+end;
+
+function Gtk2_RichMemoKeyPress(view: PGtkTextView; Event: PGdkEventKey;
+  WidgetInfo: PWidgetInfo): gboolean; cdecl;
+var
+  buf    : PGtkTextBuffer;
+  mark   : PGtkTextMark;
+  iend   : TGtkTextIter;
+  istart : TGtkTextIter;
+  tag    : PGtkTextTag;
+begin
+  if Event^.keyval= GDK_KEY_Return then begin
+    //writeln('return !');
+    buf:=gtk_text_view_get_buffer(view);
+    if not Assigned(buf) then Exit;
+    mark := gtk_text_buffer_get_mark(buf, 'insert');
+    if not Assigned(mark) then Exit;
+    tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(buf)
+      , TagNameNumeric);
+    if not Assigned(tag) then Exit;
+    gtk_text_buffer_get_iter_at_mark(buf, @istart, mark);
+
+    gtk_text_iter_set_line_offset(@istart, 0);
+    if gtk_text_iter_begins_tag(@istart, tag) then begin
+      //writeln('apply!');
+      //writeln( 'ofs: ', gtk_text_iter_get_offset(@istart));
+    end;
+  end;
+  Result:=false;
+end;
+
+{ TGtk2RichMemoStrings }
+
+function TGtk2RichMemoStrings.GetTextStr: string;
+var
+  StartIter, EndIter: TGtkTextIter;
+  AText: PgChar;
+begin
+  Result := '';
+  gtk_text_buffer_get_start_iter(FGtkBuf, @StartIter);
+  gtk_text_buffer_get_end_iter(FGtkBuf, @EndIter);
+
+  AText := gtk_text_iter_get_text(@StartIter, @EndIter);
+  Result := StrPas(AText);
+  if AText <> nil then
+    g_free(AText);
+end;
+
+function TGtk2RichMemoStrings.GetCount: integer;
+begin
+  Result := gtk_text_buffer_get_line_count(FGtkBuf);
+  if Get(Result-1) = '' then Dec(Result);
+end;
+
+function TGtk2RichMemoStrings.Get(Index: Integer): string;
+var
+  StartIter, EndIter: TGtkTextIter;
+  AText: PgChar;
+begin
+  gtk_text_buffer_get_iter_at_line(FGtkBuf, @StartIter, Index);
+  if Index = gtk_text_buffer_get_line_count(FGtkBuf) then
+    gtk_text_buffer_get_end_iter(FGtkBuf, @EndIter)
+  else begin
+    gtk_text_buffer_get_iter_at_line(FGtkBuf, @EndIter, Index);
+    gtk_text_iter_forward_to_line_end(@EndIter);
+  end;
+  // if a row is blank gtk_text_iter_forward_to_line_end will goto the row ahead
+  // this is not desired. so if it jumped ahead a row then the row we want is blank
+  if gtk_text_iter_get_line(@StartIter) = gtk_text_iter_get_line(@EndIter) then
+  begin
+    AText := gtk_text_iter_get_text(@StartIter, @EndIter);
+    Result := StrPas(AText);
+    g_free(AText);
+  end
+  else
+    Result := '';
+end;
+
+constructor TGtk2RichMemoStrings.Create(TextView: PGtkTextView;
+  TheOwner: TWinControl);
+begin
+  inherited Create;
+  if TextView = nil then RaiseGDBException(
+    'TGtk2RichMemoStrings.Create Unspecified Text widget');
+  FGtkText:= TextView;
+  FGtkBuf := gtk_text_view_get_buffer(FGtkText);
+  if TheOwner = nil then RaiseGDBException(
+    'TGtk2RichMemoStrings.Create Unspecified owner');
+  FOwner:=TheOwner;
+end;
+
+destructor TGtk2RichMemoStrings.Destroy;
+begin
+
+  inherited Destroy;
+end;
+
+procedure TGtk2RichMemoStrings.Assign(Source: TPersistent);
+var
+  S: TStrings;
+begin
+  if Source is TStrings then
+  begin
+    S:=TStrings(Source);
+    // to prevent Clear and then SetText we need to use our own Assign
+    QuoteChar := S.QuoteChar;
+    Delimiter := S.Delimiter;
+    NameValueSeparator := S.NameValueSeparator;
+    TextLineBreakStyle := S.TextLineBreakStyle;
+    Text := S.Text;
+  end
+  else
+    inherited Assign(Source);
+end;
+
+procedure TGtk2RichMemoStrings.AddStrings(TheStrings: TStrings);
+begin
+  SetTextStr(GetTextStr + TStrings(TheStrings).Text);
+end;
+
+procedure TGtk2RichMemoStrings.Clear;
+begin
+  SetText('');
+end;
+
+procedure TGtk2RichMemoStrings.Delete(Index: integer);
+var
+StartIter,
+EndIter: TGtkTextIter;
+begin
+  gtk_text_buffer_get_iter_at_line(FGtkBuf, @StartIter, Index);
+  if Index = Count-1 then begin
+    gtk_text_iter_backward_char(@StartIter);
+    gtk_text_buffer_get_end_iter(FGtkBuf, @EndIter)
+  end
+  else
+    gtk_text_buffer_get_iter_at_line(FGtkBuf, @EndIter, Index+1);
+  gtk_text_buffer_delete(FGtkBuf, @StartIter, @EndIter);
+end;
+
+procedure TGtk2RichMemoStrings.Insert(Index: integer; const S: string);
+var
+  StartIter,
+  CursorIter: TGtkTextIter;
+  NewLine: String;
+  TextMark: PGtkTextMark;
+begin
+  if Index < gtk_text_buffer_get_line_count(FGtkBuf) then begin
+    //insert with LineEnding
+    NewLine := S+LineEnding;
+    gtk_text_buffer_get_iter_at_line(FGtkBuf, @StartIter, Index);
+  end
+  else begin
+    //append with a preceding LineEnding
+    gtk_text_buffer_get_end_iter(FGtkBuf, @StartIter);
+    if gtk_text_buffer_get_line_count(FGtkBuf) = Count then
+      NewLine := LineEnding+S+LineEnding
+    else
+      NewLine := S+LineEnding;
+  end;
+
+  {if FQueueCursorMove = 0 then
+  begin}
+    TextMark := gtk_text_buffer_get_insert(FGtkBuf);
+    gtk_text_buffer_get_iter_at_mark(FGtkBuf, @CursorIter, TextMark);
+{    if gtk_text_iter_equal(@StartIter, @CursorIter) then
+      QueueCursorMove(-1);
+  end;}
+
+  // and finally insert the new text
+  gtk_text_buffer_insert(FGtkBuf, @StartIter, PChar(NewLine) ,-1);
+end;
+
+procedure TGtk2RichMemoStrings.SetTextStr(const Value: string);
+begin
+  if (Value <> Text) then
+  begin
+    LockOnChange({%H-}PGtkObject(Owner.Handle), 1);
+    gtk_text_buffer_set_text(FGtkBuf, PChar(Value), -1);
+  end;
+end;
 
 class procedure TGtk2WSCustomRichMemo.SetCallbacks(
   const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
@@ -257,6 +495,7 @@ begin
   SignalConnect(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged_Before, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'insert-text', @Gtk2WS_RichMemoInsert, AWidgetInfo);
+  SignalConnect(PGtkWidget(view), 'key-press-event',  @Gtk2_RichMemoKeyPress, AWidgetInfo);
 end;
 
 class procedure TGtk2WSCustomRichMemo.GetWidgetBuffer(const AWinControl: TWinControl;
@@ -361,6 +600,34 @@ begin
 
   Set_RC_Name(AWinControl, Widget);
   SetCallbacks(Widget, WidgetInfo);
+end;
+
+class procedure TGtk2WSCustomRichMemo.DestroyHandle(
+  const AWinControl: TWinControl);
+var
+  w : PGtkWidget;
+  b : PGtkTextBuffer;
+  handlerid: gulong;
+begin
+  GetWidgetBuffer(AWinControl, w, b);
+
+  // uninstall hanlder, to prevent crashes
+  handlerid := g_signal_handler_find(b
+    , G_SIGNAL_MATCH_FUNC or G_SIGNAL_MATCH_DATA
+    , 0, 0, nil
+    , @Gtk2WS_MemoSelChanged, GetWidgetInfo(w));
+  g_signal_handler_disconnect (b, handlerid);
+
+  inherited DestroyHandle(AWinControl);
+end;
+
+class function TGtk2WSCustomRichMemo.GetStrings(const ACustomMemo: TCustomMemo
+  ): TStrings;
+var
+  TextView: PGtkTextView;
+begin
+  TextView := PGtkTextView(GetWidgetInfo({%H-}Pointer(ACustomMemo.Handle), False)^.CoreWidget);
+  Result := TGtk2RichMemoStrings.Create(TextView, ACustomMemo);
 end;
 
 class function TGtk2WSCustomRichMemo.GetStyleRange(

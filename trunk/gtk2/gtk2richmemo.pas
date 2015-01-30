@@ -55,6 +55,7 @@ type
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
     class procedure DestroyHandle(const AWinControl: TWinControl); override;
 
+    class function  GetSelLength(const ACustomEdit: TCustomEdit): integer; override;
     class function  GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
 
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
@@ -619,6 +620,25 @@ begin
   g_signal_handler_disconnect (b, handlerid);
 
   inherited DestroyHandle(AWinControl);
+end;
+
+class function TGtk2WSCustomRichMemo.GetSelLength(const ACustomEdit: TCustomEdit
+  ): integer;
+var
+  w : PGtkWidget;
+  b : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+begin
+  GetWidgetBuffer(ACustomEdit, w, b);
+  if not Assigned(b) then begin
+    Result:=-1;
+    Exit;
+  end;
+  Result := 0;
+  if not gtk_text_buffer_get_selection_bounds(b, @istart, @iend) then Exit;
+
+  Result := Abs(gtk_text_iter_get_offset(@iend) - gtk_text_iter_get_offset(@istart));
 end;
 
 class function TGtk2WSCustomRichMemo.GetStrings(const ACustomMemo: TCustomMemo

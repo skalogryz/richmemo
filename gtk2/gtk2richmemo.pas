@@ -31,8 +31,8 @@ uses
   // LCL
   LCLType, Controls, Graphics, LazUTF8, StdCtrls, LCLProc,
   // Gtk2 widget
-  Gtk2Def,
-  GTK2WinApiWindow, Gtk2Globals, Gtk2Proc, InterfaceBase,
+  Gtk2Int, Gtk2Def,
+  GTK2WinApiWindow, Gtk2Globals, Gtk2Proc,
   gdk2pixbuf, Gtk2WSStdCtrls,
   // RichMemo
   RichMemo, WSRichMemo, RichMemoUtils;
@@ -90,6 +90,25 @@ type
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
+
+    // inline handler
+    class function InlineInsert(const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
+      const ASize: TSize; AHandler: TRichMemoInline; var wsObj: TRichMemoInlineWSObject): Boolean; override;
+    class procedure InlineInvalidate(const AWinControl: TWinControl;
+       AHandler: TRichMemoInline; wsObj: TRichMemoInlineWSObject); override;
+  end;
+
+  { TGtk2InlineObject }
+
+  TGtk2InlineObject = class(TRichMemoInlineWSObject)
+  public
+    anch   : PGtkTextChildAnchor;
+    wgt    : PGtkWidget;
+    il     : TRichMemoInline;
+    size   : TSize;
+    cnv    : TCanvas;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
 type
@@ -329,6 +348,20 @@ begin
     end;
   end;
   Result:=false;
+end;
+
+{ TGtk2InlineObject }
+
+constructor TGtk2InlineObject.Create;
+begin
+  inherited Create;
+
+end;
+
+destructor TGtk2InlineObject.Destroy;
+begin
+  cnv.Free;
+  inherited Destroy;
 end;
 
 { TGtk2RichMemoStrings }
@@ -1176,6 +1209,76 @@ begin
   gtk_text_buffer_apply_tag(b, tag, @istart, @iend);
 
   //todo: set default font with scale
+end;
+
+function GtkDrawableDraw(widget: PGtkWidget;
+  event : PGdkEventExpose; gi: TGtk2InlineObject): gboolean; cdecl;
+begin
+  if not Assigned(widget) then Exit;
+  if not gi.cnv.HandleAllocated then
+    gi.cnv.Handle:=GTK2WidgetSet.CreateDCForWidget(widget, event^.Window,false);
+  gi.il.Draw( gi.cnv, gi.Size);
+  Result:=gTRUE;
+end;
+
+class function TGtk2WSCustomRichMemo.InlineInsert(
+  const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
+  const ASize: TSize; AHandler: TRichMemoInline;
+  var wsObj: TRichMemoInlineWSObject): Boolean;
+var
+  w      : PGtkWidget;
+  b      : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+  anch   : PGtkTextChildAnchor;
+  gi     : TGtk2InlineObject;
+  draw   : PGtkWidget;
+  sz     : TSize;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  DPIFactor = ScreenDPI / PageDPI;
+begin
+  Result:=false;
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(b) then Exit;
+
+  gi:=TGtk2InlineObject.Create;
+
+  gtk_text_buffer_get_iter_at_offset(b, @istart, ATextStart);
+  anch:=gtk_text_buffer_create_child_anchor(b, @istart);
+
+  draw:=gtk_drawing_area_new;
+  ConnectSignal( PGtkObject(draw), 'expose-event', @GtkDrawableDraw, gi);
+
+  sz.cx:=round(ASize.cx * DPIFactor);
+  sz.cy:=round(ASize.cy * DPIFactor);
+  gtk_widget_set_size_request(draw, sz.cx, sz.cy);
+  gtk_text_view_add_child_at_anchor(PGtkTextView(w), draw, anch);
+
+  gi.il:=AHandler;
+  gi.anch:=anch;
+  gi.wgt:=draw;
+  gi.size:=sz;
+  gi.cnv:=TCanvas.Create;
+
+  gtk_widget_show(draw);
+  gi.il.SetVisible(true);
+
+  wsObj:=gi;
+  Result:=true;
+end;
+
+class procedure TGtk2WSCustomRichMemo.InlineInvalidate(
+  const AWinControl: TWinControl; AHandler: TRichMemoInline;
+  wsObj: TRichMemoInlineWSObject);
+var
+  gi : TGtk2InlineObject;
+begin
+  if not Assigned(wsObj) or not (wsObj is TGtk2InlineObject) then Exit;
+  gi := TGtk2InlineObject(wsObj);
+  if Assigned(gi.wgt) then
+    gtk_widget_queue_draw(gi.wgt);
 end;
 
 

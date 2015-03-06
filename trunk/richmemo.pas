@@ -444,6 +444,7 @@ procedure TCustomRichMemo.SetTextAttributes(TextStart, TextLen: Integer;
 var
   params  : TFontParams;
 begin
+  InitFontParams(params);
   params.Name := AFont.Name;
   params.Color := AFont.Color;
   params.Size := AFont.Size;

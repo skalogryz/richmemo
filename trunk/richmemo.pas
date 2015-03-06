@@ -245,6 +245,7 @@ function GetFontParams(styles: TFontStyles): TFontParams; overload;
 function GetFontParams(color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; color: TColor; styles: TFontStyles): TFontParams; overload;
 function GetFontParams(const Name: String; Size: Integer; color: TColor; styles: TFontStyles): TFontParams; overload;
+function GetFontParams(AFont: TFont): TFontParams; overload;
 
 procedure InitParaMetric(var m: TParaMetric);
 procedure InitParaNumbering(var n: TParaNumbering);
@@ -287,6 +288,29 @@ begin
   Result.Size := Size;
   Result.Color := color;
   Result.Style := styles;
+end;
+
+function GetFontParams(AFont: TFont): TFontParams; overload;
+var
+  data    : TFontData;
+begin
+  InitFontParams(Result);
+  if not Assigned(AFont) then Exit;
+
+  if AFont.Reference.Handle <> 0 then begin
+    data:=GetFontData(AFont.Reference.Handle);
+    if data.Height<0
+      then Result.Size:=round(abs(data.Height)/ScreenInfo.PixelsPerInchY*72)
+      else Result.Size:=data.Height;
+    Result.Name:=data.Name;
+    Result.Color:=AFont.Color;
+    Result.Style:=data.Style;
+  end else begin
+    Result.Name := AFont.Name;
+    Result.Color := AFont.Color;
+    Result.Size := AFont.Size;
+    Result.Style := AFont.Style;
+  end;
 end;
 
 procedure InitParaMetric(var m: TParaMetric);
@@ -441,15 +465,9 @@ end;
 
 procedure TCustomRichMemo.SetTextAttributes(TextStart, TextLen: Integer;  
   AFont: TFont); 
-var
-  params  : TFontParams;
 begin
-  InitFontParams(params);
-  params.Name := AFont.Name;
-  params.Color := AFont.Color;
-  params.Size := AFont.Size;
-  params.Style := AFont.Style;
-  SetTextAttributes(TextStart, TextLen, {TextStyleAll,} params);
+  if not Assigned(AFont) then Exit;
+  SetTextAttributes(TextStart, TextLen, GetFontParams(AFont));
 end;
 
 procedure TCustomRichMemo.SetTextAttributes(TextStart, TextLen: Integer;  

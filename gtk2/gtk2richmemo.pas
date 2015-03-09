@@ -138,6 +138,7 @@ type
 implementation
 
 
+// todo: why "shr" on each of this flag test?
 function gtktextattr_underline(const a : TGtkTextAppearance) : Boolean;
 begin
   Result:=((a.flag0 and bm_TGtkTextAppearance_underline) shr bp_TGtkTextAppearance_underline) > 0;
@@ -147,6 +148,12 @@ function gtktextattr_strikethrough(const a : TGtkTextAppearance) : Boolean;
 begin
   Result:=((a.flag0 and bm_TGtkTextAppearance_strikethrough) shr bp_TGtkTextAppearance_strikethrough) > 0;
 end;
+
+function gtktextattr_bkcolor(const a : TGtkTextAppearance) : Boolean;
+begin
+  Result:=((a.flag0 and bm_TGtkTextAppearance_draw_bg ) shr bp_TGtkTextAppearance_draw_bg) > 0;
+end;
+
 
 function GtkTextAttrToFontParams(const textAttr: TGtkTextAttributes; var FontParams: TIntFontParams): Boolean;
 var
@@ -158,10 +165,7 @@ const
   ScreenDPI = 96; // todo: might change, should be received dynamically
   PageDPI   = 72; // not expected to be changed
 begin
-  FontParams.Style := [];
-  FontParams.Name := '';
-  FontParams.Size := 0;
-  FontParams.Color := 0;
+  InitFontParams(FontParams);
 
   pf := textAttr.font;
   Result := Assigned(pf);
@@ -184,6 +188,10 @@ begin
   FontParams.Color := TGDKColorToTColor(textAttr.appearance.fg_color);
   if gtktextattr_underline(textAttr.appearance) then  Include(FontParams.Style, fsUnderline);
   if gtktextattr_strikethrough(textAttr.appearance) then Include(FontParams.Style, fsStrikeOut);
+  FontParams.HasBkClr := gtktextattr_bkcolor(textAttr.appearance);
+  if FontParams.HasBkClr then
+    FontParams.BkColor := TGDKColorToTColor(textAttr.appearance.bg_color);
+
 end;
 
 type
@@ -1302,8 +1310,49 @@ begin
   Result:=TGtk2WSCustomRichMemo.ImageFromFile(ARichMemo, APos, FileNameUTF8, AImgSize);
 end;
 
+function GtkWSGetFontParams(fontref: HFONT; var params: TFontParams): Boolean;
+var
+  gtkobj: PGDIObject;
+  pangofont: PPangoLayout;
+  PangoDesc: PPangoFontDescription;
+  sz       : Integer;
+  isSzAbs  : Boolean;
+  style    : gint;
+  attr     : PPangoAttrList;
+begin
+  gtkobj:=PGDIObject(fontref);
+  Result:=Assigned(gtkobj) and (gtkobj^.GDIType=gdiFont);
+  if not Result then Exit;
+
+  if gtkobj^.LogFont.lfFaceName = 'default' then begin
+    pangofont:=GTK2WidgetSet.GetDefaultGtkFont(False);
+    if PANGO_IS_LAYOUT(pangofont) then
+    begin
+      PangoDesc := pango_layout_get_font_description(pangofont);
+      if not Assigned(PangoDesc) then
+        PangoDesc := pango_context_get_font_description(pango_layout_get_context(pangofont));
+      params.Name := StrPas(pango_font_description_get_family(PangoDesc));
+
+      isSzAbs := pango_font_description_get_size_is_absolute(PangoDesc);
+      sz := pango_font_description_get_size(PangoDesc);
+      if not isSzAbs then
+        params.Size := round(sz / PANGO_SCALE)
+      else
+        params.Size := round(sz/ScreenInfo.PixelsPerInchY*72);
+
+      if pango_font_description_get_weight(PangoDesc) > PANGO_WEIGHT_NORMAL then
+        Include(params.Style, fsBold);
+      style:=pango_font_description_get_style(PangoDesc);
+
+      if style and PANGO_STYLE_ITALIC > 0 then Include(params.Style, fsItalic);
+    end;
+  end else
+    Result:=false;
+end;
+
 initialization
   InsertImageFromFile := @GtkInsertImageFromFile;
+  WSGetFontParams:=@GtkWSGetFontParams;
 
 end.
 

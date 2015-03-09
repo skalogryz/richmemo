@@ -25,6 +25,7 @@ interface
 
 uses
   Types, Classes, SysUtils,
+  LCLType,
   Graphics, Controls, StdCtrls,
   WSStdCtrls, RichMemo;
 
@@ -102,6 +103,10 @@ type
 
   
 function WSRegisterCustomRichMemo: Boolean; external name 'WSRegisterCustomRichMemo';
+
+var
+  //note: this internal function might go away eventually!
+  WSGetFontParams: function (wsfontref: HFONT; var params: TFontParams): Boolean = nil;
 
 implementation
 

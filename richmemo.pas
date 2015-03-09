@@ -292,19 +292,25 @@ end;
 
 function GetFontParams(AFont: TFont): TFontParams; overload;
 var
-  data    : TFontData;
+  data   : TFontData;
+  wstest : Boolean;
 begin
   InitFontParams(Result);
   if not Assigned(AFont) then Exit;
 
   if AFont.Reference.Handle <> 0 then begin
-    data:=GetFontData(AFont.Reference.Handle);
-    if data.Height<0
-      then Result.Size:=round(abs(data.Height)/ScreenInfo.PixelsPerInchY*72)
-      else Result.Size:=data.Height;
-    Result.Name:=data.Name;
-    Result.Color:=AFont.Color;
-    Result.Style:=data.Style;
+    // WSGetFontParams is introduced, because default Gtk widgetset returns
+    // only FontName from the handle.
+    wstest:= Assigned(WSGetFontParams) and WSGetFontParams(AFont.Reference.Handle, Result);
+    if not wstest then begin
+      data:=GetFontData(AFont.Reference.Handle);
+      if data.Height<0
+        then Result.Size:=round(abs(data.Height)/ScreenInfo.PixelsPerInchY*72)
+        else Result.Size:=data.Height;
+      Result.Name:=data.Name;
+      Result.Color:=AFont.Color;
+      Result.Style:=data.Style;
+    end;
   end else begin
     Result.Name := AFont.Name;
     Result.Color := AFont.Color;

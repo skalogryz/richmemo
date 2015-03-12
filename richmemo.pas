@@ -305,11 +305,10 @@ begin
       with Result, ALogFont do
       begin
         Height := lfHeight;
-        if lfWeight >= FW_BOLD then
-          Include(Style, fsBold);
-        if lfItalic <> 0 then Include(Style, fsItalic);
-        if lfUnderline <> 0 then Include(Style, fsUnderline);
-        if lfStrikeOut <> 0 then Include(Style, fsStrikeOut);
+        if lfWeight >= FW_BOLD then Include(Style, fsBold);
+        if lfItalic > 0 then Include(Style, fsItalic);
+        if lfUnderline > 0 then Include(Style, fsUnderline);
+        if lfStrikeOut > 0 then Include(Style, fsStrikeOut);
         Charset := TFontCharset(lfCharSet);
         Name := lfFaceName;
         case lfPitchAndFamily and $F of

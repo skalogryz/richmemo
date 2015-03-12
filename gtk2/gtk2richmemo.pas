@@ -1317,8 +1317,6 @@ var
   PangoDesc: PPangoFontDescription;
   sz       : Integer;
   isSzAbs  : Boolean;
-  style    : gint;
-  attr     : PPangoAttrList;
 begin
   gtkobj:=PGDIObject(fontref);
   Result:=Assigned(gtkobj) and (gtkobj^.GDIType=gdiFont);
@@ -1326,25 +1324,30 @@ begin
 
   if gtkobj^.LogFont.lfFaceName = 'default' then begin
     pangofont:=GTK2WidgetSet.GetDefaultGtkFont(False);
-    if PANGO_IS_LAYOUT(pangofont) then
+    Result:=PANGO_IS_LAYOUT(pangofont);
+    if Result then
     begin
+      // default font name
       PangoDesc := pango_layout_get_font_description(pangofont);
       if not Assigned(PangoDesc) then
         PangoDesc := pango_context_get_font_description(pango_layout_get_context(pangofont));
       params.Name := StrPas(pango_font_description_get_family(PangoDesc));
 
-      isSzAbs := pango_font_description_get_size_is_absolute(PangoDesc);
-      sz := pango_font_description_get_size(PangoDesc);
-      if not isSzAbs then
-        params.Size := round(sz / PANGO_SCALE)
-      else
-        params.Size := round(sz/ScreenInfo.PixelsPerInchY*72);
+      // default font size
+      if gtkobj^.LogFont.lfHeight = 0 then begin
+        isSzAbs := pango_font_description_get_size_is_absolute(PangoDesc);
+        sz := pango_font_description_get_size(PangoDesc);
+        if not isSzAbs then
+          params.Size := round(sz / PANGO_SCALE)
+        else
+          params.Size := round(sz/ScreenInfo.PixelsPerInchY*72);
+      end;
 
-      if pango_font_description_get_weight(PangoDesc) > PANGO_WEIGHT_NORMAL then
-        Include(params.Style, fsBold);
-      style:=pango_font_description_get_style(PangoDesc);
-
-      if style and PANGO_STYLE_ITALIC > 0 then Include(params.Style, fsItalic);
+      // rely on LogFont structure to be initialiazed (as it seems to be)
+      if gtkobj^.LogFont.lfItalic > 0 then Include(params.Style, fsItalic);
+      if gtkobj^.LogFont.lfWidth >= FW_BOLD then Include(params.Style, fsBold);
+      if gtkobj^.LogFont.lfUnderline > 0 then Include(params.Style, fsUnderline);
+      if gtkobj^.LogFont.lfStrikeOut > 0 then Include(params.Style, fsStrikeOut);
     end;
   end else
     Result:=false;

@@ -24,7 +24,9 @@ unit RichMemo;
 interface
 
 uses
-  Types, Classes, SysUtils, Graphics, StdCtrls, LazUTF8;
+  Types, Classes, SysUtils
+  , LCLType, LCLIntf
+  , Graphics, StdCtrls, LazUTF8;
 
 type
   TFontParams  = record
@@ -290,6 +292,38 @@ begin
   Result.Style := styles;
 end;
 
+//todo: get rid of this Graphics.GetFontData dupication
+//this is the only function that's using LCLType and LCLIntf
+function RMGetFontData(Font: HFont): TFontData;
+var
+  ALogFont: TLogFont;
+begin
+  Result := DefFontData;
+  if Font <> 0 then
+  begin
+    if GetObject(Font, SizeOf(ALogFont), @ALogFont) <> 0 then
+      with Result, ALogFont do
+      begin
+        Height := lfHeight;
+        if lfWeight >= FW_BOLD then
+          Include(Style, fsBold);
+        if lfItalic <> 0 then Include(Style, fsItalic);
+        if lfUnderline <> 0 then Include(Style, fsUnderline);
+        if lfStrikeOut <> 0 then Include(Style, fsStrikeOut);
+        Charset := TFontCharset(lfCharSet);
+        Name := lfFaceName;
+        case lfPitchAndFamily and $F of
+          VARIABLE_PITCH: Pitch := fpVariable;
+          FIXED_PITCH: Pitch := fpFixed;
+        else
+          Pitch := fpDefault;
+        end;
+        Orientation := lfOrientation;
+        Handle := Font;
+      end;
+  end;
+end;
+
 function GetFontParams(AFont: TFont): TFontParams; overload;
 var
   data   : TFontData;
@@ -303,14 +337,16 @@ begin
     // only FontName from the handle.
     wstest:= Assigned(WSGetFontParams) and WSGetFontParams(AFont.Reference.Handle, Result);
     if not wstest then begin
-      data:=GetFontData(AFont.Reference.Handle);
+      data:=RMGetFontData(AFont.Reference.Handle);
       if data.Height<0
         then Result.Size:=round(abs(data.Height)/ScreenInfo.PixelsPerInchY*72)
         else Result.Size:=data.Height;
       Result.Name:=data.Name;
-      Result.Color:=AFont.Color;
       Result.Style:=data.Style;
     end;
+    // color is not stored with system font information
+    // it's an additional attribute introduced in TFont class
+    Result.Color:=AFont.Color;
   end else begin
     Result.Name := AFont.Name;
     Result.Color := AFont.Color;

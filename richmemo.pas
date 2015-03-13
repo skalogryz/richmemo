@@ -261,7 +261,7 @@ var
 implementation
 
 uses
-  WSRichMemo;
+  RichMemoFactory, WSRichMemo;
 
 procedure InitFontParams(var p: TFontParams);
 begin

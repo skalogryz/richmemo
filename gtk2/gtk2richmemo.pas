@@ -1345,7 +1345,7 @@ begin
 
       // rely on LogFont structure to be initialiazed (as it seems to be)
       if gtkobj^.LogFont.lfItalic > 0 then Include(params.Style, fsItalic);
-      if gtkobj^.LogFont.lfWidth >= FW_BOLD then Include(params.Style, fsBold);
+      if gtkobj^.LogFont.lfWeight >= FW_BOLD then Include(params.Style, fsBold);
       if gtkobj^.LogFont.lfUnderline > 0 then Include(params.Style, fsUnderline);
       if gtkobj^.LogFont.lfStrikeOut > 0 then Include(params.Style, fsStrikeOut);
     end;

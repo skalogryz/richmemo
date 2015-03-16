@@ -22,8 +22,7 @@ interface
 
 {$IFDEF FPC_FULLVERSION >= 20600}
 uses
-  SysUtils, StrUtils, Graphics,
-  RichMemo;
+  SysUtils, Graphics, RichMemo;
 
 type
   TRichEditFromRichMemo = class(TObject);

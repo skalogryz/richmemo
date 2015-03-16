@@ -99,6 +99,11 @@ type
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); override;
 
+    class procedure SetParaTabs(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AStopList: TTabStopList); override;
+    class function GetParaTabs(const AWinControl: TWinControl; TextStart: integer;
+      var AStopList: TTabStopList): Boolean; override;
+
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string;
@@ -140,6 +145,10 @@ const
 { taCenter       } ES_CENTER
   );
 
+const
+  TAB_OFFSET_MASK = $7FFFFF;
+  TAB_OFFSET_BITS = 24;
+  TWIP_PT         = 20; // Twips in Point. Twips are commonly used measurement unit for RichEdit inteface
   
 procedure LockRedraw(AHandle: HWND);
 begin
@@ -617,12 +626,12 @@ begin
 
   RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
 
-  AMetrics.FirstLine:=para.dxStartIndent/20;
-  AMetrics.TailIndent:=para.dxRightIndent/20;
-  AMetrics.HeadIndent:=(para.dxStartIndent+para.dxOffset)/20;
-  AMetrics.SpaceAfter:=para.dySpaceAfter/20;
-  AMetrics.SpaceBefore:=para.dySpaceBefore/20;
-  AMetrics.LineSpacing:=para.dyLineSpacing*DefLineSpacing/20;
+  AMetrics.FirstLine:=para.dxStartIndent/TWIP_PT;
+  AMetrics.TailIndent:=para.dxRightIndent/TWIP_PT;
+  AMetrics.HeadIndent:=(para.dxStartIndent+para.dxOffset)/TWIP_PT;
+  AMetrics.SpaceAfter:=para.dySpaceAfter/TWIP_PT;
+  AMetrics.SpaceBefore:=para.dySpaceBefore/TWIP_PT;
+  AMetrics.LineSpacing:=para.dyLineSpacing*DefLineSpacing/TWIP_PT;
 
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 end;
@@ -643,14 +652,14 @@ begin
      or PFM_OFFSET
      or PFM_SPACEAFTER or PFM_SPACEBEFORE
      or PFM_LINESPACING;
-  para.dxStartIndent:=round(AMetrics.FirstLine*20);
-  para.dxRightIndent:=round(AMetrics.TailIndent*20);
-  para.dxOffset:=round((AMetrics.HeadIndent-AMetrics.FirstLine)*20);
-    //round(AMetrics.HeadIndent*20);
-  para.dySpaceAfter:=round(AMetrics.SpaceAfter*20);
-  para.dySpaceBefore:=round(AMetrics.SpaceBefore*20);
+  para.dxStartIndent:=round(AMetrics.FirstLine*TWIP_PT);
+  para.dxRightIndent:=round(AMetrics.TailIndent*TWIP_PT);
+  para.dxOffset:=round((AMetrics.HeadIndent-AMetrics.FirstLine)*TWIP_PT);
+    //round(AMetrics.HeadIndent*TWIP_PT);
+  para.dySpaceAfter:=round(AMetrics.SpaceAfter*TWIP_PT);
+  para.dySpaceBefore:=round(AMetrics.SpaceBefore*TWIP_PT);
   if AMetrics.LineSpacing > 0 then begin
-    para.dyLineSpacing:=round(AMetrics.LineSpacing/DefLineSpacing*20);
+    para.dyLineSpacing:=round(AMetrics.LineSpacing/DefLineSpacing*TWIP_PT);
     para.bLineSpacingRule:=5; // always line spacing?
   end;
 
@@ -713,7 +722,7 @@ begin
     ANumber.SepChar:=SepDot
   else if (ANumber.Style<>pnNone) and ((para.wNumberingStyle and PFNS_SOMESEPCHAR)= 0) then
     ANumber.SepChar:=SepPar;
-  ANumber.Indent:=para.wNumberingTab/20;
+  ANumber.Indent:=para.wNumberingTab/TWIP_PT;
   Result:=true;
 end;
 
@@ -762,10 +771,84 @@ begin
     para.wNumberingStyle:=numbstyle;
   end;
 
-  para.wNumberingTab:=round(ANumber.Indent*20);
+  para.wNumberingTab:=round(ANumber.Indent*TWIP_PT);
   eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLen, para);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask)
+end;
+
+class procedure TWin32WSCustomRichMemo.SetParaTabs(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AStopList: TTabStopList);
+var
+  para : PARAFORMAT2;
+  eventmask: Integer;
+  cnt : Integer;
+  i   : Integer;
+const
+  PARAALIGN   : array [TTabAlignment] of LongWord = (
+     0 shl TAB_OFFSET_BITS, // taHead,
+     1 shl TAB_OFFSET_BITS, // taCenter,
+     2 shl TAB_OFFSET_BITS, // taTail,
+     3 shl TAB_OFFSET_BITS, // taDecimal,
+     4 shl TAB_OFFSET_BITS  // taWordBar
+     );
+
+begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+  FillChar(para, SizeOf(para), 0);
+
+  para.cbSize:=sizeof(para);
+  para.dwMask:=PFM_TABSTOPS;
+
+  if AStopList.Count > MAX_TAB_STOPS then cnt:=MAX_TAB_STOPS
+  else cnt:=AStopList.Count;
+
+  para.cTabCount:=cnt;
+  for i:=0 to cnt-1 do begin
+    para.rgxTabs[i]:=((round(AStopList.Tabs[i].Offset*TWIP_PT)) and TAB_OFFSET_MASK) or PARAALIGN[AStopList.Tabs[i].Align] ;
+  end;
+
+  eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.SetPara2(AWinControl.Handle, TextStart, TextLen, para);
+
+  RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+end;
+
+class function TWin32WSCustomRichMemo.GetParaTabs(
+  const AWinControl: TWinControl; TextStart: integer;
+  var AStopList: TTabStopList): Boolean;
+var
+  para : PARAFORMAT2;
+  eventmask: Integer;
+  v  : LongWord;
+  al : TTabAlignment;
+  i  : Integer;
+begin
+  Result:=False;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+
+  eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
+  RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+
+  InitTabStopList(AStopList);
+  AStopList.Count:=para.cTabCount;
+  SetLength(AStopList.Tabs, AStopList.Count);
+  for i:=0 to AStopList.Count-1 do begin
+    v:=para.rgxTabs[i];
+    AStopList.Tabs[i].Offset:=(v and TAB_OFFSET_MASK) / TWIP_PT;
+    case v shr TAB_OFFSET_BITS of
+      1: al:=taCenter;
+      2: al:=taTail;
+      3: al:=taDecimal;
+      4: al:=taWordBar;
+    else
+      al:=taHead
+    end;
+    AStopList.Tabs[i].Align:=al;
+  end;
+  Result:=true;
 end;
 
 class procedure TWin32WSCustomRichMemo.InDelText(const AWinControl:TWinControl;

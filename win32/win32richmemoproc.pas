@@ -602,9 +602,7 @@ var
 begin
   GetSelection(RichEditWnd, s, l);
   SetSelection(RichEditWnd, TextStart, TextLen);
-
   SendMessagea(RichEditWnd, EM_SETPARAFORMAT, 0, LPARAM(@para));
-
   SetSelection(RichEditWnd, s, l);
 end;
 

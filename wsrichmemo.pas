@@ -37,18 +37,6 @@ type
   TIntParaMetric = RichMemo.TParaMetric;
   TIntParaNumbering = RichMemo.TParaNumbering;
 
-  TTabAlignment = (taLeft, taCenter, taRight, taDecimal, taWordBar);
-
-  TTabInfo = record
-    Offset : Double;
-    Align  : TTabAlignment;
-  end;
-
-  TIntParaTabs = record
-    Count : Integer;
-    Tabs  : array of TTabInfo;
-  end;
-
   TIntSearchOpt = record
     start   : Integer;
     len     : Integer;
@@ -84,6 +72,12 @@ type
     class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; virtual;
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const ANumber: TIntParaNumbering); virtual;
+
+    class procedure SetParaTabs(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AStopList: TTabStopList); virtual;
+    class function GetParaTabs(const AWinControl: TWinControl; TextStart: integer;
+      var AStopList: TTabStopList): Boolean; virtual;
+
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
     //class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
@@ -192,6 +186,18 @@ class procedure TWSCustomRichMemo.SetParaNumbering(
   const ANumber: TIntParaNumbering);
 begin
 
+end;
+
+class procedure TWSCustomRichMemo.SetParaTabs(const AWinControl: TWinControl;
+  TextStart, TextLen: Integer; const AStopList: TTabStopList);
+begin
+
+end;
+
+class function TWSCustomRichMemo.GetParaTabs(const AWinControl: TWinControl;
+  TextStart: integer; var AStopList: TTabStopList): Boolean;
+begin
+  Result:=False;
 end;
 
 class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 

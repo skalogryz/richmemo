@@ -90,6 +90,18 @@ type
     // thus length = lengthNoBr
   end;
 
+type
+  TTabAlignment = (taHead, taCenter, taTail, taDecimal, taWordBar);
+
+  TTabStop = record
+    Offset : Double;
+    Align  : TTabAlignment; // not used
+  end;
+
+  TTabStopList = record
+    Count : Integer;
+    Tabs  : array of TTabStop;
+  end;
 
 type
   TRichMemoObject = class(TObject);
@@ -149,6 +161,9 @@ type
     procedure SetParaNumbering(TextStart, TextLen: Integer; const ANumber: TParaNumbering); virtual;
     function GetParaRange(CharOfs: Integer; var ParaRange: TParaRange): Boolean; virtual;
     function GetParaRange(CharOfs: Integer; var TextStart, TextLength: Integer): Boolean;
+
+    procedure SetParaTabs(TextStart, TextLen: Integer; const AStopList: TTabStopList); virtual;
+    function GetParaTabs(CharOfs: Integer; var AStopList: TTabStopList): Boolean; virtual;
 
     procedure SetTextAttributes(TextStart, TextLen: Integer; AFont: TFont);
     procedure SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);
@@ -253,6 +268,9 @@ procedure InitParaMetric(var m: TParaMetric);
 procedure InitParaNumbering(var n: TParaNumbering);
 procedure InitParaNumber(var n: TParaNumbering; ASepChar: WideChar = SepPar; StartNum: Integer = 1);
 procedure InitParaBullet(var n: TParaNumbering);
+procedure InitTabStopList(var tabs: TTabStopList); overload;
+procedure InitTabStopList(var tabs: TTabStopList; const TabStopsPt: array of double); overload;
+
 
 var
   RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
@@ -377,6 +395,23 @@ procedure InitParaBullet(var n: TParaNumbering);
 begin
   InitParaNumbering(n);
   n.Style:=pnBullet;
+end;
+
+procedure InitTabStopList(var tabs: TTabStopList);
+begin
+  FillChar(tabs, sizeof(tabs), 0);
+end;
+
+procedure InitTabStopList(var tabs: TTabStopList; const TabStopsPt: array of double);
+var
+  i : Integer;
+begin
+  InitTabStopList(tabs);
+  tabs.count:=length(TabStopsPt);
+  SetLength(tabs.tabs, tabs.Count);
+  for i:=0 to tabs.Count-1 do begin
+    tabs.tabs[i].Offset:=TabStopsPt[i];
+  end;
 end;
 
 { TRichMemoInline }
@@ -609,6 +644,21 @@ begin
   Result:=GetParaRange(CharOfs, p);
   TextStart:=p.start;
   TextLength:=p.length;
+end;
+
+procedure TCustomRichMemo.SetParaTabs(TextStart, TextLen: Integer;
+  const AStopList: TTabStopList);
+begin
+  if HandleAllocated then
+    TWSCustomRichMemoClass(WidgetSetClass).SetParaTabs(Self, TextStart, TextLen, AStopList);
+end;
+
+function TCustomRichMemo.GetParaTabs(CharOfs: Integer; var AStopList: TTabStopList): Boolean;
+begin
+  Result:=false;
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).GetParaTabs(Self, CharOfs, AStopList);
 end;
 
 function TCustomRichMemo.GetContStyleLength(TextStart: Integer): Integer;

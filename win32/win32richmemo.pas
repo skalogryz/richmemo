@@ -149,6 +149,12 @@ const
   TAB_OFFSET_MASK = $7FFFFF;
   TAB_OFFSET_BITS = 24;
   TWIP_PT         = 20; // Twips in Point. Twips are commonly used measurement unit for RichEdit inteface
+
+  TAB_LEFT      = 0;  // Ordinary tab
+  TAB_CENTER    = 1;  // Center tab
+  TAB_RIGHT     = 2;  // Right-aligned tab
+  TAB_DECIMAL   = 3;  // Decimal tab
+  TAB_WORD      = 4;  // Word bar tab (vertical bar)
   
 procedure LockRedraw(AHandle: HWND);
 begin
@@ -839,12 +845,12 @@ begin
     v:=para.rgxTabs[i];
     AStopList.Tabs[i].Offset:=(v and TAB_OFFSET_MASK) / TWIP_PT;
     case v shr TAB_OFFSET_BITS of
-      1: al:=taCenter;
-      2: al:=taTail;
-      3: al:=taDecimal;
-      4: al:=taWordBar;
+      TAB_CENTER : al:=taCenter;
+      TAB_RIGHT  : al:=taRight;
+      TAB_DECIMAL: al:=taDecimal;
+      TAB_WORD   : al:=taWordBar;
     else
-      al:=taHead
+      al:=taLeft;
     end;
     AStopList.Tabs[i].Align:=al;
   end;

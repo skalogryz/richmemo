@@ -91,7 +91,7 @@ type
   end;
 
 type
-  TTabAlignment = (taHead, taCenter, taTail, taDecimal, taWordBar);
+  TTabAlignment = (taLeft, taCenter, taRight, taDecimal, taWordBar);
 
   TTabStop = record
     Offset : Double;

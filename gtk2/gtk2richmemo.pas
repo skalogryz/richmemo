@@ -77,6 +77,11 @@ type
     class procedure SetParaNumbering(const AWinControl: TWinControl; TextStart,
       TextLen: Integer; const ANumber: TIntParaNumbering); override;
 
+    class procedure SetParaTabs(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AStopList: TTabStopList); override;
+    class function GetParaTabs(const AWinControl: TWinControl; TextStart: integer;
+      var AStopList: TTabStopList): Boolean; override;
+
     class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
 
@@ -601,6 +606,7 @@ var
   TempWidget: PGtkWidget;
   WidgetInfo: PWidgetInfo;
   buffer: PGtkTextBuffer;
+  SS:TPoint;
 begin
   Widget := gtk_scrolled_window_new(nil, nil);
   Result := TLCLIntfHandle(PtrUInt(Widget));
@@ -616,9 +622,10 @@ begin
 
   GTK_WIDGET_UNSET_FLAGS(PGtkScrolledWindow(Widget)^.hscrollbar, GTK_CAN_FOCUS);
   GTK_WIDGET_UNSET_FLAGS(PGtkScrolledWindow(Widget)^.vscrollbar, GTK_CAN_FOCUS);
-  gtk_scrolled_window_set_policy(PGtkScrolledWindow(Widget),
-                                     GTK_POLICY_AUTOMATIC,
-                                     GTK_POLICY_AUTOMATIC);
+
+  SS:=Gtk2TranslateScrollStyle(TCustomMemo(AWinControl).ScrollBars);
+  gtk_scrolled_window_set_policy(PGtkScrolledWindow(Widget),SS.X, SS.Y);
+
   // add border for memo
   gtk_scrolled_window_set_shadow_type(PGtkScrolledWindow(Widget),
     BorderStyleShadowMap[TCustomControl(AWinControl).BorderStyle]);
@@ -626,10 +633,10 @@ begin
   SetMainWidget(Widget, TempWidget);
   GetWidgetInfo(Widget, True)^.CoreWidget := TempWidget;
 
-  gtk_text_view_set_editable(PGtkTextView(TempWidget), True);
+  gtk_text_view_set_editable(PGtkTextView(TempWidget), not TCustomMemo(AWinControl).ReadOnly);
   gtk_text_view_set_wrap_mode(PGtkTextView(TempWidget), GTK_WRAP_WORD);
 
-  gtk_text_view_set_accepts_tab(PGtkTextView(TempWidget), True);
+  gtk_text_view_set_accepts_tab(PGtkTextView(TempWidget), TCustomMemo(AWinControl).WantTabs);
 
   gtk_widget_show_all(Widget);
 
@@ -970,6 +977,83 @@ begin
   until ln>ls;
 
 
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetParaTabs(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AStopList: TTabStopList);
+var
+  w      : PGtkWidget;
+  buffer : PGtkTextBuffer;
+  tag    : PGtkTextTag;
+  parr   : PPangoTabArray;
+  i      : Integer;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  DPIFactor = ScreenDPI / PageDPI;
+begin
+  GetWidgetBuffer(AWinControl, w, buffer);
+  if not Assigned(w) or not Assigned(buffer) then Exit;
+
+  GetWidgetBuffer(AWinControl, w, buffer);
+
+  if AStopList.Count=0 then
+    parr:=nil
+  else begin
+    parr:=pango_tab_array_new(AStopList.Count, true);
+    for i:=0 to AStopList.Count-1 do begin
+      pango_tab_array_set_tab(parr, i, PANGO_TAB_LEFT, round(AStopList.Tabs[i].Offset * DPIFactor) );
+    end;
+  end;
+
+  tag := gtk_text_buffer_create_tag (buffer, nil,
+      'tabs',   [ parr,
+      'tabs-set', gboolean(AStopList.Count>0),
+      nil]);
+  ApplyTag(buffer, tag, TextStart, TextLen, true);
+
+  if Assigned(parr) then pango_tab_array_free(parr);
+end;
+
+class function TGtk2WSCustomRichMemo.GetParaTabs(
+  const AWinControl: TWinControl; TextStart: integer;
+  var AStopList: TTabStopList): Boolean;
+const
+  ScreenDPI = 96; // todo: might change, should be received dynamically
+  PageDPI   = 72; // not expected to be changed
+  PixToPt   = PageDPI / ScreenDPI;
+var
+  w      : PGtkWidget;
+  buffer : PGtkTextBuffer;
+  tag    : PGtkTextTag;
+  parr   : PPangoTabArray;
+  i      : Integer;
+  attr   : PGtkTextAttributes;
+  loc    : gint;
+  al     : TPangoTabAlign;
+  f      : Double;
+begin
+  InitTabStopList(AStopList);
+  attr:=GetAttrAtPos(AWinControl, TextStart, true);
+  Result:=Assigned(attr);
+  if not Result then Exit;
+  if not Assigned(attr^.tabs) then Exit;
+
+  AStopList.Count:=pango_tab_array_get_size(attr^.tabs);
+  if AStopList.Count=0 then Exit;
+
+  f := PixToPt;
+  if not pango_tab_array_get_positions_in_pixels(attr^.tabs) then
+    f:= f / PANGO_SCALE;
+
+  SetLength(AStopList.Tabs, AStopList.Count);
+  for i:=0 to AStopList.Count-1 do begin
+    pango_tab_array_get_tab(attr^.tabs, i, @al, @loc);
+    AStopList.Tabs[i].Offset:=loc*f;
+    AStopList.Tabs[i].Align:=taLeft;
+  end;
+  gtk_text_attributes_unref(attr);
 end;
 
 class function TGtk2WSCustomRichMemo.GetParaRange(

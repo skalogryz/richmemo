@@ -266,7 +266,7 @@ begin
     Exit
   else begin
     stop.Tabs[index].Offset:=AValue;
-    m.SetParaTabs(m.SelStart, 1, stop);
+    m.SetParaTabs(m.SelStart, m.SelLength, stop);
   end;
 end;
 
@@ -280,7 +280,7 @@ begin
   if stop.Count<AValue then
     SetLength(stop.Tabs, AValue);
   stop.Count:=AValue;
-  m.SetParaTabs(m.SelStart, 1, stop);
+  m.SetParaTabs(m.SelStart, m.SelLength, stop);
 end;
 
 function TRichEditParaAttributes.GetAlignment: TRichEditAlignment;

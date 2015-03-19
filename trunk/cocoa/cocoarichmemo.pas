@@ -7,10 +7,9 @@ interface
 {$modeswitch objectivec2}
 
 uses
-  CocoaAll, Types, Classes, SysUtils,
-  LCLType, Controls, StdCtrls,
+  CocoaAll, Classes, SysUtils,
+  LCLType, Graphics, Controls,
   CocoaPrivate, CocoaUtils,
-  CocoaWSCommon, CocoaWSStdCtrls,
   WSRichMemo, RichMemo;
 
 type
@@ -20,10 +19,21 @@ type
   TCocoaWSCustomRichMemo = class(TWSCustomRichMemo)
   public
     // assumption is made that LCL creates NSTextView
+
+    class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
+      var Params: TIntFontParams): Boolean; override;
+    class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const Params: TIntFontParams); override;
+
     class procedure SetParaAlignment(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AAlign: TIntParaAlignment); override;
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
       var AAlign: TIntParaAlignment): Boolean; override;
+
+    class function GetParaMetric(const AWinControl: TWinControl; TextStart: Integer;
+      var AMetric: TIntParaMetric): Boolean; override;
+    class procedure SetParaMetric(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AMetric: TIntParaMetric); override;
 
     class procedure SetParaTabs(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const AStopList: TTabStopList); override;
@@ -61,7 +71,202 @@ begin
   Result:=ParaRange(txt.string_, textOffset, textLen);
 end;
 
+function TextRange(txt: NSTextStorage; textOffset, TextLen: Integer): NSRange; inline; overload;
+begin
+  Result.location:=textOffset;
+   if textOffset+TextLen>txt.length then
+     Result.length:=txt.length-textOffset
+   else
+     Result.length:=TextLen;
+end;
+
+
+function GetDict(txt: NSTextStorage; textOffset: integer): NSDictionary;
+begin
+  if textOffset>=txt.string_.length then
+    textOffset:=txt.string_.length-1;
+  Result := txt.attributesAtIndex_effectiveRange(textOffset, nil);
+end;
+
+function GetPara(txt: NSTextStorage; textOffset: integer; isReadOnly, useDefault: Boolean): NSParagraphStyle;
+var
+  dict: NSDictionary;
+  op  : NSParagraphStyle;
+begin
+  Result:=nil;
+  if not Assigned(txt) then Exit;
+  dict:=GetDict(txt, textOffset);
+  op:=nil;
+  if Assigned(dict) then
+    op:=NSParagraphStyle(  dict.objectForKey(NSParagraphStyleAttributeName) );
+
+  if not Assigned(op) then begin
+    if not useDefault then Exit;
+    op:=NSParagraphStyle.defaultParagraphStyle;
+  end;
+
+  if isReadOnly then
+    Result := op
+  else
+    Result := op.mutableCopyWithZone(nil)
+end;
+
+function GetWritePara(txt: NSTextStorage; textOffset: integer): NSMutableParagraphStyle;
+begin
+  Result:=NSMutableParagraphStyle(GetPara(txt, textOffset, false, true));
+end;
+
+function GetReadPara(txt: NSTextStorage; textOffset: integer; useDefault: Boolean = false): NSParagraphStyle;
+begin
+  Result:=GetPara(txt, textOffset, true, useDefault);
+end;
+
+type
+  TNSFontParams = record
+    font      : NSFont;
+    fontColor : NSColor;
+    backColor : NSColor;
+    ulnStyle  : NSNumber;
+    strStyle  : NSNumber;
+  end;
+
+procedure ReadNSFontParams(dict: NSDictionary; var params: TNSFontParams);
+begin
+  if not Assigned(dict) then FillChar(params, sizeof(params),0)
+  else begin
+    params.font:=dict.objectForKey(NSFontAttributeName);
+    params.fontColor:=dict.objectForKey(NSForegroundColorAttributeName);
+    params.backColor:=dict.objectForKey(NSBackgroundColorAttributeName);
+    params.ulnStyle:=dict.objectForKey(NSUnderlineStyleAttributeName);
+    params.strStyle:=dict.objectForKey(NSStrikethroughStyleAttributeName);
+  end;
+end;
+
 { TCocoaWSCustomRichMemo }
+
+class function TCocoaWSCustomRichMemo.GetTextAttributes(
+  const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams
+  ): Boolean;
+var
+  view  : TCocoaTextView;
+  txt   : NSTextStorage;
+  dict  : NSDictionary;
+
+  prm   : TNSFontParams;
+  trt   : NSFontSymbolicTraits;
+begin
+  InitFontParams(Params);
+  view:=MemoTextView(AWinControl);
+  Result:=false;
+  if not Assigned(view) then Exit;
+
+  txt:=view.textStorage;
+  dict:=GetDict(txt, textStart);
+  ReadNSFontParams(dict, prm);
+  if Assigned(prm.font) then begin
+    Params.Name:=NSStringToString(prm.font.familyName);
+    Params.Size:=round(prm.font.pointSize);
+    trt:=prm.font.fontDescriptor.symbolicTraits;
+    if (trt and NSFontItalicTrait) > 0 then Include(Params.Style, fsItalic);
+    if (trt and NSFontBoldTrait) > 0 then Include(Params.Style, fsBold);
+  end;
+  if Assigned(prm.ulnStyle) and (prm.ulnStyle.integerValue <> NSUnderlineStyleNone) then
+    Include(Params.Style, fsUnderline);
+  if Assigned(prm.strStyle) and (prm.strStyle.integerValue <> NSUnderlineStyleNone) then
+    Include(Params.Style, fsStrikeOut);
+  if Assigned(prm.fontColor) then
+    Params.Color:=NSColorToColorRef(prm.fontColor);
+  Params.HasBkClr:=Assigned(prm.backColor);
+  if Params.HasBkClr then
+    Params.BkColor:=NSColorToColorRef(prm.backColor);
+  Result:=true;
+end;
+
+function FindFont(const FamilyName: String; astyle: TFontStyles): NSFontDescriptor;
+var
+  fd  : NSFontDescriptor;
+  old : NSFontDescriptor;
+  fdd : NSFontDescriptor;
+  trt : NSFontSymbolicTraits;
+  ns  : NSString;
+  i   : Integer;
+const
+  fallback : array [0..1] of NSFontSymbolicTraits = (NSFontItalicTrait, NSFontBoldTrait);
+begin
+  trt:=0;
+  ns:=NSStringUtf8(FamilyName);
+  if fsItalic in aStyle then trt:=trt or NSFontItalicTrait;
+  if fsBold in aStyle then trt:=trt or NSFontBoldTrait;
+
+  fd:=NSFontDescriptor(NSFontDescriptor.alloc).initWithFontAttributes(nil);
+  fd:=fd.fontDescriptorWithFamily(ns);
+  fd:=fd.fontDescriptorWithSymbolicTraits(trt);
+
+  fdd:=fd.matchingFontDescriptorWithMandatoryKeys(nil);
+  i:=0;
+  while not Assigned(fdd) and (i<length(fallback)) do begin
+    trt:=trt and (not fallback[i]);
+    fd:=fd.fontDescriptorWithSymbolicTraits(trt);
+    fdd:=fd.matchingFontDescriptorWithMandatoryKeys(nil);
+  end;
+  Result:=fdd;
+  ns.release;
+end;
+
+class procedure TCocoaWSCustomRichMemo.SetTextAttributes(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const Params: TIntFontParams);
+var
+  view  : TCocoaTextView;
+  txt   : NSTextStorage;
+
+  fd    : NSFontDescriptor;
+  font  : NSFont;
+  rng   : NSRange;
+  clr   : NSColor;
+  num   : NSNumber;
+  arr   : NSArray;
+
+begin
+  view:=MemoTextView(AWinControl);
+  if not Assigned(view) then Exit;
+
+  txt:=view.textStorage;
+
+  rng := TextRange(txt, TextStart, textLen);
+
+  fd:=FindFont(Params.Name, Params.Style);
+  font:=NSFont.fontWithDescriptor_size(fd, Params.Size);
+  txt.addAttribute_value_range(NSFontAttributeName, font, rng);
+  // fd.release;
+
+  if fsUnderline in Params.Style then begin
+    num:=NSNumber.numberWithInt(NSUnderlineStyleSingle);
+    txt.addAttribute_value_range(NSUnderlineStyleAttributeName, num, rng);
+    num.release;
+  end else
+    txt.removeAttribute_range(NSUnderlineStyleAttributeName, rng);
+
+  if fsStrikeOut in Params.Style then begin
+    num:=NSNumber.numberWithInt(NSUnderlineStyleSingle);
+    txt.addAttribute_value_range(NSStrikethroughStyleAttributeName, num, rng);
+    num.release;
+  end else
+    txt.removeAttribute_range(NSStrikethroughStyleAttributeName, rng);
+
+
+  clr:=ColorToNSColor(Params.Color);
+  txt.addAttribute_value_range(NSForegroundColorAttributeName, clr, rng);
+  clr.release;
+
+  if Params.HasBkClr then begin
+    clr:=ColorToNSColor(Params.BkColor);
+    txt.addAttribute_value_range(NSBackgroundColorAttributeName, clr, rng);
+    clr.release;
+  end else
+    txt.removeAttribute_range(NSBackgroundColorAttributeName, rng);
+
+end;
 
 class procedure TCocoaWSCustomRichMemo.SetParaAlignment(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;
@@ -126,6 +331,57 @@ begin
   Result:=true;
 end;
 
+class function TCocoaWSCustomRichMemo.GetParaMetric(
+  const AWinControl: TWinControl; TextStart: Integer;
+  var AMetric: TIntParaMetric): Boolean;
+var
+  view  : TCocoaTextView;
+  txt   : NSTextStorage;
+  par   : NSParagraphStyle;
+begin
+  InitParaMetric(AMetric);
+  view:=MemoTextView(AWinControl);
+  Result:=false;
+  if not Assigned(view) then Exit;
+
+  txt:=view.textStorage;
+  par:=GetReadPara(txt, TextStart, true);
+
+  AMetric.FirstLine := par.firstLineHeadIndent;
+  AMetric.HeadIndent := par.headIndent;
+  AMetric.TailIndent := par.tailIndent;
+  AMetric.LineSpacing := par.lineSpacing;
+  AMetric.SpaceAfter := par.paragraphSpacing;
+  AMetric.SpaceBefore := par.paragraphSpacingBefore;
+
+  Result:=true;
+end;
+
+class procedure TCocoaWSCustomRichMemo.SetParaMetric(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AMetric: TIntParaMetric);
+var
+  view  : TCocoaTextView;
+  txt   : NSTextStorage;
+  par   : NSMutableParagraphStyle;
+begin
+  view:=MemoTextView(AWinControl);
+  if not Assigned(view) then Exit;
+
+  txt:=view.textStorage;
+  par:=GetWritePara(txt, TextStart);
+
+  par.setFirstLineHeadIndent(AMetric.FirstLine);
+  par.setHeadIndent(AMetric.HeadIndent);
+  par.setTailIndent(AMetric.TailIndent);
+  par.setLineSpacing(AMetric.LineSpacing);
+  par.setParagraphSpacing(AMetric.SpaceAfter);
+  par.setParagraphSpacingBefore(AMetric.SpaceBefore);
+
+  txt.addAttribute_value_range( NSParagraphStyleAttributeName, par, ParaRange(txt, TextStart, textLen));
+  par.release;
+end;
+
 class procedure TCocoaWSCustomRichMemo.SetParaTabs(
   const AWinControl: TWinControl; TextStart, TextLen: Integer;
   const AStopList: TTabStopList);
@@ -135,7 +391,6 @@ var
   par   : NSMutableParagraphStyle;
   tabs  : NSMutableArray;
   tab   : NSTextTab;
-  dict  : NSDictionary;
   i     : Integer;
   rng   : NSRange;
 const
@@ -150,7 +405,9 @@ begin
   view:=MemoTextView(AWinControl);
   if not Assigned(view) then Exit;
 
-  par := NSParagraphStyle.defaultParagraphStyle.mutableCopyWithZone(nil);
+  txt := view.textStorage;
+  par:=GetWritePara(txt, TextStart);
+
   if AStopList.Count>0 then begin
     tabs := NSMutableArray.alloc.init;
     for i:=0 to AStopList.Count-1 do begin
@@ -160,7 +417,6 @@ begin
     end;
   end;
   par.setTabStops(tabs);
-  txt := view.textStorage;
   txt.addAttribute_value_range( NSParagraphStyleAttributeName, par, ParaRange(txt, TextStart, textLen));
   par.release;
 end;
@@ -173,7 +429,6 @@ var
   txt   : NSTextStorage;
   par   : NSParagraphStyle;
   tabs  : NSArray;
-  dict  : NSDictionary;
   tab   : NSTextTab;
   i     : Integer;
 begin
@@ -183,15 +438,11 @@ begin
   if not Assigned(view) then Exit;
 
   txt:=view.textStorage;
-  dict := txt.attributesAtIndex_effectiveRange(textStart, nil);
-  if not Assigned(dict) then Exit;
-
-  par:=NSParagraphStyle(  dict.objectForKey(NSParagraphStyleAttributeName) );
-  if not Assigned(par) then
-    par:=NSParagraphStyle.defaultParagraphStyle;
+  par:=GetReadPara(txt, textStart, false);
+  if not Assigned(par) then Exit;
 
   tabs:=par.tabStops;
-  if not Assigned(par) then Exit;
+  if not Assigned(tabs) then Exit;
   AStopList.Count:=tabs.count;
   SetLength(AStopList.Tabs, AStopList.Count);
   for i:=0 to tabs.count-1 do begin

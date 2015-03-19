@@ -8,17 +8,21 @@ interface
 
 uses
   CocoaAll, Classes, SysUtils,
-  LCLType, Graphics, Controls,
-  CocoaPrivate, CocoaUtils,
+  LCLType, Graphics, Controls, StdCtrls,
+  CocoaPrivate, CocoaUtils, CocoaWSCommon,
   WSRichMemo, RichMemo;
 
 type
+  TCocoaRichView = objcclass(TCocoaTextView)
+  public
+    scale : Double;
+  end;
 
   { TCocoaWSCustomRichMemo }
 
   TCocoaWSCustomRichMemo = class(TWSCustomRichMemo)
   public
-    // assumption is made that LCL creates NSTextView
+    class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
 
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; override;
@@ -40,6 +44,7 @@ type
     class function GetParaTabs(const AWinControl: TWinControl; TextStart: integer;
       var AStopList: TTabStopList): Boolean; override;
 
+    class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
 
     class procedure InDelText(const AWinControl: TWinControl;
       const TextUTF8: String; DstStart, DstLen: Integer); override;
@@ -143,6 +148,78 @@ begin
 end;
 
 { TCocoaWSCustomRichMemo }
+
+const
+  VerticalScrollerVisible: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } false,
+ {ssVertical      } true,
+ {ssBoth          } true,
+ {ssAutoHorizontal} false,
+ {ssAutoVertical  } true,
+ {ssAutoBoth      } true
+  );
+
+  HorizontalScrollerVisible: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } true,
+ {ssVertical      } false,
+ {ssBoth          } true,
+ {ssAutoHorizontal} true,
+ {ssAutoVertical  } false,
+ {ssAutoBoth      } true
+  );
+
+  ScrollerAutoHide: array[TScrollStyle] of boolean = (
+ {ssNone          } false,
+ {ssHorizontal    } false,
+ {ssVertical      } false,
+ {ssBoth          } false,
+ {ssAutoHorizontal} true,
+ {ssAutoVertical  } true,
+ {ssAutoBoth      } true
+  );
+
+class function TCocoaWSCustomRichMemo.CreateHandle(
+  const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle;
+var
+  txt: TCocoaRichView;
+  ns: NSString;
+  scr: TCocoaScrollView;
+  nr:NSRect;
+  r:TRect;
+begin
+  scr := TCocoaScrollView(NSView(TCocoaScrollView.alloc).lclInitWithCreateParams(AParams));
+
+  nr.origin.x:=0;
+  nr.origin.x:=0;
+  nr.size.height:=0;
+  nr.size.width:=AParams.Width;
+
+  txt := TCocoaRichView.alloc.initwithframe(nr);
+  txt.scale := 1.0;
+
+  scr.setDocumentView(txt);
+
+  scr.setHasVerticalScroller(VerticalScrollerVisible[TMemo(AWinControl).ScrollBars]);
+  scr.setHasHorizontalScroller(HorizontalScrollerVisible[TMemo(AWinControl).ScrollBars]);
+  scr.setAutohidesScrollers(ScrollerAutoHide[TMemo(AWinControl).ScrollBars]);
+
+  if TCustomMemo(AWinControl).BorderStyle=bsSingle then
+     scr.setBorderType(NSBezelBorder);
+
+  nr:=scr.documentVisibleRect;
+  txt.setFrame(nr);
+  txt.textContainer.setLineFragmentPadding(0);
+
+  txt.callback := TLCLCommonCallback.Create(txt, AWinControl);
+  ns := NSStringUtf8(AParams.Caption);
+  txt.setString(ns);
+  ns.release;
+
+  scr.callback := txt.callback;
+  Result := TLCLIntfHandle(scr);
+end;
 
 class function TCocoaWSCustomRichMemo.GetTextAttributes(
   const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams
@@ -456,6 +533,31 @@ begin
       AStopList.Tabs[i].Align:=taLeft;
     end;
   end;
+end;
+
+class procedure TCocoaWSCustomRichMemo.SetZoomFactor(
+  const AWinControl: TWinControl; AZoomFactor: Double);
+var
+  view  : TCocoaRichView;
+  sz    : NSSize;
+begin
+  view:=TCocoaRichView(MemoTextView(AWinControl));
+  if not Assigned(view) then Exit;
+
+  // reset Scaling
+  if view.scale<>1.0 then begin
+    sz.width:=1/view.scale;
+    sz.height:=1/view.scale;
+    view.scaleUnitSquareToSize(sz);
+  end;
+
+  // set new scaling
+  sz.width:=AZoomFactor;
+  sz.height:=AZoomFactor;
+  view.scaleUnitSquareToSize(sz);
+  view.layoutManager.ensureLayoutForTextContainer(view.textContainer);
+
+  view.scale:=AZoomFactor;
 end;
 
 class procedure TCocoaWSCustomRichMemo.InDelText(

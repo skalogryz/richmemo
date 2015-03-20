@@ -25,7 +25,7 @@ interface
 
 uses
   Types, Classes, SysUtils
-  , LCLType, LCLIntf
+  , LCLType, LCLIntf, Printers
   , Graphics, StdCtrls, LazUTF8;
 
 type
@@ -104,6 +104,20 @@ type
   end;
 
 type
+  TPrintParams = record
+    Title     : String;
+    PageRect  : TRect;   // position of the printed page in points
+                         // points are relative to the physical page (paper) size
+                         // not DPI of the printer
+    SelStart  : Integer;
+    SelLength : Integer;
+  end;
+
+  TPrintMeasure = record
+    Pages     : Integer;
+  end;
+
+type
   TRichMemoObject = class(TObject);
   TCustomRichMemo = class;
 
@@ -131,6 +145,9 @@ type
     fZoomFactor : Double;
   private
     procedure InlineInvalidate(handler: TRichMemoInline);
+
+    //todo: PrintMeasure doesn't work propertly
+    function PrintMeasure(const params: TPrintParams; var est: TPrintMeasure): Boolean;
   protected
     procedure DoSelectionChange;
     class procedure WSRegisterClass; override;
@@ -183,6 +200,8 @@ type
     procedure SetSelLengthFor(const aselstr: string);
 
     function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer;
+
+    function Print(const params: TPrintParams): Integer;
 
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
@@ -270,6 +289,7 @@ procedure InitParaNumber(var n: TParaNumbering; ASepChar: WideChar = SepPar; Sta
 procedure InitParaBullet(var n: TParaNumbering);
 procedure InitTabStopList(var tabs: TTabStopList); overload;
 procedure InitTabStopList(var tabs: TTabStopList; const TabStopsPt: array of double); overload;
+procedure InitPrintParams(var prm: TPrintParams);
 
 
 var
@@ -412,6 +432,11 @@ begin
   for i:=0 to tabs.Count-1 do begin
     tabs.tabs[i].Offset:=TabStopsPt[i];
   end;
+end;
+
+procedure InitPrintParams(var prm: TPrintParams);
+begin
+  FillChar(prm, sizeof(prm), 0);
 end;
 
 { TRichMemoInline }
@@ -872,6 +897,33 @@ begin
   end else
     Result:=-1;
 end;
+
+function TCustomRichMemo.Print(const params: TPrintParams): Integer;
+var
+  printed: Integer;
+begin
+  Result:=0;
+  if not Assigned(Printer) then Exit;
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).Print(Self, Printer, params, true);
+end;
+
+function TCustomRichMemo.PrintMeasure(const params: TPrintParams; var est: TPrintMeasure): Boolean;
+begin
+  if not Assigned(Printer) then begin
+    Result:=False;
+    Exit;
+  end;
+
+  if not HandleAllocated then HandleNeeded;
+
+  if HandleAllocated then begin
+    est.Pages:=TWSCustomRichMemoClass(WidgetSetClass).Print(Self, Printer, params, false);
+  end else
+    Result:=false;
+end;
+
 
 end.
 

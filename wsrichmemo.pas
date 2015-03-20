@@ -26,7 +26,7 @@ interface
 uses
   Types, Classes, SysUtils,
   LCLType,
-  Graphics, Controls, StdCtrls,
+  Graphics, Controls, StdCtrls, Printers,
   WSStdCtrls, RichMemo;
 
 type
@@ -92,6 +92,8 @@ type
       const ASize: TSize; AHandler: TRichMemoInline; var wsObj: TRichMemoInlineWSObject): Boolean; virtual;
     class procedure InlineInvalidate(const AWinControl: TWinControl;
        AHandler: TRichMemoInline; wsObj: TRichMemoInlineWSObject); virtual;
+
+    class function Print(const AWinControl: TWinControl; APrinter: TPrinter; const AParams: TPrintParams; DoPrint: Boolean): Integer; virtual;
   end;
   TWSCustomRichMemoClass = class of TWSCustomRichMemo;
 
@@ -245,6 +247,12 @@ class procedure TWSCustomRichMemo.InlineInvalidate(
   wsObj: TRichMemoInlineWSObject);
 begin
 
+end;
+
+class function TWSCustomRichMemo.Print(const AWinControl: TWinControl;
+  APrinter: TPrinter; const AParams: TPrintParams; DoPrint: Boolean): Integer;
+begin
+  Result:=0;
 end;
 
 end.

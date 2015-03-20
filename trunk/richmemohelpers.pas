@@ -86,6 +86,7 @@ type
     function SelAttributes: TTextAttributes;
     function Paragraph: TParaAttributes;
     function FindText(const SearchStr: String; StartPos, Length: Integer; Options: TSearchTypes): Integer;
+    procedure Print(const ACaption: String); overload;
   end;
 {$ELSE}
   {$WARNING Class Helpers require FPC 2.6.0 or later, RichEdit compatible methods will not be available }
@@ -337,6 +338,15 @@ begin
   Result:=Pos(sub, src);
   if Result<=0 then Result:=-1
   else Result:=StartPos+Result-1;
+end;
+
+procedure TRichEditForMemo.Print(const ACaption: String);
+var
+  prm : TPrintParams;
+begin
+  InitPrintParams(prm);
+  prm.Title:=ACaption;
+  Print(prm);
 end;
 
 {$ENDIF}

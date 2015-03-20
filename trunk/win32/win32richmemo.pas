@@ -30,7 +30,7 @@ uses
   Classes, SysUtils, 
   // LCL headers
   LCLType, LCLIntf, LCLProc, WSLCLClasses,
-  Graphics, Controls, StdCtrls, 
+  Graphics, Controls, StdCtrls, Printers,
   // Win32WidgetSet
   Win32WSControls, Win32Int, Win32WSStdCtrls, win32proc,
   // RichMemo headers
@@ -115,6 +115,9 @@ type
       const ASize: TSize; AHandler: TRichMemoInline; var wsObj: TRichMemoInlineWSObject): Boolean; override;
     class procedure InlineInvalidate(const AWinControl: TWinControl;
        AHandler: TRichMemoInline; wsObj: TRichMemoInlineWSObject); override;
+
+    class function Print(const AWinControl: TWinControl; APrinter: TPrinter;
+      const AParams: TPrintParams; DoPrint: Boolean): Integer; override;
   end;
 
   { TWin32Inline }
@@ -131,6 +134,11 @@ type
     destructor Destroy; override;
   end;
 
+var
+  // whenever print range is used - insert an additional line break, so EN_FORMATRANGE
+  // doesn't overprint the selected text (until the end of the line).
+  // No info is found online, about the bug
+  FixPrintSelRange : Boolean = true;
   
 implementation
 
@@ -150,12 +158,17 @@ const
   TAB_OFFSET_BITS = 24;
   TAB_ALIGN_MASK  = 3;
   TWIP_PT         = 20; // Twips in Point. Twips are commonly used measurement unit for RichEdit inteface
+  POINTS_INCH     = 72;
+  TWIP_INCH       = POINTS_INCH * TWIP_PT;
 
   TAB_LEFT      = 0;  // Ordinary tab
   TAB_CENTER    = 1;  // Center tab
   TAB_RIGHT     = 2;  // Right-aligned tab
   TAB_DECIMAL   = 3;  // Decimal tab
   TAB_WORD      = 4;  // Word bar tab (vertical bar)
+
+  FORMAT_RENDER   = 1;
+  FORMAT_ESTIMATE = 0;
   
 procedure LockRedraw(AHandle: HWND);
 begin
@@ -963,6 +976,122 @@ begin
   if not Assigned(AHandler) or not Assigned(wsObj) or (not (wsObj is TWin32Inline)) then Exit;
   if not Assigned(TWin32Inline(wsObj).fSink) then Exit;
   TWin32Inline(wsObj).fSink.OnViewChange(DVASPECT_CONTENT, -1);
+end;
+
+class function TWin32WSCustomRichMemo.Print(const AWinControl: TWinControl;
+  APrinter: TPrinter;
+  const AParams: TPrintParams; DoPrint: Boolean): Integer;
+var
+  Rng: TFormatRange;
+  Ofs, MaxLen, LogX, LogY, OldMap: Integer;
+  SaveRect: TRect;
+  hnd : THandle;
+  hdc : Windows.HDC;
+  PrCh: Integer;
+  maxch : Integer;
+
+  fixedRange : Boolean;
+  eventMask  : LongWord;
+const
+  PrintFlag : array [Boolean] of byte = (FORMAT_ESTIMATE, FORMAT_RENDER);
+begin
+  Result:=0;
+  if not (Assigned(RichEditManager) and Assigned(AWinControl)) then Exit;
+
+  hnd:=(AWinControl.Handle);
+  if (hnd=0) or (hnd=INVALID_HANDLE_VALUE) then Exit;
+
+  FillChar(Rng, SizeOf(Rng), 0);
+
+  if DoPrint then begin
+    APrinter.Title:=AParams.Title;
+    APrinter.BeginDoc;
+  end;
+
+  fixedRange:=false;
+  try
+    if DoPrint then begin
+      hdc:=APrinter.Canvas.Handle;
+      Rng.hdc:=hdc;
+      Rng.hdcTarget:=hdc;
+    end else begin
+      Rng.hdc:=GetDC(hnd);
+      Rng.hdcTarget:=rng.hdc;
+    end;
+    LogX:=APrinter.XDPI;
+    LogY:=APrinter.YDPI;
+    if (LogX=0) or (LogY=0) then Exit;
+
+    Rng.rcPage:=Bounds( 0, 0
+      ,round(APrinter.PageWidth  / LogX * TWIP_INCH)
+      ,round(APrinter.PageHeight / LogY * TWIP_INCH)
+    );
+
+    if not IsRectEmpty(AParams.PageRect) then begin
+      Rng.rc.left   := round(AParams.PageRect.Left   * TWIP_PT);
+      Rng.rc.top    := round(AParams.PageRect.Top    * TWIP_PT);
+      Rng.rc.right  := round(AParams.PageRect.Right  * TWIP_PT);
+      Rng.rc.bottom := round(AParams.PageRect.Bottom * TWIP_PT);
+    end else begin
+      //todo: use PhysicalOffset?
+      Rng.rc:=Rng.rcPage;
+    end;
+    if not DoPrint then Rng.rcPage.bottom:=Rng.rc.bottom;
+    SaveRect:=Rng.rc;
+
+    if AParams.SelLength<=0 then begin
+      Ofs:=0;
+      MaxLen:=RichEditManager.GetTextLength(hnd);
+
+    end else begin
+      if AParams.SelStart<0 then Ofs:=0
+      else Ofs:=AParams.SelStart;
+      MaxLen:=AParams.SelLength;
+
+      if FixPrintSelRange  then begin
+        fixedRange:=true;
+        Windows.SendMessage(hnd, WM_SETREDRAW, WPARAM(false), 0);
+        eventmask:=RichEditManager.SetEventMask(hnd, 0);
+        RichEditManager.SetText(hnd,#10,Ofs+MaxLen,0);
+        RichEditManager.SetEventMask(hnd, eventmask);
+      end;
+    end;
+    maxch:=Ofs+MaxLen;
+
+    OldMap := SetMapMode(hdc, MM_TEXT);
+    SendMessage(hnd, EM_FORMATRANGE, 0, 0);
+    try
+      repeat
+        Rng.rc := SaveRect;
+        Rng.chrg.cpMin := Ofs;
+        Rng.chrg.cpMax := maxch;
+        PrCh := Ofs;
+        Ofs := SendMessage(hnd, EM_FORMATRANGE, PrintFlag[DoPrint], LPARAM(@Rng));
+        inc(Result);
+        if (Ofs < MaxLen) and (Ofs <> -1) then begin
+           if DoPrint then
+             APrinter.NewPage;
+        end;
+
+      until (Ofs >= MaxLen) or (Ofs = -1) or (PrCh = Ofs);
+    finally
+      SendMessage(hnd, EM_FORMATRANGE, 0, 0);
+      SetMapMode(hdc, OldMap);
+    end;
+
+  finally
+    if fixedRange then begin
+      eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
+      RichEditManager.SetText(AWinControl.Handle,'',maxch,1);
+      RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+      Windows.SendMessage(hnd, WM_SETREDRAW, WPARAM(not false), 0);
+    end;
+
+    if DoPrint then
+      APrinter.EndDoc
+    else
+      ReleaseDC(hnd, Rng.hdc);
+  end;
 end;
  
 end.

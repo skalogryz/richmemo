@@ -1027,16 +1027,10 @@ begin
       ,round(APrinter.PageHeight / LogY * TWIP_INCH)
     );
 
-    if not IsRectEmpty(AParams.PageRect) then begin
-      Rng.rc.left   := round(AParams.PageRect.Left   * TWIP_PT);
-      Rng.rc.top    := round(AParams.PageRect.Top    * TWIP_PT);
-      Rng.rc.right  := round(AParams.PageRect.Right  * TWIP_PT);
-      Rng.rc.bottom := round(AParams.PageRect.Bottom * TWIP_PT);
-    end else begin
-      //todo: use PhysicalOffset?
-      Rng.rc:=Rng.rcPage;
-    end;
-    if not DoPrint then Rng.rcPage.bottom:=Rng.rc.bottom;
+    Rng.rc.left   := round(AParams.Margins.Left   * TWIP_PT);
+    Rng.rc.top    := round(AParams.Margins.Top    * TWIP_PT);
+    Rng.rc.right  := round(Rng.rcPage.Right - AParams.Margins.Right * TWIP_PT);
+    Rng.rc.bottom := round(Rng.rcPage.Bottom - AParams.Margins.Bottom * TWIP_PT);
     SaveRect:=Rng.rc;
 
     if AParams.SelLength<=0 then begin

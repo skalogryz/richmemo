@@ -104,11 +104,16 @@ type
   end;
 
 type
+  TRectOffsets = record
+    Left   : Double;
+    Top    : Double;
+    Right  : Double;
+    Bottom : Double;
+  end;
+
   TPrintParams = record
     Title     : String;
-    PageRect  : TRect;   // position of the printed page in points
-                         // points are relative to the physical page (paper) size
-                         // not DPI of the printer
+    Margins   : TRectOffsets; // margins in points
     SelStart  : Integer;
     SelLength : Integer;
   end;

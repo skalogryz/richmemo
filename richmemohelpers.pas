@@ -345,7 +345,7 @@ var
   prm : TPrintParams;
 begin
   InitPrintParams(prm);
-  prm.Title:=ACaption;
+  prm.JobTitle:=ACaption;
   Print(prm);
 end;
 

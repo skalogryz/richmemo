@@ -6,7 +6,8 @@ object Form1: TForm1
   Caption = 'Form1'
   ClientHeight = 240
   ClientWidth = 687
-  LCLVersion = '1.2.4.0'
+  OnCreate = FormCreate
+  LCLVersion = '1.3'
   object RichMemo1: TRichMemo
     Left = 8
     Height = 178

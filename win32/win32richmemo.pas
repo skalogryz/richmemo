@@ -978,33 +978,43 @@ begin
   TWin32Inline(wsObj).fSink.OnViewChange(DVASPECT_CONTENT, -1);
 end;
 
+type
+  TPrintRichMemo = class(TCustomRichMemo)
+  end;
+
 class function TWin32WSCustomRichMemo.Print(const AWinControl: TWinControl;
   APrinter: TPrinter;
   const AParams: TPrintParams; DoPrint: Boolean): Integer;
 var
-  Rng: TFormatRange;
-  Ofs, MaxLen, LogX, LogY, OldMap: Integer;
-  SaveRect: TRect;
-  hnd : THandle;
-  hdc : Windows.HDC;
-  PrCh: Integer;
-  maxch : Integer;
+  Rng         : TFormatRange;
+  Ofs, MaxLen : Integer;
+  LogX, LogY  : Integer;
+  OldMap      : Integer;
+  SaveRect    : TRect;
+  hnd         : THandle;
+  hdc         : Windows.HDC;
+  PrCh        : Integer;
+  maxch       : Integer;
 
-  fixedRange : Boolean;
-  eventMask  : LongWord;
+  fixedRange  : Boolean;
+  eventMask   : LongWord;
+  rm          : TPrintRichMemo;
+  doAbort     : Boolean;
 const
   PrintFlag : array [Boolean] of byte = (FORMAT_ESTIMATE, FORMAT_RENDER);
 begin
   Result:=0;
-  if not (Assigned(RichEditManager) and Assigned(AWinControl)) then Exit;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl)
+    or not (AWinControl is TCustomRichMemo) then Exit;
 
   hnd:=(AWinControl.Handle);
   if (hnd=0) or (hnd=INVALID_HANDLE_VALUE) then Exit;
+  rm:=TPrintRichMemo(AWinControl);
 
   FillChar(Rng, SizeOf(Rng), 0);
 
   if DoPrint then begin
-    APrinter.Title:=AParams.Title;
+    APrinter.Title:=AParams.JobTitle;
     APrinter.BeginDoc;
   end;
 
@@ -1055,19 +1065,38 @@ begin
     OldMap := SetMapMode(hdc, MM_TEXT);
     SendMessage(hnd, EM_FORMATRANGE, 0, 0);
     try
-      repeat
-        Rng.rc := SaveRect;
-        Rng.chrg.cpMin := Ofs;
-        Rng.chrg.cpMax := maxch;
-        PrCh := Ofs;
-        Ofs := SendMessage(hnd, EM_FORMATRANGE, PrintFlag[DoPrint], LPARAM(@Rng));
-        inc(Result);
-        if (Ofs < MaxLen) and (Ofs <> -1) then begin
-           if DoPrint then
-             APrinter.NewPage;
-        end;
+      Result:=1;
+      doAbort:=false;
+      rm.DoPrintAction(paDocStart, APrinter.Canvas, Result, doAbort);
+      if not doAbort then begin
+        repeat
+          rm.DoPrintAction(paPageStart, APrinter.Canvas, Result, doAbort);
+          if doAbort then break;
 
-      until (Ofs >= MaxLen) or (Ofs = -1) or (PrCh = Ofs);
+          Rng.rc := SaveRect;
+          Rng.chrg.cpMin := Ofs;
+          Rng.chrg.cpMax := maxch;
+          PrCh := Ofs;
+          Ofs := SendMessage(hnd, EM_FORMATRANGE, PrintFlag[DoPrint], LPARAM(@Rng));
+          if (Ofs < MaxLen) and (Ofs <> -1) then begin
+             if DoPrint then begin
+               rm.DoPrintAction(paPageEnd, APrinter.Canvas, Result, doAbort);
+               inc(Result);
+               if not doAbort then APrinter.NewPage;
+             end else
+               inc(Result);
+          end;
+
+        until (Ofs >= MaxLen) or (Ofs = -1) or (PrCh = Ofs) or doAbort;
+
+        if not doAbort then begin
+          rm.DoPrintAction(paPageEnd, APrinter.Canvas, Result, doAbort);
+          if not doAbort then
+            rm.DoPrintAction(paDocEnd, APrinter.Canvas, Result, doAbort);
+         end;
+        if doAbort then APrinter.Abort;
+      end;
+
     finally
       SendMessage(hnd, EM_FORMATRANGE, 0, 0);
       SetMapMode(hdc, OldMap);
@@ -1081,7 +1110,7 @@ begin
       Windows.SendMessage(hnd, WM_SETREDRAW, WPARAM(not false), 0);
     end;
 
-    if DoPrint then
+    if DoPrint and not APrinter.Aborted and not doAbort then
       APrinter.EndDoc
     else
       ReleaseDC(hnd, Rng.hdc);

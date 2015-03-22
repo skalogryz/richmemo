@@ -26,10 +26,14 @@ type
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
     procedure Button4Click(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
   private
     { private declarations }
   public
     { public declarations }
+    procedure RichMemo1PrintAction(Sender: TObject;
+      APrintAction: TPrintAction; PrintCanvas: TCanvas;
+      CurrentPage: Integer; var AbortPrint: Boolean);
   end;
 
 var
@@ -75,7 +79,7 @@ begin
   InitPrintParams(prm);
   prm.SelStart:=RichMemo1.SelStart;
   prm.SelLength:=RichMemo1.SelLength;
-  prm.Title:='Rich Memo Printing';
+  prm.JobTitle:='Rich Memo Printing';
   PageSetupToMargins(PageSetupDialog1, prm);
 
   RichMemo1.Print(prm);
@@ -89,6 +93,23 @@ end;
 procedure TForm1.Button4Click(Sender: TObject);
 begin
   PageSetupDialog1.Execute;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  RichMemo1.OnPrintAction:=@RichMemo1PrintAction;
+end;
+
+procedure TForm1.RichMemo1PrintAction(Sender: TObject;
+  APrintAction: TPrintAction; PrintCanvas: TCanvas; CurrentPage: Integer;
+  var AbortPrint: Boolean);
+begin
+  if APrintAction=paPageStart then begin
+    PrintCanvas.Brush.Color:=clBlue;
+    PrintCanvas.Brush.Style:=bsSolid;
+    PrintCanvas.Ellipse(100,100,200,200);
+  end;
+  writeln('action: ', APrintAction);
 end;
 
 end.

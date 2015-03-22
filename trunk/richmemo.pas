@@ -112,7 +112,7 @@ type
   end;
 
   TPrintParams = record
-    Title     : String;
+    JobTitle  : String;       // print job title to be shown in system printing manager
     Margins   : TRectOffsets; // margins in points
     SelStart  : Integer;
     SelLength : Integer;
@@ -121,6 +121,13 @@ type
   TPrintMeasure = record
     Pages     : Integer;
   end;
+
+  TPrintAction = (paDocStart, paPageStart, paPageEnd, paDocEnd);
+
+  TPrintActionEvent = procedure (Sender: TObject;
+    APrintAction: TPrintAction;
+    PrintCanvas: TCanvas;
+    CurrentPage: Integer; var AbortPrint: Boolean) of object;
 
 type
   TRichMemoObject = class(TObject);
@@ -145,9 +152,10 @@ type
 
   TCustomRichMemo = class(TCustomMemo)
   private
-    fHideSelection  : Boolean;
-    fOnSelectionChange: TNotifyEvent;
-    fZoomFactor : Double;
+    fHideSelection      : Boolean;
+    fOnSelectionChange  : TNotifyEvent;
+    fOnPrintAction      : TPrintActionEvent;
+    fZoomFactor         : Double;
   private
     procedure InlineInvalidate(handler: TRichMemoInline);
 
@@ -164,6 +172,11 @@ type
     procedure SetSelText(const SelTextUTF8: string); override;
     function GetZoomFactor: Double; virtual;
     procedure SetZoomFactor(AValue: Double); virtual;
+
+    procedure DoPrintAction(PrintJobEvent: TPrintAction;
+      PrintCanvas: TCanvas;
+      CurrentPage: Integer; var AbortPrint: Boolean);
+
   public
     constructor Create(AOwner: TComponent); override;
     procedure CopyToClipboard; override;
@@ -211,6 +224,7 @@ type
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
     property ZoomFactor: Double read GetZoomFactor write SetZoomFactor;
+    property OnPrintAction: TPrintActionEvent read fOnPrintAction write fOnPrintAction;
   end;
   
   { TRichMemo }
@@ -262,6 +276,7 @@ type
     property OnMouseWheelUp;
     property OnSelectionChange;
     property OnStartDrag;
+    property OnPrintAction;
     property OnUTF8KeyPress;
     property ParentBidiMode;
     property ParentColor;
@@ -535,6 +550,16 @@ begin
   fZoomFactor:=AValue;
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).SetZoomFactor(Self, AValue);
+end;
+
+procedure TCustomRichMemo.DoPrintAction(PrintJobEvent: TPrintAction;
+  PrintCanvas: TCanvas; CurrentPage: Integer; var AbortPrint: Boolean);
+begin
+  if Assigned(OnPrintAction) then
+    try
+      OnPrintAction(Self, PrintJobEvent, PrintCanvas, CurrentPAge, AbortPrint);
+    except
+    end;
 end;
 
 procedure TCustomRichMemo.InlineInvalidate(handler: TRichMemoInline);

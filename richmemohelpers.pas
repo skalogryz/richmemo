@@ -162,12 +162,15 @@ begin
   m.SetRangeParams( m.SelStart, m.SelLength, [tmm_Size], '', ASize, 0, [], []);
 end;
 
+const
+  AllFontStyles : TFontStyles = [fsBold, fsItalic, fsUnderline, fsStrikeOut];
+
 procedure TRichEditTextAttributes.SetStyles(AValue: TFontStyles);
 var
   m   : TCustomRichMemo;
 begin
   m := TCustomRichMemo(TObject(Self));
-  m.SetRangeParams(m.SelStart, m.SelLength, [tmm_Styles], '', 0, 0, AValue, []);
+  m.SetRangeParams(m.SelStart, m.SelLength, [tmm_Styles], '', 0, 0, AValue, AllFontStyles - AValue);
 end;
 
 { TRichEditParaAttributes }

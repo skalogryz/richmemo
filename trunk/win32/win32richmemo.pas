@@ -36,26 +36,29 @@ uses
   // RichMemo headers
   RichMemo, WSRichMemo, Win32RichMemoProc, Win32RichMemoOle;
 
-type  
+type
 
-  { TWin32RichMemoStringsW }
-
-  TWin32RichMemoStringsW = class(TWin32MemoStrings)
+  TWin32RichMemoStrings = class(TWin32MemoStrings)
   protected
+    fUpd    : Boolean;
     fHandle : HWND;
-    function GetTextStr: string; override;
+    procedure SetUpdateState(Updating: Boolean); override;
   public
     constructor Create(AHandle: HWND; TheOwner: TWinControl);
   end;
 
+  { TWin32RichMemoStringsW }
+
+  TWin32RichMemoStringsW = class(TWin32RichMemoStrings)
+  protected
+    function GetTextStr: string; override;
+  end;
+
   { TWin32RichMemoStringsA }
 
-  TWin32RichMemoStringsA = class(TWin32MemoStrings)
+  TWin32RichMemoStringsA = class(TWin32RichMemoStrings)
   protected
-    fHandle : HWND;
     function GetTextStr: string; override;
-  public
-    constructor Create(AHandle: HWND; TheOwner: TWinControl);
   end;
 
   { TWin32WSCustomRichMemo }
@@ -170,16 +173,25 @@ const
   FORMAT_RENDER   = 1;
   FORMAT_ESTIMATE = 0;
   
-procedure LockRedraw(AHandle: HWND);
+procedure LockRedraw(rm: TCustomRichMemo; AHandle: THandle);
+var
+  ln: TWin32RichMemoStrings;
 begin
-  SendMessage(AHandle, WM_SETREDRAW, 0, 0);
+  ln:=TWin32RichMemoStrings(rm.Lines);
+  if not Assigned(ln) or not ln.fUpd then
+    SendMessage(AHandle, WM_SETREDRAW, 0, 0);
 end;
 
-procedure UnlockRedraw(AHandle: HWND; NeedInvalidate: Boolean = true);
+procedure UnlockRedraw(rm: TCustomRichMemo; AHandle: HWND; NeedInvalidate: Boolean = true);
+var
+  ln: TWin32RichMemoStrings;
 begin
-  SendMessage(AHandle, WM_SETREDRAW, 1, 0);
-  if NeedInvalidate then 
-    Windows.InvalidateRect(AHandle, nil, true);
+  ln:=TWin32RichMemoStrings(rm.Lines);
+  if not Assigned(ln) or not ln.fUpd then begin
+    SendMessage(AHandle, WM_SETREDRAW, 1, 0);
+    if NeedInvalidate then
+      Windows.InvalidateRect(AHandle, nil, true);
+  end;
 end;
 
 function RichEditNotifyProc(const AWinControl: TWinControl; Window: HWnd;
@@ -276,13 +288,21 @@ begin
   inherited Destroy;
 end;
 
-{ TWin32RichMemoStringsW }
+{ TWin32RichMemoStrings }
 
-constructor TWin32RichMemoStringsW.Create(AHandle: HWND; TheOwner: TWinControl);
+constructor TWin32RichMemoStrings.Create(AHandle: HWND; TheOwner: TWinControl);
 begin
   inherited Create(AHandle, TheOwner);
   fHandle:=AHandle;
 end;
+
+procedure TWin32RichMemoStrings.SetUpdateState(Updating: Boolean);
+begin
+  fUpd:=Updating;
+  inherited SetUpdateState(Updating);
+end;
+
+{ TWin32RichMemoStringsW }
 
 function TWin32RichMemoStringsW.GetTextStr: string;
 var
@@ -308,12 +328,6 @@ end;
 
 
 { TWin32RichMemoStringsA }
-
-constructor TWin32RichMemoStringsA.Create(AHandle: HWND; TheOwner: TWinControl);
-begin
-  inherited Create(AHandle, TheOwner);
-  fHandle:=AHandle;
-end;
 
 function TWin32RichMemoStringsA.GetTextStr: string;
 var
@@ -470,11 +484,11 @@ begin
   
   NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
   if NeedLock then begin
-    LockRedraw(AWinControl.Handle);
+    LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
     RichEditManager.SetSelection(AWinControl.Handle, TextStart, TextLen);
     RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params );
     RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-    UnlockRedraw(AWinControl.Handle);
+    UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
   end else 
     RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params);
 
@@ -500,15 +514,15 @@ begin
   
   NeedLock := (OrigStart <> TextStart);
   if NeedLock then begin
-    LockRedraw(AWinControl.Handle);
+    LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
     RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
     RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-    UnlockRedraw(AWinControl.Handle, false);
+    UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   end else begin
-    LockRedraw(AWinControl.Handle);
+    LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
     Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params);
-    UnlockRedraw(AWinControl.Handle, false);
+    UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   end;
 
   RichEditManager.SetEventMask(AWinControl.Handle,eventmask);
@@ -549,24 +563,16 @@ begin
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
 
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
-  LockRedraw(AWinControl.Handle);
-  InitScrollInfo(hInfo);
-  InitScrollInfo(vInfo);  
-  hVisible:=GetScrollbarVisible(AWinControl.Handle, SB_Horz);
-  vVisible:=GetScrollbarVisible(AWinControl.Handle, SB_Vert);
-  GetScrollInfo(AWinControl.Handle, SB_Horz, hInfo);
-  GetScrollInfo(AWinControl.Handle, SB_Vert, vInfo);
-  
+  LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
+
   RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
   try
     Result := RichEditManager.GetStyleRange(AWinControl.Handle, TextStart, RangeStart, RangeLen);
   except
   end;
   
-  if hVisible then SetScrollInfo(AWinControl.Handle, SB_Horz, hInfo, false);
-  if vVisible then SetScrollInfo(AWinControl.Handle, SB_Vert, vInfo, false);
   RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-  UnlockRedraw(AWinControl.Handle, false);
+  UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 end;

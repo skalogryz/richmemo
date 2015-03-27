@@ -205,6 +205,11 @@ const
   PFNS_NEWNUMBER  = $8000;
   PFNS_SOMESEPCHAR = PFNS_PARENS or PFNS_PERIOD or PFNS_PLAIN;
 
+const
+  // this is the list of CHARFORMAT attributes that RichMemo supports
+  CFM_RICHMEMO_ATTRS = CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS
+                       or CFM_SUBSCRIPT or CFM_SUBSCRIPT or CFM_BACKCOLOR;
+
 
 implementation
 
@@ -263,6 +268,19 @@ begin
   if Effects and CFE_UNDERLINE > 0 then Include(Result, fsUnderline);
 end;
 
+function VScriptPosToEffects(vpos: TVScriptPos): LongWord;
+const
+  EffMask : array [TVScriptPos] of LongWord = (0, CFE_SUBSCRIPT, CFE_SUPERSCRIPT);
+begin
+  Result:=EffMask[vpos];
+end;
+
+function EffectsToVScriptPost(Effects: LongWord): TVScriptPos;
+begin
+  if Effects and CFE_SUBSCRIPT > 0 then Result:=vpSubScript
+  else if Effects and CFE_SUBSCRIPT > 0 then Result:=vpSuperScript
+  else Result:=vpNormal;
+end;
          
 procedure CharFormatToFontParams(const fmt: TCHARFORMAT; var Params: TIntFontParams);
 begin
@@ -281,6 +299,7 @@ begin
   if fmt.cbSize > sizeof(CHARFORMAT) then begin
     Params.HasBkClr:=(fmt.dwEffects and CFE_AUTOBACKCOLOR) = 0;
     if Params.HasBkClr then Params.Color:=Params.Color;
+    Params.VScriptPos:=EffectsToVScriptPost(fmt.dwEffects);
   end;
 end;
 
@@ -329,8 +348,8 @@ begin
   fmt.dwMask := fmt.dwMask or CFM_SIZE;
   fmt.yHeight := Params.Size * TwipsInFontSize;
   
-  fmt.dwMask := fmt.dwMask or CFM_EFFECTS;
-  fmt.dwEffects := FontStylesToEffects(Params.Style);
+  fmt.dwMask := fmt.dwMask or CFM_EFFECTS or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
+  fmt.dwEffects := FontStylesToEffects(Params.Style) or VScriptPosToEffects(Params.VScriptPos);
 
   if Params.HasBkClr then begin
     fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
@@ -357,8 +376,8 @@ begin
     
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
-  fmt.dwMask := CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS or CFM_BACKCOLOR;
-  
+  fmt.dwMask := CFM_RICHMEMO_ATTRS;
+
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
   
   CharFormatToFontParams(fmt, Params);
@@ -383,8 +402,8 @@ var
   last    : Integer;
 
 const
-  ALL_MASK = CFM_BOLD or CFM_ITALIC or CFM_STRIKEOUT or CFM_UNDERLINE or 
-             CFM_SIZE or CFM_COLOR or CFM_FACE;
+  ALL_MASK = CFM_RICHMEMO_ATTRS;
+
 begin
   Result := false;
   if (RichEditWnd = 0) then Exit;

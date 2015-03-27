@@ -549,10 +549,6 @@ class function TWin32WSCustomRichMemo.GetStyleRange(
 var
   OrigStart : Integer;
   OrigLen   : Integer;
-  hInfo     : TScrollInfo;
-  vInfo     : TScrollInfo;
-  hVisible  : Boolean;
-  vVisible  : Boolean;
   eventmask : longword;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin

@@ -29,6 +29,8 @@ uses
   , Graphics, StdCtrls, LazUTF8;
 
 type
+  TVScriptPos = (vpNormal, vpSubScript, vpSuperScript);
+
   TFontParams  = record
     Name      : String;
     Size      : Integer;
@@ -36,6 +38,7 @@ type
     Style     : TFontStyles;
     HasBkClr  : Boolean;
     BkColor   : TColor;
+    VScriptPos  : TVScriptPos;
   end;
 
   TParaAlignment  = (paLeft, paRight, paCenter, paJustify);

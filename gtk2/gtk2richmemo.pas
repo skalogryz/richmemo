@@ -39,6 +39,7 @@ uses
 
 const
   TagNameNumeric = 'numeric';
+  TagNameSubOrSuper = 'suborsuper';
   BulletChar     = #$E2#$80#$A2;
   TabChar        = #$09;
 
@@ -48,15 +49,21 @@ type
   protected
     class procedure SetCallbacks(const AGtkWidget: PGtkWidget; const AWidgetInfo: PWidgetInfo);
     class procedure GetWidgetBuffer(const AWinControl: TWinControl; var TextWidget: PGtkWidget; var Buffer: PGtkTextBuffer);
+
+    class function GetAttrAtIter(view: PGtkTextView; const start: TGtkTextIter): PGtkTextAttributes;
     class function GetAttrAtPos(const AWinControl: TWinControl; TextStart: Integer; APara: Boolean = false): PGtkTextAttributes;
+    class procedure GetAttributesAt(const AWinControl: TWinControl; TextStart: Integer; APara: Boolean;
+      var attr: PGtkTextAttributes; var fp: TFontParams);
+
     class procedure ApplyTag(abuffer: PGtkTextBuffer; tag: PGtkTextTag; TextStart, TextLen: Integer; ToParagraphs: Boolean = False);
+    class procedure FormatSubSuperScript(buffer: PGtkTextBuffer; vs: TVScriptPos; fontSizePts: Double; TextStart, TextLen: Integer);
 
   published
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): TLCLIntfHandle; override;
     class procedure DestroyHandle(const AWinControl: TWinControl); override;
 
-    class function  GetSelLength(const ACustomEdit: TCustomEdit): integer; override;
-    class function  GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
+    class function GetSelLength(const ACustomEdit: TCustomEdit): integer; override;
+    class function GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
 
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer;
       var RangeStart, RangeLen: Integer): Boolean; override;
@@ -140,8 +147,13 @@ type
     property Owner: TWinControl read FOwner;
   end;
 
-implementation
 
+const
+  SubSuperFontKoef = 0.583; // the koef for the font size of sub/super scripts matching Adover Illustrator and OpenOffice
+  SuperRiseKoef =  0.58;
+  SubRiseKoef   = -0.08;
+
+implementation
 
 // todo: why "shr" on each of this flag test?
 function gtktextattr_underline(const a : TGtkTextAppearance) : Boolean;
@@ -160,7 +172,7 @@ begin
 end;
 
 
-function GtkTextAttrToFontParams(const textAttr: TGtkTextAttributes; var FontParams: TIntFontParams): Boolean;
+function GtkTextAttrToFontParams(const textAttr: TGtkTextAttributes; var FontParams: TIntFontParams; const FontKoef : Double = 1.0): Boolean;
 var
   w   : integer;
   st  : TPangoStyle;
@@ -182,7 +194,7 @@ begin
     sz:=FontParams.Size / PANGO_SCALE;
     if pango_font_description_get_size_is_absolute(pf) then
       sz:=sz/(ScreenDPI/PageDPI);
-    FontParams.Size:=round(sz);
+    FontParams.Size:=round(sz*FontKoef);
     w := pango_font_description_get_weight(pf);
     if w > PANGO_WEIGHT_NORMAL then Include(FontParams.Style, fsBold);
 
@@ -339,7 +351,6 @@ function Gtk2_RichMemoKeyPress(view: PGtkTextView; Event: PGdkEventKey;
 var
   buf    : PGtkTextBuffer;
   mark   : PGtkTextMark;
-  iend   : TGtkTextIter;
   istart : TGtkTextIter;
   tag    : PGtkTextTag;
 begin
@@ -565,24 +576,33 @@ begin
   buffer := gtk_text_view_get_buffer (PGtkTextView(TextWidget));
 end;
 
+class function TGtk2WSCustomRichMemo.GetAttrAtIter(view: PGtkTextView; const start: TGtkTextIter): PGtkTextAttributes;
+var
+  attr       : PGtkTextAttributes;
+begin
+  Result:=nil;
+  attr := gtk_text_view_get_default_attributes(view);
+  if not Assigned(attr) then Exit;
+
+  gtk_text_iter_get_attributes(@start, attr);
+  Result:=attr;
+end;
+
 class function TGtk2WSCustomRichMemo.GetAttrAtPos(
   const AWinControl: TWinControl; TextStart: Integer; APara: Boolean ): PGtkTextAttributes;
 var
   TextWidget : PGtkWidget;
   buffer     : PGtkTextBuffer;
   iter       : TGtkTextIter;
-  attr       : PGtkTextAttributes;
 begin
   Result:=nil;
   GetWidgetBuffer(AWinControl, TextWidget, buffer);
-
-  attr := gtk_text_view_get_default_attributes(PGtkTextView(TextWidget));
-  if not Assigned(attr) then Exit;
+  if not Assigned(buffer) then Exit;
 
   gtk_text_buffer_get_iter_at_offset(buffer, @iter, TextStart);
   if APara then gtk_text_iter_set_line_offset(@iter, 0);
-  gtk_text_iter_get_attributes(@iter, attr);
-  Result:=attr;
+
+  Result := GetAttrAtIter(PGtkTextView(TextWidget), iter);
 end;
 
 class procedure TGtk2WSCustomRichMemo.ApplyTag(abuffer: PGtkTextBuffer;
@@ -650,6 +670,8 @@ begin
       'editable',   [ gboolean(gFALSE),
       'editable-set', gboolean(gTRUE),
       nil]);
+
+  gtk_text_buffer_create_tag (buffer, TagNameSubOrSuper, nil);
 
   Set_RC_Name(AWinControl, Widget);
   SetCallbacks(Widget, WidgetInfo);
@@ -732,6 +754,84 @@ begin
   Result:=true;
 end;
 
+class procedure TGtk2WSCustomRichMemo.FormatSubSuperScript(buffer: PGtkTextBuffer; vs: TVScriptPos; fontSizePts: Double; TextStart, TextLen: Integer);
+var
+  sz     : gint;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+  tag     : PGtkTextTag;
+  scrtag   : PGtkTextTag;
+  hasscript : Boolean;
+  k         : Double;
+begin
+  gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
+  scrtag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(buffer), TagNameSubOrSuper );
+  hasscript := gtk_text_iter_has_tag( @istart, scrtag );
+
+  if not hasscript then begin
+    iend:=istart;
+    gtk_text_iter_forward_to_tag_toggle(@iend, scrtag);
+    hasscript:=gtk_text_iter_get_offset(@iend)<TextStart+TextLen;
+  end;
+
+  if vs = vpNormal then begin
+    // no need to do anything, since no modifications were applied;
+    if not hasscript then Exit;
+    gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
+    gtk_text_buffer_remove_tag(buffer, scrtag, @istart, @iend);
+    tag := gtk_text_buffer_create_tag (buffer, nil,
+        'rise',     [0,
+        'rise-set',  gboolean(gTRUE),
+        nil]);
+    gtk_text_buffer_apply_tag(buffer, tag, @istart, @iend);
+  end else begin
+    gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
+
+    if vs = vpSubScript then k := SubRiseKoef
+    else k := SuperRiseKoef;
+    sz := round(fontSizePts * k * PANGO_SCALE);
+
+    tag := gtk_text_buffer_create_tag (buffer, nil,
+        'rise',     [sz,
+        'rise-set',  gboolean(gTRUE),
+        'size-set',       gboolean(gTRUE),
+        'size-points',    gdouble(fontSizePts*SubSuperFontKoef),
+        nil]);
+    gtk_text_buffer_apply_tag(buffer, tag, @istart, @iend);
+    gtk_text_buffer_apply_tag(buffer, scrtag, @istart, @iend);
+  end;
+end;
+
+class procedure TGtk2WSCustomRichMemo.GetAttributesAt(
+  const AWinControl: TWinControl; TextStart: Integer; APara: Boolean;
+  var attr: PGtkTextAttributes; var fp: TFontParams);
+var
+  iter : TGtkTextIter;
+  v    : PGtkTextView;
+  b    : PGtkTextBuffer;
+  tag  : PGtkTextTag;
+begin
+  InitFontParams(fp);
+  GetWidgetBuffer(AWinControl, PGtkWidget(v), b);
+
+  gtk_text_buffer_get_iter_at_offset(b, @iter, TextStart);
+  if APara then gtk_text_iter_set_line_offset(@iter, 0);
+
+  attr:=GetAttrAtIter(v, iter);
+  if not Assigned(attr) then Exit;
+
+  tag := gtk_text_tag_table_lookup( gtk_text_buffer_get_tag_table(b), TagNameSubOrSuper );
+
+  if gtk_text_iter_has_tag(@iter, tag) then begin
+    GtkTextAttrToFontParams(attr^, fp, 1 / SubSuperFontKoef );
+    if attr^.appearance.rise < 0 then fp.VScriptPos:=vpSubScript
+    else if attr^.appearance.rise > 0 then fp.VScriptPos:=vpSuperScript;
+  end else
+    GtkTextAttrToFontParams(attr^, fp);
+
+end;
+
+
 class procedure TGtk2WSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; const Params: TIntFontParams);
 var
   TextWidget: PGtkWidget;
@@ -772,6 +872,7 @@ begin
       nil]);
   ApplyTag(buffer, tag, TextStart, TextLen);
 
+  FormatSubSuperScript(buffer, Params.VScriptPos, Params.Size, TextStart, TextLen);
 end;
 
 class function TGtk2WSCustomRichMemo.GetParaAlignment(
@@ -830,8 +931,7 @@ const
   PageDPI   = 72; // not expected to be changed
   PixToPt   = PageDPI / ScreenDPI;
 begin
-  attr:=GetAttrAtPos(AWinControl, TextStart, true);
-  GtkTextAttrToFontParams(attr^, fp);
+  GetAttributesAt(AWinControl, TextStart, true, attr, fp);
   Result := Assigned(attr);
   if Result then begin
     if attr^.indent<0 then begin
@@ -879,8 +979,7 @@ begin
   end else
     fl:=fl-h;
 
-  attr:=GetAttrAtPos(AWinControl, TextStart);
-  GtkTextAttrToFontParams(attr^, fp);
+  GetAttributesAt(AWinControl, TextStart, true, attr, fp);
   gtk_text_attributes_unref(attr);
 
   GetWidgetBuffer(AWinControl, w, buffer);
@@ -1028,10 +1127,6 @@ const
   PageDPI   = 72; // not expected to be changed
   PixToPt   = PageDPI / ScreenDPI;
 var
-  w      : PGtkWidget;
-  buffer : PGtkTextBuffer;
-  tag    : PGtkTextTag;
-  parr   : PPangoTabArray;
   i      : Integer;
   attr   : PGtkTextAttributes;
   loc    : gint;
@@ -1325,7 +1420,6 @@ var
   w      : PGtkWidget;
   b      : PGtkTextBuffer;
   istart : TGtkTextIter;
-  iend   : TGtkTextIter;
   anch   : PGtkTextChildAnchor;
   gi     : TGtk2InlineObject;
   draw   : PGtkWidget;
@@ -1378,16 +1472,14 @@ begin
 end;
 
 
-class function TGtk2WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams): Boolean;
+class function TGtk2WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl;
+   TextStart: Integer; var Params: TIntFontParams): Boolean;
 var
-  attr       : PGtkTextAttributes;
+  attr : PGtkTextAttributes;
 begin
-  attr:=GetAttrAtPos(AWinControl, TextStart);
+  GetAttributesAt(AWinControl, TextStart, false, attr, params);
   Result := Assigned(attr);
-  if Result then begin
-    GtkTextAttrToFontParams(attr^, Params);
-    gtk_text_attributes_unref(attr);
-  end;
+  if Result then gtk_text_attributes_unref(attr);
 end;
 
 function GtkInsertImageFromFile(const ARichMemo: TCustomRichMemo; APos: Integer;

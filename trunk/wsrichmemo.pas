@@ -26,7 +26,7 @@ interface
 uses
   Types, Classes, SysUtils,
   LCLType,
-  Graphics, Controls, StdCtrls, Printers,
+  Graphics, Controls, Printers,
   WSStdCtrls, RichMemo;
 
 type
@@ -77,6 +77,11 @@ type
       const AStopList: TTabStopList); virtual;
     class function GetParaTabs(const AWinControl: TWinControl; TextStart: integer;
       var AStopList: TTabStopList): Boolean; virtual;
+
+    class procedure SetTextUIParams(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const ui: TTextUIParam); virtual;
+    class function GetTextUIParams(const AWinControl: TWinControl; TextStart: Integer;
+      var ui: TTextUIParam): Boolean; virtual;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
     //class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
@@ -200,6 +205,18 @@ class function TWSCustomRichMemo.GetParaTabs(const AWinControl: TWinControl;
   TextStart: integer; var AStopList: TTabStopList): Boolean;
 begin
   Result:=False;
+end;
+
+class procedure TWSCustomRichMemo.SetTextUIParams(const AWinControl: TWinControl;
+  TextStart, TextLen: Integer; const ui: TTextUIParam);
+begin
+
+end;
+
+class function TWSCustomRichMemo.GetTextUIParams(const AWinControl: TWinControl;
+  TextStart: Integer; var ui: TTextUIParam): Boolean;
+begin
+  Result:=false;
 end;
 
 class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 

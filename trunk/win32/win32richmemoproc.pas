@@ -165,7 +165,10 @@ type
     class function GetTextLength(RichEditWnd: Handle): Integer;
     class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
-    class function GetStyleRange(RichEditWnd: Handle; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual; 
+    class procedure SetTextUIStyle(RichEditWnd: Handle; const ui: TTextUIParam); virtual;
+    class function GetTextUIStyle(RichEditWnd: Handle; var ui: TTextUIParam): Boolean; virtual;
+
+    class function GetStyleRange(RichEditWnd: Handle; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
     class procedure GetSelection(RichEditWnd: Handle; var TextStart, TextLen: Integer); virtual;      
     class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;      
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
@@ -193,6 +196,8 @@ const
   HardBreak  = #13;
 
 const
+  CFE_PROTECTED = $00000010;
+  CFE_LINK      = $00000020;
   CFM_BACKCOLOR = $04000000;
   CFE_AUTOBACKCOLOR = CFM_BACKCOLOR;
 
@@ -382,6 +387,46 @@ begin
   
   CharFormatToFontParams(fmt, Params);
   Result := true;  
+end;
+
+class procedure TRichEditManager.SetTextUIStyle(RichEditWnd: Handle; const ui: TTextUIParam);
+var
+  w   : WPARAM;
+  fmt : TCHARFORMAT2;
+begin
+  if RichEditWnd = 0 then Exit;
+
+  w := SCF_SELECTION;
+
+  FillChar(fmt, sizeof(fmt), 0);
+  fmt.cbSize := sizeof(fmt);
+
+  fmt.dwMask := CFM_LINK;
+  if uiLink in ui.features then fmt.dwEffects := fmt.dwEffects or CFE_LINK;
+
+  SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt));
+end;
+
+class function TRichEditManager.GetTextUIStyle(RichEditWnd: Handle; var ui: TTextUIParam): Boolean;
+var
+  w   : WPARAM;
+  fmt : TCHARFORMAT2;
+begin
+  Result:=false;
+  if RichEditWnd = 0 then Exit;
+
+  w := SCF_SELECTION;
+
+  FillChar(fmt, sizeof(fmt), 0);
+  fmt.cbSize := sizeof(fmt);
+
+  fmt.dwMask := CFM_LINK;
+
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
+  InitTextUIParams(ui);
+  if fmt.dwEffects and CFE_LINK > 0 then
+    Include(ui.features, uiLink);
+  Result:=true;
 end;
 
 type

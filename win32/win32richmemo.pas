@@ -82,6 +82,12 @@ type
       const Params: TIntFontParams); override;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;      
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
+
+    class procedure SetTextUIParams(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const ui: TTextUIParam); override;
+    class function GetTextUIParams(const AWinControl: TWinControl; TextStart: Integer;
+      var ui: TTextUIParam): Boolean; override;
+
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
 
@@ -194,23 +200,56 @@ begin
   end;
 end;
 
+type
+ PENLINK = ^TENLINK;
+
 function RichEditNotifyProc(const AWinControl: TWinControl; Window: HWnd;
       Msg: UInt; WParam: Windows.WParam; LParam: Windows.LParam;
       var MsgResult: Windows.LResult; var WinProcess: Boolean): Boolean;
 var
-  sch : PSELCHANGE;
+  lnk : PENLINK;
+  hdr : PNMHDR;
+  mb  : TMouseButton;
+  mmsg : UINT;
+  isClick : Boolean;
+  minfo   : TLinkMouseInfo;
 begin
   Result:=false; // we need to catch just notifications,
     // any other message should be handled in a "Default" manner
     // So, default result is false;
+  hdr:=PNMHDR(LParam);
   case Msg of
     WM_NOTIFY: begin
-      sch:=PSELCHANGE(LPARAM);
-      if sch^.nmhdr.code=EN_SELCHANGE then
-      begin
-        if Assigned(AWinControl) and (AWinControl is TCustomRichMemo) then
-          TIntCustomRichMemo(AWinControl).DoSelectionChange;
-        Result:=true;
+      case hdr^.code of
+        EN_SELCHANGE:
+          begin
+            if Assigned(AWinControl) and (AWinControl is TCustomRichMemo) then
+              TIntCustomRichMemo(AWinControl).DoSelectionChange;
+            Result:=true;
+          end;
+        EN_LINK:
+          begin
+            lnk:=PENLINK(LPARAM);
+            if Assigned(AWinControl) and (AWinControl is TCustomRichMemo) then begin
+              isClick:=true;
+              mmsg:=lnk^.msg;
+              mb:=mbLeft;
+              case mmsg of
+                WM_LBUTTONUP: mb:=mbLeft;
+                WM_RBUTTONUP: mb:=mbRight;
+                WM_MBUTTONUP: mb:=mbMiddle;
+              else
+                isClick:=false;
+              end;
+              if isClick then begin
+                FillChar(minfo, sizeof(minfo), 0);
+                minfo.button:=mb;
+                TIntCustomRichMemo(AWinControl).DoLinkAction(laClick, minfo, lnk^.chrg.cpMin, lnk^.chrg.cpMax-lnk^.chrg.cpMin);
+              end;
+
+            end;
+            Result:=true;
+          end;
       end;
     end;
   end;
@@ -460,7 +499,7 @@ begin
   FinishCreateWindow(AWinControl, Params, false);
 
   eventmask := SendMessage(AWinControl.Handle, EM_GETEVENTMASK, 0, 0);
-  eventmask := eventmask or ENM_SELCHANGE;
+  eventmask := eventmask or ENM_SELCHANGE or ENM_LINK;
   SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
 
   // memo is not a transparent control -> no need for parentpainting
@@ -571,6 +610,62 @@ begin
   UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+end;
+
+class procedure TWin32WSCustomRichMemo.SetTextUIParams(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const ui: TTextUIParam);
+var
+  OrigStart : Integer;
+  OrigLen   : Integer;
+  NeedLock  : Boolean;
+  eventmask : Integer;
+begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+
+  eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
+
+  NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
+  if NeedLock then begin
+    LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+    RichEditManager.SetSelection(AWinControl.Handle, TextStart, TextLen);
+    RichEditManager.SetTextUIStyle(AWinControl.Handle, ui);
+    RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+    UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+  end else
+    RichEditManager.SetTextUIStyle(AWinControl.Handle, ui);
+
+  RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+end;
+
+class function TWin32WSCustomRichMemo.GetTextUIParams(const AWinControl: TWinControl; TextStart: Integer;
+  var ui: TTextUIParam): Boolean;
+var
+  OrigStart : Integer;
+  OrigLen   : Integer;
+  NeedLock  : Boolean;
+  eventmask : Integer;
+begin
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
+    Result:=false;
+    Exit;
+  end;
+
+  eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
+
+  NeedLock := (OrigStart <> TextStart);
+  if NeedLock then begin
+    LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+    RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
+    RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
+    RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+    UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+  end else
+    RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
+
+  RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+  Result:=true;
 end;
 
 class function TWin32WSCustomRichMemo.LoadRichText(

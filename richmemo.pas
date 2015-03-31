@@ -26,7 +26,7 @@ interface
 uses
   Types, Classes, SysUtils
   , LCLType, LCLIntf, Printers
-  , Graphics, StdCtrls, LazUTF8;
+  , Graphics, Controls, StdCtrls, LazUTF8;
 
 type
   TVScriptPos = (vpNormal, vpSubScript, vpSuperScript);
@@ -133,6 +133,25 @@ type
     CurrentPage: Integer; var AbortPrint: Boolean) of object;
 
 type
+  TLinkAction = (laClick);
+
+  TLinkMouseInfo = record
+    button : TMouseButton;
+  end;
+
+  TLinkActionEvent = procedure (Sender: TObject;
+    ALinkAction: TLinkAction;
+    const info: TLinkMouseInfo;
+    LinkStart, LinkLen: Integer) of object;
+
+  TTextUIFeature = (uiLink);
+  TTextUIFeatures = set of TTextUIFeature;
+
+  TTextUIParam = record
+    features : TTextUIFeatures;
+  end;
+
+type
   TRichMemoObject = class(TObject);
   TCustomRichMemo = class;
 
@@ -158,6 +177,7 @@ type
     fHideSelection      : Boolean;
     fOnSelectionChange  : TNotifyEvent;
     fOnPrintAction      : TPrintActionEvent;
+    fOnLinkAction       : TLinkActionEvent;
     fZoomFactor         : Double;
   private
     procedure InlineInvalidate(handler: TRichMemoInline);
@@ -179,6 +199,8 @@ type
     procedure DoPrintAction(PrintJobEvent: TPrintAction;
       PrintCanvas: TCanvas;
       CurrentPage: Integer; var AbortPrint: Boolean);
+    procedure DoLinkAction(ALinkAction: TLinkAction; const AMouseInfo: TLinkMouseInfo;
+      LinkStart, LinkEnd: Integer);
 
   public
     constructor Create(AOwner: TComponent); override;
@@ -209,8 +231,11 @@ type
       const FontName: String; FontSize: Integer; FontColor: TColor; AddFontStyle, RemoveFontStyle: TFontStyles); overload;
     procedure SetRangeParams(TextStart, TextLength: Integer; ModifyMask: TTextModifyMask;
       const fnt: TFontParams; AddFontStyle, RemoveFontStyle: TFontStyles); overload;
-    procedure SetRangeParaParams(TextStart, TextLength: INteger; ModifyMask: TParaModifyMask;
+    procedure SetRangeParaParams(TextStart, TextLength: Integer; ModifyMask: TParaModifyMask;
       const ParaMetric: TParaMetric);
+
+    procedure SetLink(TextStart, TextLength: Integer; AIsLink: Boolean); virtual;
+    function isLink(TextStart: Integer): Boolean; virtual;
 
     function LoadRichText(Source: TStream): Boolean; virtual;
     function SaveRichText(Dest: TStream): Boolean; virtual;
@@ -228,6 +253,7 @@ type
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
     property ZoomFactor: Double read GetZoomFactor write SetZoomFactor;
     property OnPrintAction: TPrintActionEvent read fOnPrintAction write fOnPrintAction;
+    property OnLinkAction: TLinkActionEvent read fOnLinkAction write fOnLinkAction;
   end;
   
   { TRichMemo }
@@ -314,6 +340,7 @@ procedure InitTabStopList(var tabs: TTabStopList); overload;
 procedure InitTabStopList(var tabs: TTabStopList; const TabStopsPt: array of double); overload;
 procedure InitPrintParams(var prm: TPrintParams);
 
+procedure InitTextUIParams(var prm: TTextUIParam);
 
 var
   RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
@@ -322,7 +349,7 @@ var
 implementation
 
 uses
-  RichMemoFactory, WSRichMemo;
+  {%H-}RichMemoFactory, WSRichMemo;
 
 procedure InitFontParams(var p: TFontParams);
 begin
@@ -462,6 +489,11 @@ begin
   FillChar(prm, sizeof(prm), 0);
 end;
 
+procedure InitTextUIParams(var prm: TTextUIParam);
+begin
+  FillChar(prm, sizeof(prm), 0);
+end;
+
 { TRichMemoInline }
 
 procedure TRichMemoInline.Draw(Canvas: TCanvas; const ASize: TSize);
@@ -559,10 +591,14 @@ procedure TCustomRichMemo.DoPrintAction(PrintJobEvent: TPrintAction;
   PrintCanvas: TCanvas; CurrentPage: Integer; var AbortPrint: Boolean);
 begin
   if Assigned(OnPrintAction) then
-    try
-      OnPrintAction(Self, PrintJobEvent, PrintCanvas, CurrentPAge, AbortPrint);
-    except
-    end;
+    OnPrintAction(Self, PrintJobEvent, PrintCanvas, CurrentPAge, AbortPrint);
+end;
+
+procedure TCustomRichMemo.DoLinkAction(ALinkAction: TLinkAction; const AMouseInfo: TLinkMouseInfo; LinkStart,
+  LinkEnd: Integer);
+begin
+  if Assigned(OnLinkAction) then
+    OnLinkAction(Self, ALinkAction, AMouseInfo, LinkStart, LinkEnd);
 end;
 
 procedure TCustomRichMemo.InlineInvalidate(handler: TRichMemoInline);
@@ -821,7 +857,7 @@ begin
   end;
 end;
 
-procedure TCustomRichMemo.SetRangeParaParams(TextStart, TextLength: INteger;
+procedure TCustomRichMemo.SetRangeParaParams(TextStart, TextLength: Integer;
   ModifyMask: TParaModifyMask; const ParaMetric: TParaMetric);
 var
   ln: Integer;
@@ -844,6 +880,26 @@ begin
     dec(TextLength, ln);
 
   until TextLength<=0;
+end;
+
+procedure TCustomRichMemo.SetLink(TextStart, TextLength: Integer; AIsLink: Boolean);
+var
+  ui : TTextUIParam;
+begin
+  if HandleAllocated then begin
+    TWSCustomRichMemoClass(WidgetSetClass).GetTextUIParams(Self, TextStart, ui);
+    if AIsLink then Include(ui.features, uiLink)
+    else Exclude(ui.features, uiLink);
+    TWSCustomRichMemoClass(WidgetSetClass).SetTextUIParams(Self, TextStart, TextLength, ui);
+  end;
+end;
+
+function TCustomRichMemo.isLink(TextStart: Integer): Boolean;
+var
+  ui : TTextUIParam;
+begin
+  Result:=HandleAllocated and TWSCustomRichMemoClass(WidgetSetClass).GetTextUIParams(Self, TextStart, ui);
+  if Result then Result:=uiLink in ui.features;
 end;
 
 function TCustomRichMemo.LoadRichText(Source: TStream): Boolean;
@@ -932,8 +988,6 @@ begin
 end;
 
 function TCustomRichMemo.Print(const params: TPrintParams): Integer;
-var
-  printed: Integer;
 begin
   Result:=0;
   if not Assigned(Printer) then Exit;
@@ -956,7 +1010,6 @@ begin
   end else
     Result:=false;
 end;
-
 
 end.
 

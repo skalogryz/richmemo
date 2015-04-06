@@ -26,6 +26,7 @@ interface
 uses
   Types, Classes, SysUtils,
   LCLType,
+  LazUTF8, // used for GetSubText
   Graphics, Controls, Printers,
   WSStdCtrls, RichMemo;
 
@@ -84,6 +85,9 @@ type
       var ui: TTextUIParam): Boolean; virtual;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); virtual;
+    class function GetSubText(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      AsUnicode: Boolean; var isUnicode: Boolean; var txt: string; var utxt: UnicodeString): Boolean; virtual;
+
     //class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
@@ -222,6 +226,22 @@ end;
 class procedure TWSCustomRichMemo.InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); 
 begin
 
+end;
+
+class function TWSCustomRichMemo.GetSubText(const AWinControl: TWinControl;
+  TextStart, TextLen: Integer; AsUnicode: Boolean; var isUnicode: Boolean;
+  var txt: string; var utxt: UnicodeString): Boolean;
+begin
+  // default, ineffecient implementation
+  if TextLen<0 then GetTextLen(AWinControl, TextLen);
+  Result:=GetText(AWinControl, txt);
+  if not Result then Exit;
+  if TextStart<0 then TextStart:=0;
+  inc(TextStart);
+  utxt:='';
+  isUnicode:=false;
+  txt:=UTF8Copy(txt, TextStart, TextLen);
+  Result:=true;
 end;
 
 {class procedure TWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean);

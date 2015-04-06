@@ -174,7 +174,12 @@ type
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
     class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
     class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
+
     class procedure SetText(RichEditWnd: Handle; const Text: WideString; TextStart, ReplaceLength: Integer); virtual;
+    class function GetTextW(RichEditWnd: Handle; inSelection: Boolean): WideString; virtual;
+    class function GetTextA(RichEditWnd: Handle; inSelection: Boolean): AnsiString; virtual;
+    class function GetTextUtf8(RichEditWnd: Handle; inSelection: Boolean): string;
+
     class procedure GetPara2(RichEditWnd: Handle; TextStart: Integer; var para: PARAFORMAT2); virtual;
     class procedure SetPara2(RichEditWnd: Handle; TextStart, TextLen: Integer; const para: PARAFORMAT2); virtual;
     class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; virtual;
@@ -192,8 +197,9 @@ function FontStylesToEffects(Styles: TFontStyles): LongWord;
 function EffectsToFontStyles(Effects: LongWord): TFontStyles;
 
 const
-  CP_UNICODE = 1200;
-  HardBreak  = #13;
+  GT_SELECTION = 2;
+  CP_UNICODE   = 1200;
+  HardBreak    = #13;
 
 const
   CFE_PROTECTED = $00000010;
@@ -641,6 +647,66 @@ begin
   end;
 
   SetSelection(RichEditWnd, s, l);
+end;
+
+class function TRichEditManager.GetTextW(RichEditWnd: Handle;
+  inSelection: Boolean): WideString;
+var
+  t   : GETTEXTEX;
+  res : Integer;
+  w   : WideString;
+  st  : Integer;
+begin
+  if inSelection then
+    GetSelection(RichEditWnd, st, res)
+  else
+    res:=GetTextLength(RichEditWnd);
+
+  if res>0 then begin
+    SetLength(w, res);
+    FillChar(t, sizeof(t), 0);
+    t.cb:=(length(w)+1)*sizeof(WideChar);
+    t.flags:=GT_DEFAULT;
+    if inSelection then t.flags:=t.flags or GT_SELECTION;
+    t.codepage:=CP_WINUNICODE;
+    res:=SendMessageW(RichEditWnd, EM_GETTEXTEX, WPARAM(@t), LPARAM(@w[1]));
+    Result:=w;
+  end else
+    Result:='';
+end;
+
+class function TRichEditManager.GetTextA(RichEditWnd: Handle;
+  inSelection: Boolean): AnsiString;
+var
+  t   : GETTEXTEX;
+  res : Integer;
+  s   : AnsiString;
+  st  : Integer;
+begin
+  if inSelection then
+    GetSelection(RichEditWnd, st, res)
+  else
+    res:=GetTextLength(RichEditWnd);
+
+  if res>0 then begin
+    SetLength(s, res);
+    FillChar(t, sizeof(t), 0);
+    t.cb:=length(s)+1;
+    t.flags:=GT_DEFAULT;
+    t.codepage:=CP_ACP;
+    res:=SendMessageA(RichEditWnd, EM_GETTEXTEX, WPARAM(@t), LPARAM(@s[1]));
+    Result:=s;
+  end else
+    Result:='';
+end;
+
+class function TRichEditManager.GetTextUtf8(RichEditWnd: Handle;
+  inSelection: Boolean): string;
+begin
+  if UnicodeEnabledOS then
+    Result:=UTF8Encode(GetTextW(RichEditWnd, inSelection))
+  else
+    Result:=AnsiToUtf8(GetTextA(RichEditWnd, inSelection));
 end;
 
 class procedure TRichEditManager.GetPara2(RichEditWnd: Handle; TextStart: Integer;

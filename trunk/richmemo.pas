@@ -242,6 +242,8 @@ type
 
     function InDelText(const UTF8Text: string; InsStartChar, ReplaceLength: Integer): Integer; virtual;
     function InDelInline(inlineobj: TRichMemoInline; InsStartChar, ReplaceLength: Integer; const ASize: TSize): Integer; virtual;
+    function GetText(TextStart, TextLength: Integer): String;
+    function GetUText(TextStart, TextLength: Integer): UnicodeString;
 
     procedure SetSelLengthFor(const aselstr: string);
 
@@ -295,6 +297,7 @@ type
     property OnKeyDown;
     property OnKeyPress;
     property OnKeyUp;
+    property OnLinkAction;
     property OnMouseDown;
     property OnMouseEnter;
     property OnMouseLeave;
@@ -965,6 +968,34 @@ begin
     Result:=ReplaceLength;
   end else
     inlineObj.Free;
+end;
+
+function TCustomRichMemo.GetText(TextStart, TextLength: Integer): String;
+var
+  isu  : Boolean;
+  txt  : String;
+  utxt : UnicodeString;
+begin
+  Result:='';
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated and not TWSCustomRichMemoClass(WidgetSetClass).GetSubText(Self, TextStart, TextLength, false, isu, txt, utxt) then
+    Exit;
+  if isu then Result:=UTF8Decode(utxt)
+  else Result:=txt;
+end;
+
+function TCustomRichMemo.GetUText(TextStart, TextLength: Integer): UnicodeString;
+var
+  isu  : Boolean;
+  txt  : String;
+  utxt : UnicodeString;
+begin
+    Result:='';
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated and not TWSCustomRichMemoClass(WidgetSetClass).GetSubText(Self, TextStart, TextLength, false, isu, txt, utxt) then
+    Exit;
+  if isu then Result:=utxt
+  else Result:=UTF8Encode(txt);
 end;
 
 procedure TCustomRichMemo.SetSelLengthFor(const aselstr: string);

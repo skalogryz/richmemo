@@ -38,33 +38,25 @@ uses
 
 type
 
+  { TWin32RichMemoStrings }
+
   TWin32RichMemoStrings = class(TWin32MemoStrings)
   protected
     fUpd    : Boolean;
     fHandle : HWND;
     procedure SetUpdateState(Updating: Boolean); override;
+    function GetTextStr: string; override;
   public
     constructor Create(AHandle: HWND; TheOwner: TWinControl);
-  end;
-
-  { TWin32RichMemoStringsW }
-
-  TWin32RichMemoStringsW = class(TWin32RichMemoStrings)
-  protected
-    function GetTextStr: string; override;
-  end;
-
-  { TWin32RichMemoStringsA }
-
-  TWin32RichMemoStringsA = class(TWin32RichMemoStrings)
-  protected
-    function GetTextStr: string; override;
   end;
 
   { TWin32WSCustomRichMemo }
 
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
+    class function GetText(const AWinControl: TWinControl; var AText: String): Boolean; override;
+    class function GetTextLen(const AWinControl: TWinControl; var ALength: Integer): Boolean; override;
+
     class function GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
     class procedure SetColor(const AWinControl: TWinControl); override;
   
@@ -114,6 +106,8 @@ type
       var AStopList: TTabStopList): Boolean; override;
 
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
+    class function GetSubText(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      AsUnicode: Boolean; var isUnicode: Boolean; var txt: string; var utxt: UnicodeString): Boolean; override;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string;
       const SearchOpts: TIntSearchOpt): Integer; override;
@@ -341,64 +335,39 @@ begin
   inherited SetUpdateState(Updating);
 end;
 
-{ TWin32RichMemoStringsW }
-
-function TWin32RichMemoStringsW.GetTextStr: string;
-var
-  p   : GETTEXTLENGTHEX;
-  t   : GETTEXTEX;
-  res : Integer;
-  w   : WideString;
+function TWin32RichMemoStrings.GetTextStr: string;
 begin
-  fillchar(p, sizeof(p), 0);
-  p.flags:=GTL_DEFAULT or GTL_PRECISE or GTL_NUMCHARS;
-  res := SendMessageW(fHandle, EM_GETTEXTLENGTHEX, WPARAM(@P), CP_WINUNICODE);
-  if res>0 then begin
-    SetLength(w, res);
-    FillChar(t, sizeof(t), 0);
-    t.cb:=(length(w)+1)*sizeof(WideChar);
-    t.flags:=GT_DEFAULT;
-    t.codepage:=CP_WINUNICODE;
-    res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@w[1]));
-    Result:=UTF8Encode(w);
-  end else
-    Result:='';
-end;
-
-
-{ TWin32RichMemoStringsA }
-
-function TWin32RichMemoStringsA.GetTextStr: string;
-var
-  p   : GETTEXTLENGTHEX;
-  t   : GETTEXTEX;
-  res : Integer;
-  s   : WideString;
-begin
-  fillchar(p, sizeof(p), 0);
-  p.flags:=GTL_DEFAULT or GTL_PRECISE or GTL_NUMBYTES;
-  res := SendMessageW(fHandle, EM_GETTEXTLENGTHEX, WPARAM(@P), CP_ACP);
-  if res>0 then begin
-    SetLength(s, res);
-    FillChar(t, sizeof(t), 0);
-    t.cb:=length(s)+1;
-    t.flags:=GT_DEFAULT;
-    t.codepage:=CP_ACP;
-    res:=SendMessageW(fHandle, EM_GETTEXTEX, WPARAM(@t), LPARAM(@s[1]));
-    Result:=AnsiToUtf8(s);
-  end else
+  if Assigned(RichEditManager) then
+    Result:=RichEditManager.GetTextUtf8(fHandle, false)
+  else
     Result:='';
 end;
 
 { TWin32WSCustomRichMemo }
 
+class function TWin32WSCustomRichMemo.GetText(const AWinControl: TWinControl;
+  var AText: String): Boolean;
+begin
+  Result:=Assigned(RichEditManager);
+  if Result then
+    AText:=RichEditManager.GetTextUtf8(AWinControl.Handle, false);
+end;
+
+class function TWin32WSCustomRichMemo.GetTextLen(
+  const AWinControl: TWinControl; var ALength: Integer): Boolean;
+begin
+  Result:=false;
+  ALength:=0;
+  if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
+
+  Result:=true;
+  ALength:=RichEditManager.GetTextLength(AWinControl.Handle);
+end;
+
 class function TWin32WSCustomRichMemo.GetStrings(const ACustomMemo: TCustomMemo
   ): TStrings;
 begin
-  if UnicodeEnabledOS then
-    Result := TWin32RichMemoStringsW.Create(ACustomMemo.Handle, ACustomMemo)
-  else
-    Result := TWin32RichMemoStringsA.Create(ACustomMemo.Handle, ACustomMemo);
+  Result := TWin32RichMemoStrings.Create(ACustomMemo.Handle, ACustomMemo)
 end;
 
 class procedure TWin32WSCustomRichMemo.SetColor(const AWinControl: TWinControl);  
@@ -977,6 +946,44 @@ begin
   eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.SetText(AWinControl.Handle,UTF8Decode(TextUTF8),DstStart,DstLen);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
+end;
+
+class function TWin32WSCustomRichMemo.GetSubText(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  AsUnicode: Boolean; var isUnicode: Boolean; var txt: string;
+  var utxt: UnicodeString): Boolean;
+var
+  eventmask : Integer;
+  OrigStart : Integer;
+  OrigLen   : Integer;
+  NeedLock  : Boolean;
+  Hnd       : THandle;
+begin
+  Result:=Assigned(RichEditManager) and Assigned(AWinControl);
+  if not Result then Exit;
+
+  Hnd:=AWinControl.Handle;
+  eventmask := RichEditManager.SetEventMask(Hnd, 0);
+  RichEditManager.GetSelection(Hnd, OrigStart, OrigLen);
+
+  NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
+  if NeedLock then begin
+    LockRedraw( TCustomRichMemo(AWinControl), Hnd);
+    RichEditManager.SetSelection(Hnd, TextStart, TextLen);
+  end;
+
+  isUnicode:=AsUnicode;
+  if AsUnicode then
+    utxt:=RichEditManager.GetTextW(Hnd, true)
+  else begin
+    txt:=RichEditManager.GetTextUtf8(Hnd, true);
+  end;
+
+  if NeedLock then begin
+    RichEditManager.SetSelection(Hnd, OrigStart, OrigLen);
+    UnlockRedraw( TCustomRichMemo(AWinControl), Hnd);
+  end;
+  RichEditManager.SetEventMask(Hnd, eventmask);
 end;
 
 class function TWin32WSCustomRichMemo.Search(const AWinControl: TWinControl;

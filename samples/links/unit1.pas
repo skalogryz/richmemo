@@ -61,8 +61,9 @@ end;
 procedure TForm1.OnLinkAction(Sender: TObject; AAction: TLinkAction;
   const AMouseInfo: TLinkMouseInfo; StartChar, LenChars: Integer);
 begin
-  if AMouseInfo.button = mbLeft then
-    writeln('sel: ', StartChar,' ', LenChars);
+  if AMouseInfo.button = mbLeft then begin
+    ShowMessage( 'Link Text: "'+RichMemo1.GetText(StartChar, LenChars)+'"' );
+  end;
 end;
 
 end.

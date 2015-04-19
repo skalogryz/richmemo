@@ -829,7 +829,7 @@ begin
   until (res=0) or (buf[1] = HardBreak);
 
   para.start:=tost;
-  para.lenghtNoBr:=toend;
+  para.lengthNoBr:=toend;
   if res>0 then inc(toend); // there's a line break character - add it to the range
   para.length:=toend;
 end;

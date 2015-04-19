@@ -251,6 +251,8 @@ type
 
     function Print(const params: TPrintParams): Integer;
 
+    function CharAtPos(x, y: Integer): Integer;
+
     property HideSelection : Boolean read fHideSelection write SetHideSelection;
     property OnSelectionChange: TNotifyEvent read fOnSelectionChange write fOnSelectionChange;
     property ZoomFactor: Double read GetZoomFactor write SetZoomFactor;
@@ -1025,6 +1027,14 @@ begin
   if not HandleAllocated then HandleNeeded;
   if HandleAllocated then
     Result:=TWSCustomRichMemoClass(WidgetSetClass).Print(Self, Printer, params, true);
+end;
+
+function TCustomRichMemo.CharAtPos(x, y: Integer): Integer;
+begin
+  if HandleAllocated then
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).CharAtPos(Self, x, y)
+  else
+    Result:=-1;
 end;
 
 function TCustomRichMemo.PrintMeasure(const params: TPrintParams; var est: TPrintMeasure): Boolean;

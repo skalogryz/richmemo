@@ -108,6 +108,7 @@ type
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function GetSubText(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       AsUnicode: Boolean; var isUnicode: Boolean; var txt: string; var utxt: UnicodeString): Boolean; override;
+    class function CharAtPos(const AWinControl: TWinControl; x,y: Integer): Integer; override;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string;
       const SearchOpts: TIntSearchOpt): Integer; override;
@@ -984,6 +985,20 @@ begin
     UnlockRedraw( TCustomRichMemo(AWinControl), Hnd);
   end;
   RichEditManager.SetEventMask(Hnd, eventmask);
+end;
+
+class function TWin32WSCustomRichMemo.CharAtPos(const AWinControl: TWinControl;
+  x, y: Integer): Integer;
+var
+  p : POINTL;
+begin
+  if not Assigned(AWinControl) then
+    inherited
+  else begin
+    p.x:=x;
+    p.y:=y;
+    Result:=Windows.SendMessage(AWinControl.Handle, EM_CHARFROMPOS, 0, LPARAM(@p));
+  end;
 end;
 
 class function TWin32WSCustomRichMemo.Search(const AWinControl: TWinControl;

@@ -88,6 +88,8 @@ type
     class function GetSubText(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       AsUnicode: Boolean; var isUnicode: Boolean; var txt: string; var utxt: UnicodeString): Boolean; virtual;
 
+    class function CharAtPos(const AWinControl: TWinControl; x,y: Integer): Integer; virtual;
+
     //class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
     class function LoadRichText(const AWinControl: TWinControl; Source: TStream): Boolean; virtual;
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
@@ -242,6 +244,12 @@ begin
   isUnicode:=false;
   txt:=UTF8Copy(txt, TextStart, TextLen);
   Result:=true;
+end;
+
+class function TWSCustomRichMemo.CharAtPos(const AWinControl: TWinControl; x,
+  y: Integer): Integer;
+begin
+  Result:=-1;
 end;
 
 {class procedure TWSCustomRichMemo.SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean);

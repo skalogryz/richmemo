@@ -1174,7 +1174,7 @@ begin
   gtk_text_iter_set_line_offset(@istart, 0);
   gtk_text_iter_forward_to_line_end(@iend);
   rng.start:=gtk_text_iter_get_offset(@istart);
-  rng.lenghtNoBr:=gtk_text_iter_get_offset(@iend)-rng.start;
+  rng.lengthNoBr:=gtk_text_iter_get_offset(@iend)-rng.start;
 
   // if there's a character to move, then it's end of line, if not then it won't change!
   gtk_text_iter_forward_char(@iend);

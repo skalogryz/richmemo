@@ -91,6 +91,7 @@ type
 
     class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; override;
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
+    class function CharAtPos(const AWinControl: TWinControl; x,y: Integer): Integer; override;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; override;
 
@@ -1197,6 +1198,23 @@ begin
   gtk_text_buffer_delete(b, @istart, @iend);
   if length(TextUTF8)>0 then
     gtk_text_buffer_insert(b, @istart, @textUTF8[1], length(TextUTF8));
+end;
+
+class function TGtk2WSCustomRichMemo.CharAtPos(const AWinControl: TWinControl;
+  x, y: Integer): Integer;
+var
+  w : PGtkWidget;
+  b : PGtkTextBuffer;
+  istart : TGtkTextIter;
+  gx, gy : gint;
+  trailing: gint;
+begin
+  GetWidgetBuffer(AWinControl, w, b);
+  if not Assigned(w) then Exit;
+
+  gtk_text_view_window_to_buffer_coords(PGtkTextView(w), GTK_TEXT_WINDOW_WIDGET, x, y, @gx, @gy);
+  gtk_text_view_get_iter_at_position(PGtkTextView(w), @istart, @trailing, gx,gy);
+  Result:=gtk_text_iter_get_offset(@istart)+trailing;
 end;
 
 procedure UTF8CharsToWideString(const p: Pchar; var w: WideString);

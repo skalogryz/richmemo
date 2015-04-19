@@ -87,7 +87,7 @@ type
 
   TParaRange = record
     start      : Integer; // the first character in the paragraph
-    lenghtNoBr : Integer; // the length of the paragraph, excluding the line break character
+    lengthNoBr : Integer; // the length of the paragraph, excluding the line break character
     length     : Integer; // the length of the paragrpah, including the line break, if present
     // the last line in the control doesn't contain a line break character,
     // thus length = lengthNoBr

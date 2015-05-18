@@ -874,11 +874,11 @@ var
   i   : Integer;
 const
   PARAALIGN   : array [TTabAlignment] of LongWord = (
-     0 shl TAB_OFFSET_BITS, // taHead,
-     1 shl TAB_OFFSET_BITS, // taCenter,
-     2 shl TAB_OFFSET_BITS, // taTail,
-     3 shl TAB_OFFSET_BITS, // taDecimal,
-     4 shl TAB_OFFSET_BITS  // taWordBar
+     0 shl TAB_OFFSET_BITS, // tabHead,
+     1 shl TAB_OFFSET_BITS, // tabCenter,
+     2 shl TAB_OFFSET_BITS, // tabTail,
+     3 shl TAB_OFFSET_BITS, // tabDecimal,
+     4 shl TAB_OFFSET_BITS  // tabWordBar
      );
 
 begin
@@ -926,12 +926,12 @@ begin
     v:=para.rgxTabs[i];
     AStopList.Tabs[i].Offset:=(v and TAB_OFFSET_MASK) / TWIP_PT;
     case (v shr TAB_OFFSET_BITS) and TAB_ALIGN_MASK of
-      TAB_CENTER : al:=taCenter;
-      TAB_RIGHT  : al:=taRight;
-      TAB_DECIMAL: al:=taDecimal;
-      TAB_WORD   : al:=taWordBar;
+      TAB_CENTER : al:=tabCenter;
+      TAB_RIGHT  : al:=tabRight;
+      TAB_DECIMAL: al:=tabDecimal;
+      TAB_WORD   : al:=tabWordBar;
     else
-      al:=taLeft;
+      al:=tabLeft;
     end;
     AStopList.Tabs[i].Align:=al;
   end;

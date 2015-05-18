@@ -472,11 +472,11 @@ var
   rng   : NSRange;
 const
   TabAlignMap : array [TTabAlignment] of NSTextTabType = (
-    NSLeftTabStopType,    // taLeft,
-    NSCenterTabStopType,  // taCenter,
-    NSRightTabStopType,   // taRight,
-    NSDecimalTabStopType, // taDecimal
-    NSLeftTabStopType     // taWordBar - not supported
+    NSLeftTabStopType,    // tabLeft,
+    NSCenterTabStopType,  // tabCenter,
+    NSRightTabStopType,   // tabRight,
+    NSDecimalTabStopType, // tabDecimal
+    NSLeftTabStopType     // tabWordBar - not supported
   );
 begin
   view:=MemoTextView(AWinControl);
@@ -526,9 +526,9 @@ begin
     tab:=NSTextTab(tabs.objectAtIndex(i));
     AStopList.Tabs[i].Offset:=tab.location;
     case tab.tabStopType of
-      NSCenterTabStopType: AStopList.Tabs[i].Align:= taCenter;
-      NSRightTabStopType:  AStopList.Tabs[i].Align:= taRight;
-      NSDecimalTabStopType: AStopList.Tabs[i].Align:= taDecimal;
+      NSCenterTabStopType: AStopList.Tabs[i].Align:= tabCenter;
+      NSRightTabStopType:  AStopList.Tabs[i].Align:= tabRight;
+      NSDecimalTabStopType: AStopList.Tabs[i].Align:= tabDecimal;
     else
       AStopList.Tabs[i].Align:=taLeft;
     end;

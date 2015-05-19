@@ -1156,7 +1156,7 @@ begin
   for i:=0 to AStopList.Count-1 do begin
     pango_tab_array_get_tab(attr^.tabs, i, @al, @loc);
     AStopList.Tabs[i].Offset:=loc*f;
-    AStopList.Tabs[i].Align:=taLeft;
+    AStopList.Tabs[i].Align:=tabLeft;
   end;
   gtk_text_attributes_unref(attr);
 end;

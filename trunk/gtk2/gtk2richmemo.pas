@@ -694,7 +694,12 @@ begin
     , @Gtk2WS_MemoSelChanged, GetWidgetInfo(w));
   g_signal_handler_disconnect (b, handlerid);
 
-  inherited DestroyHandle(AWinControl);
+  // the proper way of destroying a widgetset
+  Gtk2WidgetSet.DestroyLCLComponent(AWinControl);
+  // or actually - TGtk2WSWinControl.DestroyHandle(AWinControl)
+  // the following call
+  //   TWSWinControlClass(Classparent).DestroyHandle(AWinControl);
+  // won't work, because TGtk2CustomMemo doesn't have DestoryHandle assigned
 end;
 
 class function TGtk2WSCustomRichMemo.GetSelLength(const ACustomEdit: TCustomEdit

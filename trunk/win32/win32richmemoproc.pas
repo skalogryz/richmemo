@@ -163,6 +163,7 @@ type
     class function SetEventMask(RichEditWnd: Handle; eventmask: integer): Integer;
 
     class function GetTextLength(RichEditWnd: Handle): Integer;
+    class function SetDefaultTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextUIStyle(RichEditWnd: Handle; const ui: TTextUIParam); virtual;
@@ -331,6 +332,38 @@ begin
   textlen.flags := GTL_NUMCHARS or GTL_PRECISE;
   textlen.codepage := CP_UNICODE;
   Result := SendMessage(RichEditWnd, EM_GETTEXTLENGTHEX, WPARAM(@textlen), 0);
+end;
+
+class function TRichEditManager.SetDefaultTextStyle(RichEditWnd: Handle;
+  Params: TIntFontParams): Boolean;
+var
+  w : WPARAM;
+  fmt : TCHARFORMAT2;
+begin
+  if RichEditWnd = 0 then begin
+    Result := false;
+    Exit;
+  end;
+
+  w := SCF_DEFAULT;
+
+  FillChar(fmt, sizeof(fmt), 0);
+  fmt.cbSize := sizeof(fmt);
+
+  fmt.dwMask := fmt.dwMask or CFM_COLOR;
+  fmt.crTextColor := Params.Color;
+
+  fmt.dwMask := fmt.dwMask or CFM_FACE;
+  // keep last char for Null-termination?
+  CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1);
+
+  fmt.dwMask := fmt.dwMask or CFM_SIZE;
+  fmt.yHeight := Params.Size * TwipsInFontSize;
+
+  fmt.dwMask := fmt.dwMask or CFM_EFFECTS or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
+  fmt.dwEffects := FontStylesToEffects(Params.Style) or VScriptPosToEffects(Params.VScriptPos);
+
+  Result := SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt))>0;
 end;
 
 class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle; 

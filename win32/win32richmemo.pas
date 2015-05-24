@@ -59,6 +59,7 @@ type
 
     class function GetStrings(const ACustomMemo: TCustomMemo): TStrings; override;
     class procedure SetColor(const AWinControl: TWinControl); override;
+    class procedure SetFont(const AWinControl: TWinControl; const AFont: TFont); override;
   
     class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
     class procedure SetSelLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
@@ -376,6 +377,14 @@ begin
   // this methos is implemented, because Win32RichMemo doesn't use 
   // default LCL WM_PAINT message!
   SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, ColorToRGB(AWinControl.Color));
+end;
+
+class procedure TWin32WSCustomRichMemo.SetFont(const AWinControl: TWinControl;
+  const AFont: TFont);
+begin
+  if not Assigned(AWinControl) then Exit;
+  Windows.SendMessage(AWinControl.Handle, WM_SETFONT, Windows.WParam(AFont.Reference.Handle), 1);
+  RichEditManager.SetDefaultTextStyle(AWinControl.Handle, GetFontParams(AFont));
 end;
 
 class procedure TWin32WSCustomRichMemo.SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer);  

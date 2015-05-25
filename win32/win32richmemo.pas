@@ -67,6 +67,7 @@ type
     class procedure CutToClipboard(const AWinControl: TWinControl); override;
     class procedure CopyToClipboard(const AWinControl: TWinControl); override;
     class procedure PasteFromClipboard(const AWinControl: TWinControl); override;
+    class function CanPasteFromClipboard(Const AWinControl: TWinControl): boolean; override;
 
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
@@ -420,6 +421,12 @@ end;
 class procedure TWin32WSCustomRichMemo.PasteFromClipboard(const AWinControl: TWinControl);  
 begin
   SendMessage(AWinControl.Handle, WM_PASTE, 0,0);
+end;
+
+class function TWin32WSCustomRichMemo.CanPasteFromClipboard(
+  const AWinControl: TWinControl): Boolean;
+begin
+  Result:=Assigned(AWinControl) and (SendMessage(AWinControl.Handle, EM_CANPASTE, 0, 0)<>0);
 end;
 
 class function TWin32WSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;  

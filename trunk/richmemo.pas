@@ -207,6 +207,7 @@ type
     procedure CopyToClipboard; override;
     procedure CutToClipboard; override;
     procedure PasteFromClipboard; override;
+    function CanPaste: Boolean; virtual;
     
     procedure SetTextAttributes(TextStart, TextLen: Integer; const TextParams: TFontParams); virtual;
     function GetTextAttributes(TextStart: Integer; var TextParams: TFontParams): Boolean; virtual;
@@ -809,6 +810,13 @@ procedure TCustomRichMemo.PasteFromClipboard;
 begin
   if HandleAllocated then  
     TWSCustomRichMemoClass(WidgetSetClass).PasteFromClipboard(Self);
+end;
+
+function TCustomRichMemo.CanPaste: Boolean;
+begin
+  if not HandleAllocated then HandleNeeded;
+  if HandleAllocated then
+    Result:=TWSCustomRichMemoClass(WidgetSetClass).CanPasteFromClipboard(Self);
 end;
 
 procedure TCustomRichMemo.SetRangeColor(TextStart, TextLength: Integer; FontColor: TColor);

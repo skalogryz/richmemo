@@ -30,7 +30,7 @@ uses
   Classes, SysUtils, 
   // LCL headers
   LCLType, LCLIntf, LCLProc, WSLCLClasses,
-  Graphics, Controls, StdCtrls, Printers,
+  Graphics, Controls, StdCtrls, Printers, Themes,
   // Win32WidgetSet
   Win32WSControls, Win32Int, Win32WSStdCtrls, win32proc,
   // RichMemo headers
@@ -145,6 +145,17 @@ var
   // doesn't overprint the selected text (until the end of the line).
   // No info is found online, about the bug
   FixPrintSelRange : Boolean = true;
+
+type
+  // the function is called during WM_NCPAINT message handling
+  // Handled must be set to "true" to prevent Windows default handling of the message
+  // if set to true, the resulting value of the function would be used as result for message handler
+  TNCPaintProc = function (AHandle: Windows.HANDLE; RichMemo: TCustomRichMemo; WParam: WParam; LParam: LParam; var Handled: Boolean): LResult;
+
+var
+  // the value can be set to nil to use system-native drawing only.
+  // or set it to whatever function desired
+  NCPaint : TNCPaintProc = nil;
   
 implementation
 
@@ -254,12 +265,31 @@ end;
 
 function RichEditProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
    LParam: Windows.LParam): LResult; stdcall;
-begin 
+var
+  WindowInfo : PWin32WindowInfo;
+  NcHandled  : Boolean; // NCPaint has painted by itself
+begin
   case Msg of
     WM_PAINT : begin
       //todo: LCL WM_PAINT handling prevents richedit from drawing correctly
       Result := CallDefaultWindowProc(Window, Msg, WParam, LParam)
       //Result := WindowProc(Window, Msg, WParam, LParam)
+      end;
+      //When theming is enabled, and the component should have a border around it,
+    WM_NCPAINT: begin
+      if Assigned(NCPaint) then begin
+        NcHandled :=false;
+        WindowInfo := GetWin32WindowInfo(Window);
+        if WindowInfo^.WinControl is TCustomRichMemo then
+          try
+            Result:=NCPaint(Window, TCustomRichMemo(WindowInfo^.WinControl), WParam, LParam, NcHandled);
+          except
+          end;
+        // not handled by LCL pass it to WinAPI
+        if not NcHandled then
+          Result:=WindowProc(Window, Msg, WParam, LParam);
+      end else
+        Result:=WindowProc(Window, Msg, WParam, LParam);
       end;
   else
     Result := WindowProc(Window, Msg, WParam, LParam);
@@ -1251,6 +1281,25 @@ begin
       ReleaseDC(hnd, Rng.hdc);
   end;
 end;
+
+
+// The function doesn't use Windows 7 (Vista?) animations. And should.
+function ThemedNCPaint(AWindow: Windows.HANDLE; RichMemo: TCustomRichMemo; WParam: WParam; LParam: LParam; var Handled: Boolean): LResult;
+var
+  hdc : Windows.HDC;
+begin
+  // When theming is enabled, and the component should have a border around it,
+  // let the theme manager handle it
+  Handled:=(GetWindowLong(AWindow, GWL_EXSTYLE) and WS_EX_CLIENTEDGE <> 0) and (ThemeServices.ThemesEnabled);
+  if Handled then begin
+    // Paint into this DC
+    ThemeServices.PaintBorder(RichMemo, True);
+    Result := 0;
+  end;
+end;
+
+initialization
+  NCPaint := @ThemedNCPaint;
  
 end.
 

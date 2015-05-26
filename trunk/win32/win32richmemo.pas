@@ -167,7 +167,7 @@ const
   POINTS_INCH     = 72;
   TWIP_INCH       = POINTS_INCH * TWIP_PT;
 
-  TAB_LEFT      = 0;  // Ordinary tab
+  {%H-}TAB_LEFT      = 0;  // Ordinary tab
   TAB_CENTER    = 1;  // Center tab
   TAB_RIGHT     = 2;  // Right-aligned tab
   TAB_DECIMAL   = 3;  // Decimal tab

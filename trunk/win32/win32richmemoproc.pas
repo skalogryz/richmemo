@@ -819,7 +819,7 @@ class procedure TRichEditManager.GetParaRange(RichEditWnd: Handle; TextStart: in
   var para: TParaRange);
 var
   line: Integer;
-  txtlen: Integer;
+  //txtlen: Integer;
   st: Integer;
   ln: Integer;
   toend: Integer;
@@ -828,7 +828,7 @@ var
   rng : TTEXTRANGEA;
   res : Integer;
 begin
-  txtlen:=GetTextLength(RichEditWnd);
+  //txtlen:=GetTextLength(RichEditWnd);
   // lines are NOT paragraphs, but wordwrapped lines
   line:=SendMessage(RichEditWnd, EM_EXLINEFROMCHAR, 0, TextStart);
   st:=SendMessage(RichEditWnd, EM_LINEINDEX, line, 0);

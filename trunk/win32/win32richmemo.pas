@@ -1285,8 +1285,6 @@ end;
 
 // The function doesn't use Windows 7 (Vista?) animations. And should.
 function ThemedNCPaint(AWindow: Windows.HANDLE; RichMemo: TCustomRichMemo; WParam: WParam; LParam: LParam; var Handled: Boolean): LResult;
-var
-  hdc : Windows.HDC;
 begin
   // When theming is enabled, and the component should have a border around it,
   // let the theme manager handle it

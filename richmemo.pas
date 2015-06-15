@@ -149,6 +149,7 @@ type
 
   TTextUIParam = record
     features : TTextUIFeatures;
+    linkref  : String;
   end;
 
 type
@@ -235,7 +236,7 @@ type
     procedure SetRangeParaParams(TextStart, TextLength: Integer; ModifyMask: TParaModifyMask;
       const ParaMetric: TParaMetric);
 
-    procedure SetLink(TextStart, TextLength: Integer; AIsLink: Boolean); virtual;
+    procedure SetLink(TextStart, TextLength: Integer; AIsLink: Boolean; const ALinkRef: String = ''); virtual;
     function isLink(TextStart: Integer): Boolean; virtual;
 
     function LoadRichText(Source: TStream): Boolean; virtual;
@@ -895,14 +896,17 @@ begin
   until TextLength<=0;
 end;
 
-procedure TCustomRichMemo.SetLink(TextStart, TextLength: Integer; AIsLink: Boolean);
+procedure TCustomRichMemo.SetLink(TextStart, TextLength: Integer; AIsLink: Boolean; const ALinkRef: String);
 var
   ui : TTextUIParam;
 begin
   if HandleAllocated then begin
     TWSCustomRichMemoClass(WidgetSetClass).GetTextUIParams(Self, TextStart, ui);
-    if AIsLink then Include(ui.features, uiLink)
-    else Exclude(ui.features, uiLink);
+    if AIsLink then begin
+      Include(ui.features, uiLink);
+      ui.linkref:=ALinkRef;
+    end else
+      Exclude(ui.features, uiLink);
     TWSCustomRichMemoClass(WidgetSetClass).SetTextUIParams(Self, TextStart, TextLength, ui);
   end;
 end;

@@ -202,11 +202,16 @@ const
   CP_UNICODE   = 1200;
   HardBreak    = #13;
 
-const
   CFE_PROTECTED = $00000010;
   CFE_LINK      = $00000020;
   CFM_BACKCOLOR = $04000000;
   CFE_AUTOBACKCOLOR = CFM_BACKCOLOR;
+
+  ST_DEFAULT   = $00000000;
+  ST_KEEPUNDO  = $00000001;
+  ST_SELECTION = $00000002;
+  ST_NEWCHARS  = $00000004;
+  ST_UNICODE   = $00000008;
 
 const
   PFNS_PAREN      = $0000;
@@ -222,6 +227,11 @@ const
   CFM_RICHMEMO_ATTRS = CFM_COLOR or CFM_FACE or CFM_SIZE or CFM_EFFECTS
                        or CFM_SUBSCRIPT or CFM_SUBSCRIPT or CFM_BACKCOLOR;
 
+type
+  TSetTextEx = packed record
+    flags    : DWORD;
+    codepage : UINT;
+  end;
 
 implementation
 
@@ -432,6 +442,10 @@ class procedure TRichEditManager.SetTextUIStyle(RichEditWnd: Handle; const ui: T
 var
   w   : WPARAM;
   fmt : TCHARFORMAT2;
+{  st  : TSetTextEx;
+  linkrtf : String;
+  txt     : WideString;
+  txtrtf  : String;}
 begin
   if RichEditWnd = 0 then Exit;
 
@@ -441,6 +455,15 @@ begin
   fmt.cbSize := sizeof(fmt);
 
   fmt.dwMask := CFM_LINK;
+(*    txt := GetTextW(RichEditWnd, true);
+    st.codepage:=CP_ACP;
+    st.flags:=ST_SELECTION;
+    txtrtf:=txt;
+    writeln('txtrtf = ', txtrtf);
+    linkrtf:=Format('{\rtf1{\field{\*\fldinst{ HYPERLINK "%s"}}{\fldrslt{%s}}}}',
+      [ui.linkref, txtrtf]);
+    SendMessage(RichEditWnd, EM_SETTEXTEX, WPARAM(@st), LParam(@linkrtf[1])); *)
+
   if uiLink in ui.features then fmt.dwEffects := fmt.dwEffects or CFE_LINK;
 
   SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt));

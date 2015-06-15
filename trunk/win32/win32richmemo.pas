@@ -1291,6 +1291,7 @@ begin
   Handled:=(GetWindowLong(AWindow, GWL_EXSTYLE) and WS_EX_CLIENTEDGE <> 0) and (ThemeServices.ThemesEnabled);
   if Handled then begin
     // Paint into this DC
+    WindowProc(AWindow, WM_NCPAINT, WParam, LParam);
     ThemeServices.PaintBorder(RichMemo, True);
     Result := 0;
   end;

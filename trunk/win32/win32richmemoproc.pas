@@ -164,7 +164,8 @@ type
 
     class function GetTextLength(RichEditWnd: Handle): Integer;
     class function SetDefaultTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
-    class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams): Boolean; virtual;
+    class function SetSelectedTextStyle(RichEditWnd: Handle; Params: TIntFontParams;
+      useMask: Boolean = false; AModifyMask: TTextModifyMask = []): Boolean; virtual;
     class function GetSelectedTextStyle(RichEditWnd: Handle; var Params: TIntFontParams): Boolean; virtual;
     class procedure SetTextUIStyle(RichEditWnd: Handle; const ui: TTextUIParam); virtual;
     class function GetTextUIStyle(RichEditWnd: Handle; var ui: TTextUIParam): Boolean; virtual;
@@ -377,7 +378,7 @@ begin
 end;
 
 class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle; 
-  Params: TIntFontParams): Boolean;
+  Params: TIntFontParams; useMask: Boolean; AModifyMask: TTextModifyMask): Boolean;
 var
   w : WPARAM;
   fmt : TCHARFORMAT2;
@@ -391,26 +392,36 @@ begin
     
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
-  
-  fmt.dwMask := fmt.dwMask or CFM_COLOR;
-  fmt.crTextColor := Params.Color;
 
-  fmt.dwMask := fmt.dwMask or CFM_FACE;
-  // keep last char for Null-termination?
-  CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1); 
-  
-  fmt.dwMask := fmt.dwMask or CFM_SIZE;
-  fmt.yHeight := Params.Size * TwipsInFontSize;
-  
-  fmt.dwMask := fmt.dwMask or CFM_EFFECTS or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
-  fmt.dwEffects := FontStylesToEffects(Params.Style) or VScriptPosToEffects(Params.VScriptPos);
+  if not useMask or (tmm_Color in AModifyMask) then begin
+    fmt.dwMask := fmt.dwMask or CFM_COLOR;
+    fmt.crTextColor := Params.Color;
+  end;
 
-  if Params.HasBkClr then begin
-    fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
-    fmt.crBackColor := Params.BkColor;
-  end else begin
-    fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
-    fmt.dwEffects := fmt.dwEffects or CFE_AUTOBACKCOLOR;
+  if not useMask or (tmm_Name in AModifyMask) then begin
+    fmt.dwMask := fmt.dwMask or CFM_FACE;
+    // keep last char for Null-termination?
+    CopyStringToCharArray(Params.Name, fmt.szFaceName, LF_FACESIZE-1);
+  end;
+
+  if not useMask or (tmm_Size in AModifyMask) then begin
+    fmt.dwMask := fmt.dwMask or CFM_SIZE;
+    fmt.yHeight := Params.Size * TwipsInFontSize;
+  end;
+
+  if not useMask or (tmm_Styles in AModifyMask) then begin
+    fmt.dwMask := fmt.dwMask or CFM_EFFECTS or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
+    fmt.dwEffects := FontStylesToEffects(Params.Style) or VScriptPosToEffects(Params.VScriptPos);
+  end;
+
+  if not useMask or (tmm_BackColor in AModifyMask) then begin
+    if Params.HasBkClr then begin
+      fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
+      fmt.crBackColor := Params.BkColor;
+    end else begin
+      fmt.dwMask := fmt.dwMask or CFM_BACKCOLOR;
+      fmt.dwEffects := fmt.dwEffects or CFE_AUTOBACKCOLOR;
+    end;
   end;
 
   Result := SendMessage(RichEditWnd, EM_SETCHARFORMAT, w, PtrInt(@fmt))>0;

@@ -850,6 +850,16 @@ begin
 
   if (ModifyMask = []) or (TextLength = 0) then Exit;
 
+  if TWSCustomRichMemoClass(WidgetSetClass).isInternalChange(Self, ModifyMask) then
+  begin
+    // more effecient from OS view
+    TWSCustomRichMemoClass(WidgetSetClass).SetTextAttributesInternal(Self,
+      TextStart, TextLength, ModifyMask, fnt);
+    Exit;
+  end;
+
+  // manually looping from text ranges and re-applying
+  // all the style. changing only the ones that in the mask
   i := TextStart;
   j := TextStart + TextLength;
   while i < j do begin

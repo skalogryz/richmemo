@@ -72,6 +72,11 @@ type
     class function CreateHandle(const AWinControl: TWinControl; const AParams: TCreateParams): HWND; override;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; override;
+
+    class function isInternalChange(const AWinControl: TWinControl; Params: TTextModifyMask): Boolean; override;
+    class procedure SetTextAttributesInternal(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AModifyMask: TTextModifyMask; const Params: TIntFontParams); override;
+
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const Params: TIntFontParams); override;
     class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;      
@@ -581,6 +586,37 @@ begin
   end;
 
   RichEditManager.SetEventMask(AWinControl.Handle,eventmask);
+end;
+
+class function TWin32WSCustomRichMemo.isInternalChange(
+  const AWinControl: TWinControl; Params: TTextModifyMask): Boolean;
+begin
+  Result:=True;
+end;
+
+class procedure TWin32WSCustomRichMemo.SetTextAttributesInternal(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AModifyMask: TTextModifyMask; const Params: TIntFontParams);
+var
+  OrigStart : Integer;
+  OrigLen   : Integer;
+  eventmask : longword;
+  NeedLock  : Boolean;
+begin
+  eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
+
+  NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
+  if NeedLock then begin
+    LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+    RichEditManager.SetSelection(AWinControl.Handle, TextStart, TextLen);
+    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params, True, AModifyMask);
+    RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+    UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+  end else
+    RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params, True, AModifyMask);
+
+  RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 end;
 
 

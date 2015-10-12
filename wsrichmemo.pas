@@ -59,6 +59,11 @@ type
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; virtual;
+
+    class function isInternalChange(const AWinControl: TWinControl; Params: TTextModifyMask): Boolean; virtual;
+    class procedure SetTextAttributesInternal(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const AModifyMask: TTextModifyMask; const Params: TIntFontParams); virtual;
+
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer; 
       const Params: TIntFontParams); virtual;
     class function GetParaAlignment(const AWinControl: TWinControl; TextStart: Integer;
@@ -155,9 +160,22 @@ begin
   Result := false;
 end;
 
+class function TWSCustomRichMemo.isInternalChange(
+  const AWinControl: TWinControl; Params: TTextModifyMask): Boolean;
+begin
+  Result:=false;
+end;
+
+class procedure TWSCustomRichMemo.SetTextAttributesInternal(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const AModifyMask: TTextModifyMask; const Params: TIntFontParams);
+begin
+
+end;
+
 class procedure TWSCustomRichMemo.SetTextAttributes(const AWinControl: TWinControl; 
   TextStart, TextLen: Integer;  
-  {Mask: TTextStyleMask;} const Params: TIntFontParams);
+  const Params: TIntFontParams);
 begin
 end;
 

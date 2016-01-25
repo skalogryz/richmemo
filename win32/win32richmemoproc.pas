@@ -238,6 +238,7 @@ implementation
 
 const
   GlobalRichClass : AnsiString = '';
+  UnicodeEnabledOS : Boolean = true; // todo: implement it to work with Windows 9x, if necessary
   
 const
   TwipsInFontSize = 20; // see MSDN for CHARFORMAT Structure CFM_SIZE

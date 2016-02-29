@@ -845,16 +845,24 @@ var
   j : Integer;
   l : Integer;
   p : TFontParams;
+  allowInternalChange: Boolean;
+  fp : TFontParams;
+const
+  AllFontStyles : TFontStyles = [fsBold, fsItalic, fsUnderline, fsStrikeOut];
 begin
   if not HandleAllocated then HandleNeeded;
 
   if (ModifyMask = []) or (TextLength = 0) then Exit;
 
-  if TWSCustomRichMemoClass(WidgetSetClass).isInternalChange(Self, ModifyMask) then
+  allowInternalChange:=(not (tmm_Styles in ModifyMask)) or (AddFontStyle+RemoveFontStyle=AllFontStyles);
+
+  if allowInternalChange and (TWSCustomRichMemoClass(WidgetSetClass).isInternalChange(Self, ModifyMask)) then
   begin
     // more effecient from OS view
+    fp:=fnt;
+    if tmm_Styles in ModifyMask then  fp.Style:=AddFontStyle;
     TWSCustomRichMemoClass(WidgetSetClass).SetTextAttributesInternal(Self,
-      TextStart, TextLength, ModifyMask, fnt);
+      TextStart, TextLength, ModifyMask, fp);
     Exit;
   end;
 

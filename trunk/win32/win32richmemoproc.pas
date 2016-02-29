@@ -383,6 +383,8 @@ class function TRichEditManager.SetSelectedTextStyle(RichEditWnd: Handle;
 var
   w : WPARAM;
   fmt : TCHARFORMAT2;
+const
+  CFM_STYLESONLY = CFM_BOLD or CFM_ITALIC or CFM_UNDERLINE or CFM_STRIKEOUT or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
 begin
   if RichEditWnd = 0 then begin
     Result := false;
@@ -411,7 +413,7 @@ begin
   end;
 
   if not useMask or (tmm_Styles in AModifyMask) then begin
-    fmt.dwMask := fmt.dwMask or CFM_EFFECTS or CFM_SUBSCRIPT or CFM_SUPERSCRIPT;
+    fmt.dwMask := fmt.dwMask or CFM_STYLESONLY;
     fmt.dwEffects := FontStylesToEffects(Params.Style) or VScriptPosToEffects(Params.VScriptPos);
   end;
 

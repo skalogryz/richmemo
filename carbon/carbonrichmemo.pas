@@ -82,6 +82,10 @@ type
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function LoadRichText(const AWinControl: TWinControl; Src: TStream): Boolean; override;
     class function SaveRichText(const AWinControl: TWinControl; Dst: TStream): Boolean; override;
+
+    {$ifdef RMCARBONSELSTART}
+    class procedure SetSelStart(const ACustomEdit: TCustomEdit; NewStart: integer); override;
+    {$endif}
   end;
 
 implementation
@@ -442,6 +446,19 @@ begin
     CFRelease(data);
   end;
 end;
+{$ifdef RMCARBONSELSTART}
+class procedure TCarbonWSCustomRichMemo.SetSelStart(
+  const ACustomEdit: TCustomEdit; NewStart: integer);
+var
+  edit : TCarbonRichEdit;
+begin
+  edit := GetValidRichEdit(ACustomEdit);
+  if Assigned(edit) then begin
+    edit.SetSelStart(NewStart);
+    TXNShowSelection( HITextViewGetTXNObject(  edit.Widget ), false);
+  end;
+end;
+{$ENDIF}
 
 { TCarbonRichEdit }
 

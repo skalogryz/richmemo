@@ -20,6 +20,7 @@
 unit RichMemo; 
 
 {$mode objfpc}{$H+}
+{$OBJECTCHECKS OFF}
 
 interface
 

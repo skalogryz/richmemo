@@ -20,6 +20,7 @@
 unit Win32RichMemo;
 
 {$mode objfpc}{$H+}
+{$OBJECTCHECKS OFF}
 
 interface
 

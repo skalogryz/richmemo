@@ -40,6 +40,7 @@ uses
 const
   TagNameNumeric = 'numeric';
   TagNameSubOrSuper = 'suborsuper';
+  TagNameLink       = 'link';
   BulletChar     = #$E2#$80#$A2;
   TabChar        = #$09;
 
@@ -90,6 +91,12 @@ type
       var AStopList: TTabStopList): Boolean; override;
 
     class function GetParaRange(const AWinControl: TWinControl; TextStart: Integer; var rng: TParaRange): Boolean; override;
+
+    class procedure SetTextUIParams(const AWinControl: TWinControl; TextStart, TextLen: Integer;
+      const ui: TTextUIParam); override;
+    class function GetTextUIParams(const AWinControl: TWinControl; TextStart: Integer;
+      var ui: TTextUIParam): Boolean; override;
+
     class procedure InDelText(const AWinControl: TWinControl; const TextUTF8: String; DstStart, DstLen: Integer); override;
     class function CharAtPos(const AWinControl: TWinControl; x,y: Integer): Integer; override;
 
@@ -628,6 +635,9 @@ var
   WidgetInfo: PWidgetInfo;
   buffer: PGtkTextBuffer;
   SS:TPoint;
+  gcolor  : TGdkColor;
+const
+  pu: array [Boolean] of gint = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
 begin
   Widget := gtk_scrolled_window_new(nil, nil);
   Result := TLCLIntfHandle(PtrUInt(Widget));
@@ -673,6 +683,13 @@ begin
       nil]);
 
   gtk_text_buffer_create_tag (buffer, TagNameSubOrSuper, nil);
+
+  gcolor := TColortoTGDKColor(clBlue);
+  gtk_text_buffer_create_tag (buffer, TagNameLink, 'foreground-gdk', [@gcolor,
+      'foreground-set', gboolean(gTRUE),
+      'underline-set',  gboolean(gTRUE),
+      'underline',      gint(pu[true]),
+      nil] );
 
   Set_RC_Name(AWinControl, Widget);
   SetCallbacks(Widget, WidgetInfo);
@@ -1186,6 +1203,33 @@ begin
   gtk_text_iter_forward_char(@iend);
   rng.length:=gtk_text_iter_get_offset(@iend)-rng.start;
   Result:=true;
+end;
+
+class procedure TGtk2WSCustomRichMemo.SetTextUIParams(
+  const AWinControl: TWinControl; TextStart, TextLen: Integer;
+  const ui: TTextUIParam);
+var
+  TextWidget: PGtkWidget;
+  buffer  : PGtkTextBuffer;
+  tag     : Pointer;
+  istart : TGtkTextIter;
+  iend   : TGtkTextIter;
+begin
+  GetWidgetBuffer(AWinControl, TextWidget, buffer);
+  if not Assigned(buffer) then Exit;
+
+  if uiLink in ui.features then begin
+    gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
+    gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
+    gtk_text_buffer_apply_tag_by_name(buffer, TagNameLink, @istart, @iend);
+  end;
+end;
+
+class function TGtk2WSCustomRichMemo.GetTextUIParams(
+  const AWinControl: TWinControl; TextStart: Integer; var ui: TTextUIParam
+  ): Boolean;
+begin
+  //Result:=inherited GetTextUIParams(AWinControl, TextStart, ui);
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;

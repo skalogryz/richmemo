@@ -163,6 +163,19 @@ const
 
 implementation
 
+type
+  TRichMemoData = record
+    link    : Boolean;
+    link_li : integer;
+    link_le : integer;
+    link_act: TGdkEventType;
+    link_btn: guint;
+  end;
+  PRichMemoData = ^TRichMemoData;
+
+var
+  linkCursor: PGdkCursor = nil;// gdk_cursor_new(GDK_DRAFT_LARGE)
+
 // todo: why "shr" on each of this flag test?
 function gtktextattr_underline(const a : TGtkTextAppearance) : Boolean;
 begin
@@ -382,6 +395,109 @@ begin
   Result:=false;
 end;
 
+
+function Gtk2_RichMemoMotion(view: PGtkTextView; Event: PGdkEventKey;
+  WidgetInfo: PWidgetInfo): gboolean; cdecl;
+var
+  mt : PGdkEventMotion;
+  i  : TGtkTextIter;
+  tag : PGtkTextTag;
+  buf : PGtkTextBuffer;
+  w   : PGdkWindow;
+  bx,by: gint;
+begin
+  buf:=gtk_text_view_get_buffer(view);
+  if not Assigned(buf) then Exit;
+
+  tag := gtk_text_tag_table_lookup(
+           gtk_text_buffer_get_tag_table(buf), TagNameLink);
+  if not Assigned(tag) then Exit; // which is odd.
+
+  mt:=PGdkEventMotion(Event);
+  gtk_text_view_window_to_buffer_coords(view, GTK_TEXT_WINDOW_TEXT,
+    round(mt^.x), round(mt^.y), @bx, @by);
+
+  gtk_text_view_get_iter_at_location(view, @i, bx,by);
+
+  gdk_cursor_new(GDK_DRAFT_LARGE);
+  w:= gtk_text_view_get_window(view, GTK_TEXT_WINDOW_TEXT);
+  if gtk_text_iter_has_tag(@i,tag) then begin
+
+    if not Assigned(linkCursor) then
+      linkCursor:=gdk_cursor_new(GDK_HAND1);
+    gdk_window_set_cursor(w, linkCursor);
+  end else
+    gdk_window_set_cursor(w, nil);
+
+  Result:=false;
+end;
+
+function Gtk2_RichMemoMouseButton(view: PGtkTextView; Event: PGdkEventKey;
+  WidgetInfo: PWidgetInfo): gboolean; cdecl;
+var
+  mt : PGdkEventButton;
+  i  : TGtkTextIter;
+  tag : PGtkTextTag;
+  buf : PGtkTextBuffer;
+  bx,by: gint;
+  mi  : TLinkMouseInfo;
+  li,le: integer;
+  act : TLinkAction;
+  data : PRichMemoData;
+begin
+  buf:=gtk_text_view_get_buffer(view);
+  data:=PRichMemoData(WidgetInfo^.UserData);
+  if not Assigned(buf) then Exit;
+
+  tag := gtk_text_tag_table_lookup(
+           gtk_text_buffer_get_tag_table(buf), TagNameLink);
+  if not Assigned(tag) then Exit; // which is odd.
+
+  mt:=PGdkEventButton(Event);
+  gtk_text_view_window_to_buffer_coords(view, GTK_TEXT_WINDOW_TEXT,
+    round(mt^.x), round(mt^.y), @bx, @by);
+
+  gtk_text_view_get_iter_at_location(view, @i, bx,by);
+
+  if gtk_text_iter_has_tag(@i,tag) then begin
+    if TControl(WidgetInfo^.LCLObject) is TCustomRichMemo then
+    begin
+      gtk_text_iter_backward_to_tag_toggle(@i, tag);
+      li:=gtk_text_iter_get_offset(@i);
+      gtk_text_iter_forward_to_tag_toggle(@i, tag);
+      le:=gtk_text_iter_get_offset(@i)-li;
+
+      case mt^._type of
+        GDK_BUTTON_PRESS, GDK_2BUTTON_PRESS, GDK_3BUTTON_PRESS: begin
+          data^.link:=true;
+          data^.link_li:=li;
+          data^.link_le:=le;
+          data^.link_act:=mt^._type;
+          data^.link_btn:=mt^.button;
+        end;
+
+        GDK_BUTTON_RELEASE: begin
+          act:=laClick;
+          if (data^.link) and (data^.link_btn=mt^.button) and (data^.link_li=li) and (le=data^.link_le) then
+          begin
+            data^.link:=false;
+            case mt^.button of
+              2: mi.button:=mbMiddle;
+              3: mi.button:=mbRight;
+            else
+              mi.button:=mbLeft;
+            end;
+            TCustomRichMemoInt(WidgetInfo^.LCLObject).DoLinkAction(act, mi, li, le);
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  Result:=false;
+end;
+
+
 { TGtk2InlineObject }
 
 constructor TGtk2InlineObject.Create;
@@ -562,6 +678,9 @@ begin
   SignalConnectAfter(PGtkWidget(TextBuf), 'mark-set', @Gtk2WS_MemoSelChanged, AWidgetInfo);
   SignalConnectAfter(PGtkWidget(TextBuf), 'insert-text', @Gtk2WS_RichMemoInsert, AWidgetInfo);
   SignalConnect(PGtkWidget(view), 'key-press-event',  @Gtk2_RichMemoKeyPress, AWidgetInfo);
+  SignalConnect(PGtkWidget(view), 'motion-notify-event', @Gtk2_RichMemoMotion, AWidgetInfo);
+  SignalConnect(PGtkWidget(view), 'button-press-event', @Gtk2_RichMemoMouseButton, AWidgetInfo);
+  SignalConnect(PGtkWidget(view), 'button-release-event', @Gtk2_RichMemoMouseButton, AWidgetInfo);
 end;
 
 class procedure TGtk2WSCustomRichMemo.GetWidgetBuffer(const AWinControl: TWinControl;
@@ -636,6 +755,7 @@ var
   buffer: PGtkTextBuffer;
   SS:TPoint;
   gcolor  : TGdkColor;
+  data: PRichMemoData;
 const
   pu: array [Boolean] of gint = (PANGO_UNDERLINE_NONE, PANGO_UNDERLINE_SINGLE);
 begin
@@ -646,7 +766,11 @@ begin
   DebugGtkWidgets.MarkCreated(Widget,dbgsName(AWinControl));
   {$ENDIF}
 
+  New(data);
+  FillChar(data^, sizeof(TRichMemoData), 0);
   WidgetInfo := CreateWidgetInfo(Pointer(Result), AWinControl, AParams);
+  WidgetInfo^.DataOwner := True;
+  WidgetInfo^.UserData := data;
 
   TempWidget := gtk_text_view_new();
   gtk_container_add(PGtkContainer(Widget), TempWidget);
@@ -1218,18 +1342,39 @@ begin
   GetWidgetBuffer(AWinControl, TextWidget, buffer);
   if not Assigned(buffer) then Exit;
 
+  gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
+  gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
   if uiLink in ui.features then begin
-    gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
-    gtk_text_buffer_get_iter_at_offset (buffer, @iend, TextStart+TextLen);
     gtk_text_buffer_apply_tag_by_name(buffer, TagNameLink, @istart, @iend);
+  end else begin
+    tag := gtk_text_tag_table_lookup(
+         gtk_text_buffer_get_tag_table(buffer), TagNameLink);
+    if Assigned(tag) then
+      gtk_text_buffer_remove_tag(buffer, tag, @istart, @iend);
   end;
 end;
 
 class function TGtk2WSCustomRichMemo.GetTextUIParams(
-  const AWinControl: TWinControl; TextStart: Integer; var ui: TTextUIParam
-  ): Boolean;
+  const AWinControl: TWinControl; TextStart: Integer;
+  var ui: TTextUIParam): Boolean;
+var
+  TextWidget: PGtkWidget;
+  buffer  : PGtkTextBuffer;
+  tag     : PGtkTextTag;
+  istart : TGtkTextIter;
 begin
-  //Result:=inherited GetTextUIParams(AWinControl, TextStart, ui);
+  ui.features:=[];
+  GetWidgetBuffer(AWinControl, TextWidget, buffer);
+  Result:=Assigned(buffer);
+  if not Result then Exit;
+
+  tag := gtk_text_tag_table_lookup(
+           gtk_text_buffer_get_tag_table(buffer), TagNameLink);
+  if Assigned(tag) then begin // which is odd.
+    gtk_text_buffer_get_iter_at_offset (buffer, @istart, TextStart);
+    if gtk_text_iter_has_tag(@istart, tag) then
+      Include(ui.features, uiLink);
+  end;
 end;
 
 class procedure TGtk2WSCustomRichMemo.InDelText(const AWinControl: TWinControl;

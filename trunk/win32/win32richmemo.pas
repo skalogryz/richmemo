@@ -80,7 +80,9 @@ type
 
     class procedure SetTextAttributes(const AWinControl: TWinControl; TextStart, TextLen: Integer;
       const Params: TIntFontParams); override;
-    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;      
+    class procedure SetHideSelection(const ACustomEdit: TCustomEdit; AHideSelection: Boolean); override;
+    class procedure SetMaxLength(const ACustomEdit: TCustomEdit; NewLength: integer); override;
+
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; override;
 
     class procedure SetTextUIParams(const AWinControl: TWinControl; TextStart, TextLen: Integer;
@@ -524,8 +526,12 @@ begin
   eventmask := eventmask or ENM_SELCHANGE or ENM_LINK;
   SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
 
+  // Limitless text. However, the value would be overwritten by a consequent
+  // SetMaxLength call, see above.
+  SendMessage(AWincontrol.Handle, EM_EXLIMITTEXT, 0, LParam(-1));
+
   // memo is not a transparent control -> no need for parentpainting
-  PArams.WindowInfo^.ParentMsgHandler := @RichEditNotifyProc;
+  Params.WindowInfo^.ParentMsgHandler := @RichEditNotifyProc;
   Params.WindowInfo^.needParentPaint := false;
   Result := Params.Window;
 end;
@@ -626,6 +632,22 @@ class procedure TWin32WSCustomRichMemo.SetHideSelection(
 begin
   if not Assigned(RichEditManager) or not Assigned(ACustomEdit) then Exit;
   RichEditManager.SetHideSelection(ACustomEdit.Handle, AHideSelection);
+end;
+
+class procedure TWin32WSCustomRichMemo.SetMaxLength(
+  const ACustomEdit: TCustomEdit; NewLength: integer);
+var
+  winhandle: HWND;
+  relen : Integer;
+begin
+  winhandle := ACustomEdit.Handle;
+  // By default NewLength=0. For RichEdit that means 64K or 32K limitation.
+  // Which makes no sense and isn't cross platform!
+  // RichMemo assumes NewLength=0 as limitless
+  if NewLength=0 then relen:=-1 // limitless
+  else relen:=NewLength;
+  SendMessage(winhandle, EM_EXLIMITTEXT, 0, LParam(relen));
+  GetWin32WindowInfo(winhandle)^.MaxLength := NewLength;
 end;
 
 procedure InitScrollInfo(var info: TScrollInfo);

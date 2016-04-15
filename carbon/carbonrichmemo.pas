@@ -30,7 +30,7 @@ uses
 
   Controls, Graphics, StdCtrls,
 
-  WSRichMemo,
+  RichMemo, WSRichMemo,
 
   CarbonDef, CarbonUtils,
   CarbonProc, CarbonEdits;
@@ -263,8 +263,13 @@ end;
 
 class function TCarbonWSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;
   const AParams: TCreateParams): HWND;
+var
+  RE: TCarbonRichEdit;
 begin
-  Result := TLCLIntfHandle(TCarbonRichEdit.Create(AWinControl, AParams));
+  RE:=TCarbonRichEdit.Create(AWinControl, AParams);
+  Result := TLCLIntfHandle(RE);
+  Re.SetWordWrap(TCustomRichMemo(AWinControl).WordWrap);
+  Re.SetBorderVisible(TCustomRichMemo(AWinControl).BorderStyle=bsSingle);
 end;
 
 class function TCarbonWSCustomRichMemo.GetStyleRange(const AWinControl: TWinControl;

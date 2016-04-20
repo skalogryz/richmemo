@@ -524,6 +524,30 @@ begin
   CGContextFillRect(aContext, r);
 end;
 
+type
+  TIntCustomRichMemo = class(TCustomRichMemo);
+
+function CarbonRichEdit_ChangeSel(ANextHandler: EventHandlerCallRef;
+  AEvent: EventRef;
+  AWidget: TCarbonWidget): OSStatus; {$IFDEF darwin}mwpascal;{$ENDIF}
+var
+  sofs, eofs: TXNOffset;
+  sofs2, eofs2: TXNOffset;
+begin
+  // selection before
+  TXNGetSelection( HITextViewGetTXNObject(AWidget.Widget), sofs, eofs);
+
+  Result := CallNextEventHandler(ANextHandler, AEvent);
+
+  // selection after
+  TXNGetSelection( HITextViewGetTXNObject(AWidget.Widget), sofs2, eofs2);
+  // seems like something has changed!
+
+  // Sorry, for the direct access!
+  if (sofs<>sofs2) or (eofs<>eofs2) then
+    TIntCustomRichMemo( AWidget.LCLObject ).DoSelectionChange;
+end;
+
 function CarbonRichEdit_Draw(ANextHandler: EventHandlerCallRef;
   AEvent: EventRef;
   AWidget: TCarbonWidget): OSStatus; {$IFDEF darwin}mwpascal;{$ENDIF}
@@ -542,6 +566,7 @@ end;
 procedure TCarbonRichEdit.RegisterEvents;
 var
   TmpSpec: EventTypeSpec;
+  TmpSpecArr: array [0..2] of EventTypeSpec;
 begin
   inherited RegisterEvents;
 
@@ -552,6 +577,15 @@ begin
       RegisterEventHandler(@CarbonRichEdit_Draw),
       1, @TmpSpec, Pointer(Self), nil);
   end;
+
+  // It's unclear, if there's a better way for tracking change of selection
+  TmpSpecArr[0]:=MakeEventSpec(kEventClassKeyboard, kEventRawKeyRepeat); // by keyboard
+  TmpSpecArr[1]:=MakeEventSpec(kEventClassKeyboard, kEventRawKeyDown);
+  TmpSpecArr[2]:=MakeEventSpec(kEventClassControl, kEventControlTrack);  // by mouse
+
+  InstallControlEventHandler(Widget,
+    RegisterEventHandler(@CarbonRichEdit_ChangeSel),
+    3, @TmpSpecArr, Pointer(Self), nil);
 
   target :=HIViewGetEventTarget(Widget);
 end;

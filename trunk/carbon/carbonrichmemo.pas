@@ -90,6 +90,9 @@ type
 
 implementation
 
+type
+  TIntCustomRichMemo = class(TCustomRichMemo);
+
 // Notes:
 
 // http://developer.apple.com/DOCUMENTATION/Carbon/Reference/Multilingual_Text_Engine/Reference/reference.html
@@ -456,11 +459,14 @@ class procedure TCarbonWSCustomRichMemo.SetSelStart(
   const ACustomEdit: TCustomEdit; NewStart: integer);
 var
   edit : TCarbonRichEdit;
+  sl   : Integer;
 begin
   edit := GetValidRichEdit(ACustomEdit);
   if Assigned(edit) then begin
     edit.SetSelStart(NewStart);
     TXNShowSelection( HITextViewGetTXNObject(  edit.Widget ), false);
+
+    TIntCustomRichMemo(ACustomEdit).DoSelectionChange;
   end;
 end;
 {$ENDIF}
@@ -523,9 +529,6 @@ begin
   CGContextSetRGBFillColor(aContext, 1,1,1,1);
   CGContextFillRect(aContext, r);
 end;
-
-type
-  TIntCustomRichMemo = class(TCustomRichMemo);
 
 function CarbonRichEdit_ChangeSel(ANextHandler: EventHandlerCallRef;
   AEvent: EventRef;

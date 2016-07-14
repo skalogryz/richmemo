@@ -5,7 +5,7 @@ interface
 {$mode objfpc}{$h+}
 
 uses
-  Classes, SysUtils, LCLProc, LCLIntf, LConvEncoding, Graphics,
+  Classes, SysUtils, LCLProc, LCLIntf, LConvEncoding, LazUTF8, Graphics,
   RichMemo, RTFParsPre211;
 
 function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream): Boolean;

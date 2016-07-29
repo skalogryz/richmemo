@@ -164,6 +164,8 @@ var
   // the value can be set to nil to use system-native drawing only.
   // or set it to whatever function desired
   NCPaint : TNCPaintProc = nil;
+
+function GetSelRTF(amemo: TCustomRichMemo): string;
   
 implementation
 
@@ -567,30 +569,22 @@ class function TWin32WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinC
 var
   OrigStart : Integer;
   OrigLen   : Integer;
-  NeedLock  : Boolean;  
   eventmask : LongWord;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
-
+  InitFontParams(Params);
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
   
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
-  
-  NeedLock := (OrigStart <> TextStart);
-  if NeedLock then begin
-    LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
-    RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
-    Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
-    RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-    UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
-  end else begin
-    LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
-    Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params);
-    UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
-  end;
+
+  LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
+  RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
+  Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
+  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+  UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
 
   RichEditManager.SetEventMask(AWinControl.Handle,eventmask);
 end;
@@ -718,7 +712,6 @@ class function TWin32WSCustomRichMemo.GetTextUIParams(const AWinControl: TWinCon
 var
   OrigStart : Integer;
   OrigLen   : Integer;
-  NeedLock  : Boolean;
   eventmask : Integer;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
@@ -729,15 +722,11 @@ begin
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
 
-  NeedLock := (OrigStart <> TextStart);
-  if NeedLock then begin
-    LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
-    RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
-    RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
-    RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
-    UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
-  end else
-    RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
+  LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+  RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
+  RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
+  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+  UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
 
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
   Result:=true;
@@ -1354,6 +1343,54 @@ begin
     ThemeServices.PaintBorder(RichMemo, True);
     Result := 0;
   end;
+end;
+
+
+
+type
+  TStreamText = record
+    buf : AnsiString;
+  end;
+  PStreamText = ^TStreamText;
+
+function Read(dwCookie:PDWORD; pbBuff:LPBYTE; cb:LONG; var pcb:LONG):DWORD; stdcall;
+var
+  p : PStreamText;
+  b : string;
+  i : integer;
+begin
+  b:=PStreamText(dwCookie)^.buf;
+  i:=length(b);
+  SetLength(b, length(b)+cb);
+  Move(pbBuff^, b[i+1], cb);
+  pcb:=cb;
+  PStreamText(dwCookie)^.buf:=b;
+  Result:=0;
+end;
+
+type
+  _editstream = record
+     dwCookie : PTRUINT;
+     dwError : DWORD;
+     pfnCallback : EDITSTREAMCALLBACK;
+  end;
+
+function GetSelRTF(amemo: TCustomRichMemo): string;
+var
+  str : _EDITSTREAM;
+  tt  : TStreamText;
+begin
+  if not Assigned(amemo) or (not amemo.HandleAllocated) then begin
+    Result:='';
+    Exit;
+  end;
+
+  FillChar(str, sizeof(str),0);
+  str.dwCookie:=PtrUInt(@tt);
+  str.pfnCallback:=@Read;
+
+  SendMessage( amemo.Handle, EM_STREAMOUT, SF_RTFNOOBJS or SFF_PLAINRTF or SFF_SELECTION,  LParam(@str));
+  Result:=tt.buf;
 end;
 
 initialization

@@ -521,10 +521,9 @@ var
   sel     : TCHARRANGE;
   d       : Integer;
   last    : Integer;
-
+  initMask : DWORD;
 const
   ALL_MASK = CFM_RICHMEMO_ATTRS;
-
 begin
   Result := false;
   if (RichEditWnd = 0) then Exit;
@@ -538,33 +537,47 @@ begin
    
   FillChar(fmt, sizeof(fmt), 0);
   fmt.cbSize := sizeof(fmt);
+
+  sel.cpMin := TextStart;
+  sel.cpMax := TextStart;
+  SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
+  SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+  initMask := fmt.dwMask and ALL_MASK;
   
+  FillChar(fmt, sizeof(fmt), 0);
+  fmt.cbSize := sizeof(fmt);
+
   sel.cpMin := TextStart;
   sel.cpMax := len+1;
   SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-  if (fmt.dwMask and ALL_MASK) <> ALL_MASK then begin
+  fmt.dwMask:=fmt.dwMask and ALL_MASK;
+
+  if fmt.dwMask <> initMask then begin
     d := (len - sel.cpMin);
     while d > 1 do begin
       d := d div 2;
-      if (fmt.dwMask and ALL_MASK) = ALL_MASK then
+      if fmt.dwMask = initMask then
         sel.cpMax := sel.cpMax + d        
       else
         sel.cpMax := sel.cpMax - d;
       SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
       SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+      fmt.dwMask:=fmt.dwMask and ALL_MASK;
     end;
-    if (fmt.dwMask and ALL_MASK) = ALL_MASK then begin
-      while (sel.cpMax <= len) and ((fmt.dwMask and ALL_MASK) = ALL_MASK) do begin
+    if fmt.dwMask = initMask then begin
+      while (sel.cpMax <= len) and (fmt.dwMask = initMask) do begin
         inc(sel.cpMax);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+        fmt.dwMask:=fmt.dwMask and ALL_MASK;
       end;
     end else begin
-      while (sel.cpMax > sel.cpMin) and ((fmt.dwMask and ALL_MASK) <> ALL_MASK) do begin
+      while (sel.cpMax > sel.cpMin) and (fmt.dwMask <> initMask) do begin
         dec(sel.cpMax);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+        fmt.dwMask:=fmt.dwMask and ALL_MASK;
       end;
       inc(sel.cpMax);
     end;
@@ -575,29 +588,33 @@ begin
   sel.cpMax := TextStart+1;
   SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
-  if (fmt.dwMask and ALL_MASK) <> ALL_MASK then begin
+  fmt.dwMask:=fmt.dwMask and ALL_MASK;
+  if fmt.dwMask <> initMask then begin
     d := TextStart;
     while d > 1 do begin
       d := d div 2;
-      if (fmt.dwMask and ALL_MASK) = ALL_MASK then
+      if fmt.dwMask = initMask then
         dec(sel.cpMin,d)
       else
         inc(sel.cpMin,d);
       SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
       SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+      fmt.dwMask:=fmt.dwMask and ALL_MASK;
     end;
-    if (fmt.dwMask and ALL_MASK) = ALL_MASK then begin
-      while (sel.cpMin > 0) and ((fmt.dwMask and ALL_MASK) = ALL_MASK) do begin
+    if (fmt.dwMask = initMask) then begin
+      while (sel.cpMin > 0) and (fmt.dwMask = initMask) do begin
         dec(sel.cpMin);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+        fmt.dwMask:=fmt.dwMask and ALL_MASK;
       end;
-      if (fmt.dwMask and ALL_MASK) <> ALL_MASK then inc(sel.cpMin);
+      if (fmt.dwMask = initMask) then inc(sel.cpMin);
     end else begin
-      while (sel.cpMin < TextStart) and ((fmt.dwMask and ALL_MASK) <> ALL_MASK) do begin
+      while (sel.cpMin < TextStart) and (fmt.dwMask <> initMask) do begin
         inc(sel.cpMin);
         SendMessage(RichEditWnd, EM_EXSETSEL, 0, LPARAM(@sel));
         SendMessage(RichEditWnd, EM_GETCHARFORMAT, SCF_SELECTION, PtrInt(@fmt));
+        fmt.dwMask:=fmt.dwMask and ALL_MASK;
       end;
     end;
   end;  

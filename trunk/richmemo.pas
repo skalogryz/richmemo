@@ -867,26 +867,31 @@ begin
     Exit;
   end;
 
-  // manually looping from text ranges and re-applying
-  // all the style. changing only the ones that in the mask
-  i := TextStart;
-  j := TextStart + TextLength;
-  while i < j do begin
-    GetTextAttributes(i, p);
+  Lines.BeginUpdate;
+  try
+    // manually looping from text ranges and re-applying
+    // all the style. changing only the ones that in the mask
+    i := TextStart;
+    j := TextStart + TextLength;
+    while i < j do begin
+      GetTextAttributes(i, p);
 
-    if tmm_Name in ModifyMask   then p.Name := fnt.Name;
-    if tmm_Color in ModifyMask  then p.Color := fnt.Color;
-    if tmm_Size in ModifyMask   then p.Size := fnt.Size;
-    if tmm_Styles in ModifyMask then p.Style := p.Style + AddFontStyle - RemoveFontStyle;
-    if tmm_BackColor in ModifyMask then begin
-      p.HasBkClr:=fnt.HasBkClr;
-      p.BkColor:=fnt.BkColor;
+      if tmm_Name in ModifyMask   then p.Name := fnt.Name;
+      if tmm_Color in ModifyMask  then p.Color := fnt.Color;
+      if tmm_Size in ModifyMask   then p.Size := fnt.Size;
+      if tmm_Styles in ModifyMask then p.Style := p.Style + AddFontStyle - RemoveFontStyle;
+      if tmm_BackColor in ModifyMask then begin
+        p.HasBkClr:=fnt.HasBkClr;
+        p.BkColor:=fnt.BkColor;
+      end;
+      l := GetContStyleLength(i);
+      if i + l > j then l := j - i;
+      if l = 0 then Break;
+      SetTextAttributes(i, l, p);
+      inc(i, l);
     end;
-    l := GetContStyleLength(i);
-    if i + l > j then l := j - i;
-    if l = 0 then Break;
-    SetTextAttributes(i, l, p);
-    inc(i, l);
+  finally
+    Lines.EndUpdate
   end;
 end;
 

@@ -189,7 +189,7 @@ type
   protected
     procedure DoSelectionChange;
     class procedure WSRegisterClass; override;
-    procedure CreateWnd; override;    
+    procedure CreateWnd; override;
     procedure UpdateRichMemo; virtual;
     procedure SetHideSelection(AValue: Boolean);
     function GetContStyleLength(TextStart: Integer): Integer;
@@ -272,6 +272,7 @@ type
     function GetRTF: string; virtual;
     procedure SetRTF(const AValue: string); virtual;
     procedure UpdateRichMemo; override;
+    procedure DestroyHandle; override;
   published
     property Align;
     property Alignment;
@@ -573,6 +574,12 @@ begin
   if fRTF<>'' then SetRTF(fRTF);
 end;
 
+procedure TRichMemo.DestroyHandle;
+begin
+  fRTF:=GetRTF;
+  inherited DestroyHandle;
+end;
+
 { TCustomRichMemo }
 
 procedure TCustomRichMemo.SetHideSelection(AValue: Boolean);
@@ -634,7 +641,7 @@ begin
   UpdateRichMemo;
 end;
 
-procedure TCustomRichMemo.UpdateRichMemo; 
+procedure TCustomRichMemo.UpdateRichMemo;
 begin
   if not HandleAllocated then Exit;
   TWSCustomRichMemoClass(WidgetSetClass).SetHideSelection(Self, fHideSelection);

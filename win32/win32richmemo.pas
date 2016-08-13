@@ -414,10 +414,15 @@ begin
 end;
 
 class procedure TWin32WSCustomRichMemo.SetColor(const AWinControl: TWinControl);  
+var
+  Color: TColor;
 begin
-  // this methos is implemented, because Win32RichMemo doesn't use 
+  // this methos is implemented, because Win32RichMemo doesn't use
   // default LCL WM_PAINT message!
-  SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, ColorToRGB(AWinControl.Color));
+  Color := AWinControl.Color;
+  if Color = clDefault then
+    Color := AWinControl.GetDefaultColor(dctBrush);
+  SendMessage(AWinControl.Handle, EM_SETBKGNDCOLOR, 0, ColorToRGB(Color));
 end;
 
 class procedure TWin32WSCustomRichMemo.SetFont(const AWinControl: TWinControl;

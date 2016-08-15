@@ -181,6 +181,18 @@ const
   );
 
 const
+  ScrollStyleToEditFlags : array [TScrollStyle] of LongWord = (
+      {ssNone}           0
+    , {ssHorizontal}     WS_HSCROLL or ES_DISABLENOSCROLL
+    , {ssVertical}       WS_VSCROLL or ES_DISABLENOSCROLL
+    , {ssBoth}           WS_HSCROLL or WS_HSCROLL or ES_DISABLENOSCROLL
+    , {ssAutoHorizontal} WS_HSCROLL
+    , {ssAutoVertical}   WS_VSCROLL
+    , {ssAutoBoth}       WS_HSCROLL or WS_HSCROLL
+  );
+
+
+const
   TAB_OFFSET_MASK = $7FFFFF;
   TAB_OFFSET_BITS = 24;
   TAB_ALIGN_MASK  = 3;
@@ -507,14 +519,8 @@ begin
     if ACustomMemo.ReadOnly then
       Flags := Flags or ES_READONLY;
     Flags := Flags or AlignmentToEditFlags[ACustomMemo.Alignment];
-    case ACustomMemo.ScrollBars of
-      ssHorizontal, ssAutoHorizontal:
-        Flags := Flags or WS_HSCROLL;
-      ssVertical, ssAutoVertical:
-        Flags := Flags or WS_VSCROLL;
-      ssBoth, ssAutoBoth:
-        Flags := Flags or WS_HSCROLL or WS_VSCROLL;
-    end;
+    Flags := Flags or ScrollStyleToEditFlags[ACustomMemo.ScrollBars];
+
     if ACustomMemo.WordWrap then
       Flags := Flags and not WS_HSCROLL
     else

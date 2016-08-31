@@ -250,7 +250,8 @@ type
 
     procedure SetSelLengthFor(const aselstr: string);
 
-    function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer;
+    function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions): Integer; overload;
+    function Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions; var ATextStart, ATextLength: Integer): Boolean; overload;
 
     function Print(const params: TPrintParams): Integer;
 
@@ -1051,6 +1052,15 @@ end;
 function TCustomRichMemo.Search(const ANiddle: string; Start, Len: Integer;
   const SearchOpt: TSearchOptions): Integer;
 var
+  ln : Integer;
+begin
+  ln := 0;
+  if not Search(ANiddle, Start, Len, SearchOpt, Result, ln) then Result:=-1;
+end;
+
+function TCustomRichMemo.Search(const ANiddle: string; Start, Len: Integer; const SearchOpt: TSearchOptions;
+  var ATextStart, ATextLength: Integer): Boolean; overload;
+var
   so : TIntSearchOpt;
 begin
   if not HandleAllocated then HandleNeeded;
@@ -1058,9 +1068,17 @@ begin
     so.len:=Len;
     so.start:=Start;
     so.options:=SearchOpt;
-    Result:=TWSCustomRichMemoClass(WidgetSetClass).Search(Self, ANiddle, so);
+    if not TWSCustomRichMemoClass(WidgetSetClass).isSearchEx then begin
+      ATextStart:=TWSCustomRichMemoClass(WidgetSetClass).Search(Self, ANiddle, so);
+      // not recommended. The text found coulbe longer than Niddle
+      // depending on the language and search options (to be done)
+      // mostly for Arabi and Hebrew languages
+      ATextLength:=UTF8Length(ANiddle);
+    end else begin
+      Result:=TWSCustomRichMemoClass(WidgetSetClass).SearchEx(Self, ANiddle, so, ATextStart, ATextLength);
+    end;
   end else
-    Result:=-1;
+    Result:=false;
 end;
 
 function TCustomRichMemo.Print(const params: TPrintParams): Integer;

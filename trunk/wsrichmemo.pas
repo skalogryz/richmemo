@@ -101,6 +101,9 @@ type
     class function SaveRichText(const AWinControl: TWinControl; Dest: TStream): Boolean; virtual;
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt): Integer; virtual;
+    // this is a temproray solution and will be removed eventually leaving a variant of SearchEx only
+    class function isSearchEx: Boolean; virtual;
+    class function SearchEx(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt; var TextStart, TextLength: Integer): Boolean; virtual;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); virtual;
 
@@ -356,6 +359,18 @@ begin
     end;
   end;
   Result:=-1;
+end;
+
+class function TWSCustomRichMemo.isSearchEx: Boolean;
+begin
+  Result:=false;
+end;
+
+class function TWSCustomRichMemo.SearchEx(const AWinControl: TWinControl;
+  const ANiddle: string; const SearchOpts: TIntSearchOpt; var TextStart,
+  TextLength: Integer): Boolean;
+begin
+  Result:=false;
 end;
 
 class procedure TWSCustomRichMemo.SetZoomFactor(const AWinControl: TWinControl;

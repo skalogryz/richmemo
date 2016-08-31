@@ -122,6 +122,9 @@ type
 
     class function Search(const AWinControl: TWinControl; const ANiddle: string;
       const SearchOpts: TIntSearchOpt): Integer; override;
+    class function isSearchEx: Boolean; override;
+    class function SearchEx(const AWinControl: TWinControl; const ANiddle: string;
+      const SearchOpts: TIntSearchOpt; var ATextStart, ATextLength: Integer ): Boolean; override;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
 
@@ -166,7 +169,7 @@ var
   NCPaint : TNCPaintProc = nil;
 
 function GetSelRTF(amemo: TCustomRichMemo): string;
-  
+
 implementation
 
 type
@@ -1111,6 +1114,19 @@ class function TWin32WSCustomRichMemo.Search(const AWinControl: TWinControl;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   Result:=RichEditManager.Find(AWinControl.Handle, UTF8Decode(ANiddle), SearchOpts);
+end;
+
+class function TWin32WSCustomRichMemo.isSearchEx: Boolean;
+begin
+  Result:=true;
+end;
+
+class function TWin32WSCustomRichMemo.SearchEx(const AWinControl: TWinControl;
+  const ANiddle: string; const SearchOpts: TIntSearchOpt; var ATextStart,
+  ATextLength: Integer): Boolean;
+begin
+  ATextStart:=RichEditManager.Find(AWinControl.Handle, UTF8Decode(ANiddle), SearchOpts, ATextLength);
+  Result:=ATextStart>=0;
 end;
 
 class procedure TWin32WSCustomRichMemo.SetZoomFactor(

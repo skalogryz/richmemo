@@ -184,7 +184,9 @@ type
 
     class procedure GetPara2(RichEditWnd: Handle; TextStart: Integer; var para: PARAFORMAT2); virtual;
     class procedure SetPara2(RichEditWnd: Handle; TextStart, TextLen: Integer; const para: PARAFORMAT2); virtual;
-    class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; virtual;
+    // the ugly Find() overload, might go away eventually
+    class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt; var TextLen: Integer): Integer; virtual; overload;
+    class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; overload;
     class procedure GetParaRange(RichEditWnd: Handle; TextStart: integer; var para: TParaRange); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
@@ -823,11 +825,18 @@ begin
   SetSelection(RichEditWnd, s, l);
 end;
 
-class function TRichEditManager.Find(RichEditWnd: THandle;
-  const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer;
+class function TRichEditManager.Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; overload;
 var
-  fw: TFINDTEXTW;
-  fa: TFINDTEXTA;
+  l : integer;
+begin
+  Result:=Find(RichEDitWnd, ANiddle, ASearch, l);
+end;
+
+class function TRichEditManager.Find(RichEditWnd: THandle;
+  const ANiddle: WideString; const ASearch: TIntSearchOpt; var TextLen: Integer): Integer;
+var
+  fw: TFINDTEXTEXW;
+  fa: TFINDTEXTEXA;
   opt: WParam;
   txt: string;
   mn, mx : Integer;
@@ -859,13 +868,15 @@ begin
     fw.chrg.cpMin := mn;
     fw.chrg.cpMax := mx;
     fw.lpstrText := PWideChar(@ANiddle[1]);
-    Result := SendMessage(RichEditWnd, EM_FINDTEXTW, opt, LParam(@fw));
+    Result := SendMessage(RichEditWnd, EM_FINDTEXTEXW, opt, LParam(@fw));
+    if Result>=0 then TextLen:=fw.chrgText.cpMax-fw.chrgText.cpMin;
   end else begin
     fa.chrg.cpMin := mn;
     fa.chrg.cpMax := mx;
     txt:=ANiddle;
     fa.lpstrText := PAnsiChar(@txt[1]);
-    Result := SendMessage(RichEditWnd, EM_FINDTEXT, opt, LParam(@fa));
+    Result := SendMessage(RichEditWnd, EM_FINDTEXTEX, opt, LParam(@fa));
+    if Result>=0 then TextLen:=fa.chrgText.cpMax-fa.chrgText.cpMin;
   end;
 end;
 

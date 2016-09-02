@@ -172,7 +172,12 @@ type
 
     class function GetStyleRange(RichEditWnd: Handle; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
     class procedure GetSelection(RichEditWnd: Handle; var TextStart, TextLen: Integer); virtual;      
-    class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;      
+    class procedure SetSelection(RichEditWnd: Handle; TextStart, TextLen: Integer); virtual;
+
+    // WARNING: GetSelRange, is causing changes in Selection!
+    class procedure GetSelRange(RichEditWnd: Handle; var sr: TCHARRANGE); virtual;
+    class procedure SetSelRange(RichEditWnd: Handle; const sr: TCHARRANGE); virtual;
+
     class procedure SetHideSelection(RichEditWnd: Handle; AValue: Boolean); virtual;
     class function LoadRichText(RichEditWnd: Handle; ASrc: TStream): Boolean; virtual;
     class function SaveRichText(RichEditWnd: Handle; ADst: TStream): Boolean; virtual;
@@ -647,6 +652,38 @@ begin
   SendMessage(RichEditWnd, EM_EXSETSEL, 0, PtrInt(@Range));
 end;
 
+class procedure TRichEditManager.GetSelRange(RichEditWnd: Handle; var sr: TCHARRANGE);
+var
+  st: Integer;
+begin
+  sr.cpMax := 0;
+  sr.cpMin := 0;
+  st:=0;
+  SendMessage(RichEditWnd, EM_EXGETSEL, 0, PtrInt(@sr));
+  // EM_EXGETSEL - always returns min and max, in the math order
+  // (where math is lower, than max)
+  // This, however, doesn't match the seletion direction.
+  // Selection direction is done by either mouse (right to left) and (left to right)
+  // or by holding SHIFT key and moving left to right.
+  // EM_EXSETSEL - repsects the specified sr.cpMax and sr.cpMin order
+
+  // Resetting the selection.
+  // This is a bit hacky, BUT the selection would be reset
+  // towards the direction of the selection
+  SendMessage(RichEditWnd, EM_SETSEL, -1, 0);
+  SendMessage(RichEditWnd, EM_GETSEL, WPARAM(@st), 0);
+
+  if st=sr.cpMin then begin // right-to-left selection
+    sr.cpMin:=sr.cpMax;
+    sr.cpMax:=st;
+  end;
+end;
+
+class procedure TRichEditManager.SetSelRange(RichEditWnd: Handle; const sr: TCHARRANGE);
+begin
+  SendMessage(RichEditWnd, EM_EXSETSEL, 0, PtrInt(@sr));
+end;
+
 class procedure TRichEditManager.SetHideSelection(RichEditWnd: Handle; AValue: Boolean);
 var
   style  : LResult;
@@ -720,9 +757,9 @@ class procedure TRichEditManager.SetText(RichEditWnd:Handle;
 var
   AnsiText : AnsiString;
   txt      : PChar;
-  s, l     : Integer;
+  sr       : TCHARRANGE;
 begin
-  GetSelection(RichEditWnd, s, l);
+  GetSelRange(RichEditWnd, sr);
   SetSelection(RichEditWnd, TextStart, ReplaceLength);
 
   txt:=nil;
@@ -735,7 +772,7 @@ begin
     SendMessageA(RichEditWnd, EM_REPLACESEL, 0, LPARAM(txt));
   end;
 
-  SetSelection(RichEditWnd, s, l);
+  SetSelRange(RichEditWnd, sr);
 end;
 
 class function TRichEditManager.GetTextW(RichEditWnd: Handle;
@@ -801,9 +838,9 @@ end;
 class procedure TRichEditManager.GetPara2(RichEditWnd: Handle; TextStart: Integer;
   var para: PARAFORMAT2);
 var
-  s, l     : Integer;
+  sr : TCHARRANGE;
 begin
-  GetSelection(RichEditWnd, s, l);
+  GetSelRange(RichEditWnd, sr);
 
   SetSelection(RichEditWnd, TextStart, 0);
 
@@ -811,18 +848,20 @@ begin
   para.cbSize:=sizeof(para);
   SendMessagea(RichEditWnd, EM_GETPARAFORMAT, 0, LPARAM(@para));
 
-  SetSelection(RichEditWnd, s, l);
+  SetSelRange(RichEditWnd, sr);
 end;
 
 class procedure TRichEditManager.SetPara2(RichEditWnd: Handle;
   TextStart, TextLen: Integer; const para: PARAFORMAT2);
 var
-  s, l     : Integer;
+  sr : TCHARRANGE;
 begin
-  GetSelection(RichEditWnd, s, l);
+  GetSelRange(RichEditWnd, sr);
+
   SetSelection(RichEditWnd, TextStart, TextLen);
   SendMessagea(RichEditWnd, EM_SETPARAFORMAT, 0, LPARAM(@para));
-  SetSelection(RichEditWnd, s, l);
+
+  SetSelRange(RichEditWnd, sr);
 end;
 
 class function TRichEditManager.Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; overload;

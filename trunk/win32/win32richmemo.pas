@@ -250,9 +250,25 @@ begin
   Result:=false; // we need to catch just notifications,
     // any other message should be handled in a "Default" manner
     // So, default result is false;
-  hdr:=PNMHDR(LParam);
   case Msg of
+    WM_COMMAND: begin
+      case HIWORD(WParam) of
+        EN_UPDATE: begin
+          // https://msdn.microsoft.com/en-us/library/windows/desktop/bb761687(v=vs.85).aspx
+          // EN_UPDATE is just a notification, that the edit is to be redrawn
+          Result:=true;
+        end;
+        EN_CHANGE: begin
+          // https://msdn.microsoft.com/en-us/library/windows/desktop/hh768384(v=vs.85).aspx
+          // Despite of what documentation claims (WM_NOTIFY), EN_CHANGE is notified by WM_COMMAND
+          if Assigned(AWinControl) and (AWinControl is TCustomRichMemo) then
+            TIntCustomRichMemo(AWinControl).Change;
+          Result:=true;
+        end;
+      end;
+    end;
     WM_NOTIFY: begin
+      hdr:=PNMHDR(LParam);
       case hdr^.code of
         EN_SELCHANGE:
           begin
@@ -539,7 +555,7 @@ begin
   FinishCreateWindow(AWinControl, Params, false);
 
   eventmask := SendMessage(AWinControl.Handle, EM_GETEVENTMASK, 0, 0);
-  eventmask := eventmask or ENM_SELCHANGE or ENM_LINK;
+  eventmask := eventmask or ENM_SELCHANGE or ENM_LINK or ENM_CHANGE;
   SendMessage(AWinControl.Handle, EM_SETEVENTMASK, 0, eventmask);
 
   // Limitless text. However, the value would be overwritten by a consequent
@@ -581,8 +597,7 @@ end;
 class function TWin32WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinControl; 
   TextStart: Integer; var Params: TIntFontParams): Boolean;  
 var
-  OrigStart : Integer;
-  OrigLen   : Integer;
+  Orig      : TCHARRANGE;
   eventmask : LongWord;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
@@ -591,13 +606,15 @@ begin
   end;
   InitFontParams(Params);
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
-  
-  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
 
   LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
+
+  RichEditManager.GetSelRange(AWinControl.Handle, Orig);
+
   RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
   Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
-  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+
+  RichEditManager.SetSelRange(AWinControl.Handle, Orig);
   UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
 
   RichEditManager.SetEventMask(AWinControl.Handle,eventmask);
@@ -669,8 +686,7 @@ class function TWin32WSCustomRichMemo.GetStyleRange(
   const AWinControl: TWinControl; TextStart: Integer; var RangeStart, 
   RangeLen: Integer): Boolean;  
 var
-  OrigStart : Integer;
-  OrigLen   : Integer;
+  Orig      : TCharRange;
   eventmask : longword;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
@@ -679,9 +695,9 @@ begin
   end;
 
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
-
-  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
+
+  RichEditManager.GetSelRange(AWinControl.Handle, Orig);
 
   RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
   try
@@ -689,7 +705,7 @@ begin
   except
   end;
   
-  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+  RichEditManager.SetSelRange(AWinControl.Handle, Orig);
   UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
@@ -724,8 +740,7 @@ end;
 class function TWin32WSCustomRichMemo.GetTextUIParams(const AWinControl: TWinControl; TextStart: Integer;
   var ui: TTextUIParam): Boolean;
 var
-  OrigStart : Integer;
-  OrigLen   : Integer;
+  Orig      : TCHARRANGE;
   eventmask : Integer;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
@@ -734,12 +749,14 @@ begin
   end;
 
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
-  RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
-
   LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+
+  RichEditManager.GetSelRange(AWinControl.Handle, Orig);
+
   RichEditManager.SetSelection(AWinControl.Handle, TextStart, 1);
   RichEditManager.GetTextUIStyle(AWinControl.Handle, ui);
-  RichEditManager.SetSelection(AWinControl.Handle, OrigStart, OrigLen);
+
+  RichEditManager.SetSelRange(AWinControl.Handle, Orig);
   UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
 
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
@@ -774,6 +791,8 @@ begin
 
   eventmask:=RichEditManager.SetEventMask(AWinControl.Handle, 0);
 
+  LockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle);
+
   RichEditManager.GetPara2(AWinControl.Handle, TextStart, para);
   case para.wAlignment of
     PFA_CENTER:  AAlign:=paCenter;
@@ -782,6 +801,7 @@ begin
   else
     AAlign:=paLeft;
   end;
+  UnlockRedraw( TCustomRichMemo(AWinControl), AWinControl.Handle );
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 
   Result:=true;
@@ -1063,6 +1083,7 @@ class function TWin32WSCustomRichMemo.GetSubText(
   var utxt: UnicodeString): Boolean;
 var
   eventmask : Integer;
+  Orig      : TCharRange;
   OrigStart : Integer;
   OrigLen   : Integer;
   NeedLock  : Boolean;
@@ -1078,7 +1099,7 @@ begin
   NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
   if NeedLock then begin
     LockRedraw( TCustomRichMemo(AWinControl), Hnd);
-    RichEditManager.SetSelection(Hnd, TextStart, TextLen);
+    RichEditManager.GetSelRange(Hnd, Orig);
   end;
 
   isUnicode:=AsUnicode;
@@ -1089,7 +1110,7 @@ begin
   end;
 
   if NeedLock then begin
-    RichEditManager.SetSelection(Hnd, OrigStart, OrigLen);
+    RichEditManager.SetSelRange(Hnd, Orig);
     UnlockRedraw( TCustomRichMemo(AWinControl), Hnd);
   end;
   RichEditManager.SetEventMask(Hnd, eventmask);

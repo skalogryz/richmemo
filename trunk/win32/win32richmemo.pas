@@ -167,6 +167,7 @@ var
   // the value can be set to nil to use system-native drawing only.
   // or set it to whatever function desired
   NCPaint : TNCPaintProc = nil;
+  AllocOLEObject : procedure (ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
 
 function GetSelRTF(amemo: TCustomRichMemo): string;
 
@@ -505,6 +506,16 @@ begin
   Result:=Assigned(AWinControl) and (SendMessage(AWinControl.Handle, EM_CANPASTE, 0, 0)<>0);
 end;
 
+procedure AssignOLECallback(ARichMemo: TCustomRichMemo; ahandle: Windows.THandle);
+var
+  cb : IRichEditOleCallback;
+begin
+  if not Assigned(AllocOLEObject) then Exit;
+  AllocOLEObject(ARichMemo, ahandle, cb);
+  if Assigned(cb) then
+    Windows.SendMessage(ahandle, EM_SETOLECALLBACK, 0, LPARAM(cb));
+end;
+
 class function TWin32WSCustomRichMemo.CreateHandle(const AWinControl: TWinControl;  
   const AParams: TCreateParams): HWND;  
 var
@@ -561,6 +572,11 @@ begin
   // Limitless text. However, the value would be overwritten by a consequent
   // SetMaxLength call, see above.
   SendMessage(AWincontrol.Handle, EM_EXLIMITTEXT, 0, LParam(-1));
+
+  // Setting OLE callback.
+  if AWinControl is TCustomRichMemo then // sanity checl
+    AssignOLECallback(TCustomRichMemo(AWincontrol), AWincontrol.Handle);
+
 
   // memo is not a transparent control -> no need for parentpainting
   Params.WindowInfo^.ParentMsgHandler := @RichEditNotifyProc;
@@ -1393,8 +1409,6 @@ begin
   end;
 end;
 
-
-
 type
   TStreamText = record
     buf : AnsiString;
@@ -1403,7 +1417,7 @@ type
 
 function Read(dwCookie:PDWORD; pbBuff:LPBYTE; cb:LONG; var pcb:LONG):DWORD; stdcall;
 var
-  p : PStreamText;
+  //p : PStreamText;
   b : string;
   i : integer;
 begin
@@ -1441,8 +1455,17 @@ begin
   Result:=tt.buf;
 end;
 
+procedure DefAllocOleObject(ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
+var
+  cb : TRichEditCallback;
+begin
+  cb:=TRichEditCallback.Create;
+  OleCallBack:=cb;
+end;
+
 initialization
   NCPaint := @ThemedNCPaint;
+  AllocOLEObject := @DefAllocOleObject;
  
 end.
 

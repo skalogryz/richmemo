@@ -170,8 +170,19 @@ var
   AllocOLEObject : procedure (ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
 
 function GetSelRTF(amemo: TCustomRichMemo): string;
+function GetRichEditOLE(amemo: TCustomRichMemo): IRichEditOle; overload;
+function GetRichEditOLE(AHandle: THandle): IRichEditOle; overload;
+function GetOleObject(ole: IRichEditOle; SelStart: Integer; out res: TREOBJECT): Boolean;
+function SetOleObjectSize(ole: IRichEditOle; SelStart: Integer; const ASize: TSize): Boolean;
+function GetOleObjectSize(ole: IRichEditOle; SelStart: Integer; var ASize: TSize): Boolean;
 
 implementation
+
+const
+  PointSize     = 72.0;
+  RtfSizeToInch = 2.54 * 1000.0;
+  SizeFactor    = 1 / PointSize * RtfSizeToInch; // pt to 0.01 mlmete
+  RevSizeFactor = 1 / SizeFactor;
 
 type
   TIntCustomRichMemo = class(TCustomRichMemo);
@@ -1192,10 +1203,6 @@ var
   Obj: TREOBJECT;
   sl, ss: Integer;
   eventmask: Integer;
-const
-  PointSize     = 72.0;
-  RtfSizeToInch = 2.54 * 1000.0;
-  SizeFactor    = 1 / PointSize * RtfSizeToInch;
 begin
   Result:=False;
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
@@ -1455,12 +1462,60 @@ begin
   Result:=tt.buf;
 end;
 
+function GetRichEditOLE(amemo: TCustomRichMemo): IRichEditOle;
+begin
+  if Assigned(amemo) then Result:=GetRichEditOle(amemo.Handle)
+  else Result:=nil;
+end;
+
+function GetRichEditOLE(AHandle: THandle): IRichEditOle;
+begin
+  SendMessage(Ahandle, EM_GETOLEINTERFACE, 0, LPARAM(@Result));
+end;
+
 procedure DefAllocOleObject(ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
 var
   cb : TRichEditCallback;
 begin
   cb:=TRichEditCallback.Create;
   OleCallBack:=cb;
+end;
+
+function GetOleObject(ole: IRichEditOle; SelStart: Integer; out res: TREOBJECT): Boolean;
+begin
+  Result:=Assigned(ole);
+  if not Result then Exit;
+  FillChar(res{%H-}, sizeof(res), 0);
+  res.cbStruct:=sizeof(res);
+  res.cp:=SelStart;
+
+  Result:=ole.GetObject(REO_IOB_USE_CP, res, REO_GETOBJ_ALL_INTERFACES)=S_OK;
+end;
+
+function SetOleObjectSize(ole: IRichEditOle; SelStart: Integer; const ASize: TSize): Boolean;
+var
+  obj : TREOBJECT;
+begin
+  if not Assigned(ole) then begin
+    Result:=false;
+    Exit;
+  end;
+  Result:=GetOleObject(ole, SelStart, obj);
+  if Result then begin
+    obj.sizel.cx:=round(ASize.cx * SizeFactor);
+    obj.sizel.cy:=round(ASize.cy * SizeFactor);
+    Result:=ole.InsertObject(obj)=S_OK;
+  end;
+end;
+
+function GetOleObjectSize(ole: IRichEditOle; SelStart: Integer; var ASize: TSize): Boolean;
+var
+  res : TREOBJECT;
+begin
+  Result:=GetOleObject(ole, SelStart, res);
+  if not Result then Exit;
+  ASize.cx:=round(res.sizel.cx*RevSizeFactor);
+  ASize.cy:=round(res.sizel.cy*RevSizeFactor);
 end;
 
 initialization

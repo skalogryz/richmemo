@@ -168,6 +168,7 @@ var
   // or set it to whatever function desired
   NCPaint : TNCPaintProc = nil;
   AllocOLEObject : procedure (ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
+  InsertInlineFlags : Integer = REO_OWNERDRAWSELECT;
 
 function GetSelRTF(amemo: TCustomRichMemo): string;
 function GetRichEditOLE(amemo: TCustomRichMemo): IRichEditOle; overload;
@@ -1239,7 +1240,7 @@ begin
     Obj.pstg := Storage;
     Obj.polesite := ClientSite;
     Obj.dvaspect := DVASPECT_CONTENT;
-    Obj.dwFlags := REO_OWNERDRAWSELECT;
+    Obj.dwFlags := InsertInlineFlags;
 
     Obj.sizel.cx:=round(ASize.cx * SizeFactor);
     Obj.sizel.cy:=round(ASize.cy * SizeFactor);

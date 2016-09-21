@@ -174,8 +174,8 @@ function GetSelRTF(amemo: TCustomRichMemo): string;
 function GetRichEditOLE(amemo: TCustomRichMemo): IRichEditOle; overload;
 function GetRichEditOLE(AHandle: THandle): IRichEditOle; overload;
 function GetOleObject(ole: IRichEditOle; SelStart: Integer; out res: TREOBJECT): Boolean;
-function SetOleObjectSize(ole: IRichEditOle; SelStart: Integer; const ASize: TSize): Boolean;
-function GetOleObjectSize(ole: IRichEditOle; SelStart: Integer; var ASize: TSize): Boolean;
+function SetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; const ASize: TSize): Boolean;
+function GetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; var ASize: TSize): Boolean;
 
 implementation
 
@@ -1493,27 +1493,47 @@ begin
   Result:=ole.GetObject(REO_IOB_USE_CP, res, REO_GETOBJ_ALL_INTERFACES)=S_OK;
 end;
 
-function SetOleObjectSize(ole: IRichEditOle; SelStart: Integer; const ASize: TSize): Boolean;
+function SetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; const ASize: TSize): Boolean;
 var
   obj : TREOBJECT;
+  ole : IRichEditOle;
+  ss  : integer;
+  sl  : integer;
 begin
+  ole:=GetRichEditOLE(ARichMemo);
   if not Assigned(ole) then begin
     Result:=false;
     Exit;
   end;
-  Result:=GetOleObject(ole, SelStart, obj);
-  if Result then begin
-    obj.sizel.cx:=round(ASize.cx * SizeFactor);
-    obj.sizel.cy:=round(ASize.cy * SizeFactor);
-    Result:=ole.InsertObject(obj)=S_OK;
-  end;
+    Result:=GetOleObject(ole, SelStart, obj);
+    if Result then begin
+      ARichMemo.Lines.BeginUpdate;
+      ss:=ARichMemo.SelStart;
+      sl:=ARichMemo.SelLength;
+      try
+        obj.polesite:=nil;
+        ARichMemo.SelStart:=SelStart;
+        ARichMemo.SelLength:=1;
+        ARichMemo.SelText:='';
+        ole.GetClientSite(obj.polesite);
+        obj.sizel.cx:=round(ASize.cx * SizeFactor);
+        obj.sizel.cy:=round(ASize.cy * SizeFactor);
+        Result:=ole.InsertObject(obj)=S_OK;
+      finally
+        ARichMemo.SelStart:=ss;
+        ARichMemo.SelLength:=sl;
+        ARichMemo.Lines.EndUpdate;
+      end;
+    end;
 end;
 
-function GetOleObjectSize(ole: IRichEditOle; SelStart: Integer; var ASize: TSize): Boolean;
+function GetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; var ASize: TSize): Boolean;
 var
   res : TREOBJECT;
+  ole : IRichEditOle;
 begin
-  Result:=GetOleObject(ole, SelStart, res);
+  ole:=GetRichEditOLE(ARichMemo);
+  Result:=Assigned(ole) and (GetOleObject(ole, SelStart, res));
   if not Result then Exit;
   ASize.cx:=round(res.sizel.cx*RevSizeFactor);
   ASize.cy:=round(res.sizel.cy*RevSizeFactor);

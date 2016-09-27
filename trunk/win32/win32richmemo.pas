@@ -30,7 +30,7 @@ uses
   // RTL headers
   Classes, SysUtils, 
   // LCL headers
-  LCLType, LCLIntf, LCLProc, WSLCLClasses,
+  LCLType, LCLIntf, LCLProc, WSLCLClasses, LMessages, LCLMessageGlue,
   Graphics, Controls, StdCtrls, Printers, Themes,
   // Win32WidgetSet
   Win32WSControls, Win32Int, Win32WSStdCtrls, win32proc,
@@ -1474,11 +1474,112 @@ begin
   SendMessage(Ahandle, EM_GETOLEINTERFACE, 0, LPARAM(@Result));
 end;
 
+type
+  { TRichEditCallback }
+
+  TRichEditCallback = class(TInterfacedObject, IRichEditOleCallback)
+  public
+    fOwner: TWinControl;
+    function GetNewStorage(out stg: IStorage): HRESULT; stdcall;
+    function GetInPlaceContext(out Frame: IOleInPlaceFrame;
+      out Doc: IOleInPlaceUIWindow;
+      lpFrameInfo: POleInPlaceFrameInfo): HRESULT; stdcall;
+    function ShowContainerUI(fShow: BOOL): HRESULT; stdcall;
+    function QueryInsertObject(const clsid: TCLSID; const stg: IStorage;
+      cp: LongInt): HRESULT; stdcall;
+    function DeleteObject(const oleobj: IOleObject): HRESULT; stdcall;
+    function QueryAcceptData(const dataobj: IDataObject;
+      var cfFormat: TClipFormat; reco: DWORD; fReally: BOOL;
+      hMetaPict: HGLOBAL): HRESULT; stdcall;
+    function ContextSensitiveHelp(fEnterMode: BOOL): HRESULT; stdcall;
+    function GetClipboardData(const chrg: RichEdit.TCharRange; reco: DWORD;
+      out dataobj: IDataObject): HRESULT; stdcall;
+    function GetDragDropEffect(fDrag: BOOL; grfKeyState: DWORD;
+      var dwEffect: DWORD): HRESULT; stdcall;
+    function GetContextMenu(seltype: Word; oleobj: IOleObject;
+      const chrg: TCharRange; var menu: HMENU): HRESULT; stdcall;
+  end;
+
+{ TRichEditCallback }
+
+function TRichEditCallback.GetNewStorage(out stg: IStorage): HRESULT; stdcall;
+begin
+  StgCreateDocfile(nil, STGM_READWRITE or STGM_SHARE_EXCLUSIVE, 0,stg);
+  Result := S_OK;
+end;
+
+function TRichEditCallback.GetInPlaceContext(out Frame: IOleInPlaceFrame; out
+  Doc: IOleInPlaceUIWindow; lpFrameInfo: POleInPlaceFrameInfo): HRESULT;
+  stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.ShowContainerUI(fShow: BOOL): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.QueryInsertObject(const clsid: TCLSID;
+  const stg: IStorage; cp: LongInt): HRESULT; stdcall;
+begin
+  Result := S_OK;
+end;
+
+function TRichEditCallback.DeleteObject(const oleobj: IOleObject): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.QueryAcceptData(const dataobj: IDataObject;
+  var cfFormat: TClipFormat; reco: DWORD; fReally: BOOL; hMetaPict: HGLOBAL
+  ): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.ContextSensitiveHelp(fEnterMode: BOOL): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.GetClipboardData(const chrg: TCharRange; reco: DWORD; out
+  dataobj: IDataObject): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.GetDragDropEffect(fDrag: BOOL; grfKeyState: DWORD;
+  var dwEffect: DWORD): HRESULT; stdcall;
+begin
+  Result := E_NOTIMPL;
+end;
+
+function TRichEditCallback.GetContextMenu(seltype: Word; oleobj: IOleObject;
+  const chrg: TCharRange; var menu: HMENU): HRESULT; stdcall;
+var
+  msg : TLMContextMenu;
+begin
+  FillChar(msg, sizeof(msg), 0);
+  msg.Msg:=LM_CONTEXTMENU;
+  msg.XPos:=Mouse.CursorPos.x;
+  msg.YPos:=Mouse.CursorPos.y;
+  msg.hWnd:=fOwner.Handle;
+  DeliverMessage(fOwner, msg);
+
+  // do not give hmenu back to RichEdit, it will destory it!
+  menu:=0;
+  Result:=S_OK;
+end;
+
+
+
 procedure DefAllocOleObject(ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
 var
   cb : TRichEditCallback;
 begin
   cb:=TRichEditCallback.Create;
+  cb.fOwner:=ARichMemo;
   OleCallBack:=cb;
 end;
 

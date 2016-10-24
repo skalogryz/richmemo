@@ -1044,6 +1044,7 @@ end;
 
 initialization
   InsertImageFromFile := @WinInsertImageFromFile;
+  RichEditManager := TRichEditManager;
 
 end.                                            
 

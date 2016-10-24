@@ -169,6 +169,7 @@ var
   NCPaint : TNCPaintProc = nil;
   AllocOLEObject : procedure (ARichMemo: TCustomRichMemo; AHandle: Windows.THandle; out OleCallback: IRichEditOleCallback);
   InsertInlineFlags : Integer = REO_OWNERDRAWSELECT;
+  RichEditClass   : String = ''; // manually assigned by RichMemo user
 
 function GetSelRTF(amemo: TCustomRichMemo): string;
 function GetRichEditOLE(amemo: TCustomRichMemo): IRichEditOle; overload;
@@ -552,8 +553,12 @@ var
   ACustomMemo : TCustomMemo;
   eventmask   : LPARAM;
 begin
-  InitRichEdit;
-  RichClass := GetRichEditClass;
+  if RichEditClass='' then begin
+    InitRichEdit;
+    RichClass := GetRichEditClass;
+  end else
+    RichClass := RichEditClass;
+
   if RichClass = '' then begin
     Result := 0;
     Exit;

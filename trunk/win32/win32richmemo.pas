@@ -177,6 +177,22 @@ function GetOleObject(ole: IRichEditOle; SelStart: Integer; out res: TREOBJECT):
 function SetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; const ASize: TSize): Boolean;
 function GetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; var ASize: TSize): Boolean;
 
+type
+  TWinLangOptions = set of (
+     wloAutokeyboard             // IMF_AUTOKEYBOARD        = $0001
+     , wloAutoFont               // IMF_AUTOFONT            = $0002
+     , wloImeCancelComplete      // IMF_IMECANCELCOMPLETE   = $0004	// High completes comp string when aborting, low cancels
+     , wloAlwaysSendNotify       // IMF_IMEALWAYSSENDNOTIFY = $0008
+     , wloAutoFontSizeAdjust     // IMF_AUTOFONTSIZEADJUST  = $0010
+     , wloUOFonts                // IMF_UIFONTS             = $0020
+     , wloDualFont               // IMF_DUALFONT	          = $0080
+  );
+
+function GetLangOptions(hnd: THandle):  TWinLangOptions; overload;
+function GetLangOptions(rm: TCustomRichMemo):  TWinLangOptions; overload;
+procedure SetLangOptions(hnd: THandle; const opts: TWinLangOptions); overload;
+procedure SetLangOptions(rm: TCustomRichMemo; const opts: TWinLangOptions); overload;
+
 implementation
 
 const
@@ -1638,6 +1654,42 @@ begin
   if not Result then Exit;
   ASize.cx:=round(res.sizel.cx*RevSizeFactor);
   ASize.cy:=round(res.sizel.cy*RevSizeFactor);
+end;
+
+function GetLangOptions(hnd: THandle): TWinLangOptions;
+var
+  r: LRESULT;
+begin
+  r:=SendMessage(hnd, EM_GETLANGOPTIONS, 0, 0);
+  Result:=TWinLangOptions(r);
+end;
+
+function GetLangOptions(rm: TCustomRichMemo): TWinLangOptions;
+begin
+  if Assigned(rm) then begin
+    if not rm.HandleAllocated then rm.HandleNeeded;
+    if rm.HandleAllocated
+      then Result:=GetLangOptions(rm.Handle)
+      else Result:=[];
+  end else
+    Result:=[];
+end;
+
+procedure SetLangOptions(hnd: THandle; const opts: TWinLangOptions); overload;
+var
+  lp : LPARAM;
+begin
+  lp:=LPARAM(opts);
+  SendMessage(hnd, EM_SETLANGOPTIONS, 0, lp);
+end;
+
+procedure SetLangOptions(rm: TCustomRichMemo; const opts: TWinLangOptions); overload;
+begin
+  if Assigned(rm) then begin
+    if not rm.HandleAllocated then rm.HandleNeeded;
+    if rm.HandleAllocated then
+      SetLangOptions(rm.Handle, opts);
+  end;
 end;
 
 initialization

@@ -178,7 +178,7 @@ function GetOleObject(ole: IRichEditOle; SelStart: Integer; out res: TREOBJECT):
 function SetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; const ASize: TSize): Boolean;
 function GetOleObjectSize(ARichMemo: TCustomRichMemo; SelStart: Integer; var ASize: TSize): Boolean;
 
-type
+(*type
   TWinLangOptions = set of (
      wloAutokeyboard             // IMF_AUTOKEYBOARD        = $0001
      , wloAutoFont               // IMF_AUTOFONT            = $0002
@@ -193,7 +193,7 @@ function GetLangOptions(hnd: THandle):  TWinLangOptions; overload;
 function GetLangOptions(rm: TCustomRichMemo):  TWinLangOptions; overload;
 procedure SetLangOptions(hnd: THandle; const opts: TWinLangOptions); overload;
 procedure SetLangOptions(rm: TCustomRichMemo; const opts: TWinLangOptions); overload;
-
+*)
 implementation
 
 const
@@ -1660,7 +1660,7 @@ begin
   ASize.cx:=round(res.sizel.cx*RevSizeFactor);
   ASize.cy:=round(res.sizel.cy*RevSizeFactor);
 end;
-
+(*
 function GetLangOptions(hnd: THandle): TWinLangOptions;
 var
   r: LRESULT;
@@ -1696,7 +1696,7 @@ begin
       SetLangOptions(rm.Handle, opts);
   end;
 end;
-
+*)
 initialization
   NCPaint := @ThemedNCPaint;
   AllocOLEObject := @DefAllocOleObject;

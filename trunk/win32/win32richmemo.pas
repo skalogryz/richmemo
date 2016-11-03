@@ -127,6 +127,7 @@ type
       const SearchOpts: TIntSearchOpt; var ATextStart, ATextLength: Integer ): Boolean; override;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); override;
+    class function GetZoomFactor(const AWinControl: TWinControl; var AZoomFactor: Double): Boolean; override;
 
     class function InlineInsert(const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
       const ASize: TSize; AHandler: TRichMemoInline; var wsObj: TRichMemoInlineWSObject): Boolean; override;
@@ -1207,6 +1208,18 @@ begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
   DN := 1000;
   SendMessage( AWinControl.Handle, EM_SETZOOM, round(AZoomFactor * DN), DN);
+end;
+
+class function TWin32WSCustomRichMemo.GetZoomFactor(const AWinControl: TWinControl; var AZoomFactor: Double): Boolean;
+var
+  numerator, denominator: Integer; // todo: Are they always integers? or can they be something else in 64-bit?
+begin
+  Result:=SendMessage(AWinControl.Handle, EM_GETZOOM, WParam(@numerator), LParam(@denominator))<>0;
+  if Result then begin
+    Result:=(numerator <> 0) and (denominator <> 0);
+    if Result then
+      AZoomFactor := double(numerator)/ double(denominator);
+  end;
 end;
 
 class function TWin32WSCustomRichMemo.InlineInsert(

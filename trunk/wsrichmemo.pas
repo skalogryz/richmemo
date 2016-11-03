@@ -106,6 +106,7 @@ type
     class function SearchEx(const AWinControl: TWinControl; const ANiddle: string; const SearchOpts: TIntSearchOpt; var TextStart, TextLength: Integer): Boolean; virtual;
 
     class procedure SetZoomFactor(const AWinControl: TWinControl; AZoomFactor: Double); virtual;
+    class function GetZoomFactor(const AWinControl: TWinControl; var AZoomFactor:Double): Boolean; virtual;
 
     //inline handler
     class function InlineInsert(const AWinControl: TWinControl; ATextStart, ATextLength: Integer;
@@ -377,6 +378,11 @@ class procedure TWSCustomRichMemo.SetZoomFactor(const AWinControl: TWinControl;
   AZoomFactor: Double);
 begin
 
+end;
+
+class function TWSCustomRichMemo.GetZoomFactor(const AWinControl: TWinControl; var AZoomFactor: Double): Boolean;
+begin
+  Result:=false;
 end;
 
 class function TWSCustomRichMemo.InlineInsert(const AWinControl: TWinControl;

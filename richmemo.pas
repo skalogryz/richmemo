@@ -593,6 +593,10 @@ end;
 function TCustomRichMemo.GetZoomFactor: Double;
 begin
   Result:=fZoomFactor;
+  if HandleAllocated then begin
+    if TWSCustomRichMemoClass(WidgetSetClass).GetZoomFactor(Self, Result) then
+      fZoomFactor:=Result;
+  end;
 end;
 
 procedure TCustomRichMemo.SetZoomFactor(AValue: Double);

@@ -1152,6 +1152,7 @@ begin
     RichEditManager.GetSelRange(Hnd, Orig);
   end;
 
+  RichEditManager.SetSelection(Hnd, TextStart, TextLen);
   isUnicode:=AsUnicode;
   if AsUnicode then
     utxt:=RichEditManager.GetTextW(Hnd, true)

@@ -136,6 +136,9 @@ type
 
     class function Print(const AWinControl: TWinControl; APrinter: TPrinter;
       const AParams: TPrintParams; DoPrint: Boolean): Integer; override;
+
+    class procedure Redo(const AWinControl: TWinControl); override;
+    class function GetCanRedo(const AWinControl: TWinControl): Boolean; override;
   end;
 
   { TWin32Inline }
@@ -531,7 +534,7 @@ begin
 end;
 
 class function TWin32WSCustomRichMemo.CanPasteFromClipboard(
-  const AWinControl: TWinControl): Boolean;
+  const AWinControl: TWinControl): boolean;
 begin
   Result:=Assigned(AWinControl) and (SendMessage(AWinControl.Handle, EM_CANPASTE, 0, 0)<>0);
 end;
@@ -1435,6 +1438,17 @@ begin
     else
       ReleaseDC(hnd, Rng.hdc);
   end;
+end;
+
+class procedure TWin32WSCustomRichMemo.Redo(const AWinControl: TWinControl);
+begin
+  SendMessage( AWinControl.Handle, EM_REDO, 0, 0);
+end;
+
+class function TWin32WSCustomRichMemo.GetCanRedo(const AWinControl: TWinControl
+  ): Boolean;
+begin
+  Result:=SendMessage( AWinControl.Handle, EM_CANREDO, 0, 0)<>0;
 end;
 
 

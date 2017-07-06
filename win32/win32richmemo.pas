@@ -139,6 +139,8 @@ type
 
     class procedure Redo(const AWinControl: TWinControl); override;
     class function GetCanRedo(const AWinControl: TWinControl): Boolean; override;
+
+    class procedure ScrollBy(const AWinControl: TWinControl;  DeltaX, DeltaY: integer); override;
   end;
 
   { TWin32Inline }
@@ -1451,6 +1453,18 @@ begin
   Result:=SendMessage( AWinControl.Handle, EM_CANREDO, 0, 0)<>0;
 end;
 
+class procedure TWin32WSCustomRichMemo.ScrollBy(const AWinControl: TWinControl;
+  DeltaX, DeltaY: integer);
+var
+  pt : TPoint;
+begin
+  if not Assigned(AWinControl) or not (AWinControl.HandleAllocated) or ((DeltaX=0) and (DeltaY=0)) then Exit;
+
+  Windows.SendMessage(AWinControl.Handle, EM_GETSCROLLPOS, 0, LPARAM(@pt));
+  dec(pt.x,DeltaX);
+  dec(pt.y,Deltay);
+  Windows.SendMessage(AWinControl.Handle, EM_SETSCROLLPOS, 0, LPARAM(@pt));
+end;
 
 // The function doesn't use Windows 7 (Vista?) animations. And should.
 function ThemedNCPaint(AWindow: Windows.HANDLE; RichMemo: TCustomRichMemo; WParam: WParam; LParam: LParam; var Handled: Boolean): LResult;

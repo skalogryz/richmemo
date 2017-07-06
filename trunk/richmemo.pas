@@ -864,6 +864,7 @@ var
   p : TFontParams;
   allowInternalChange: Boolean;
   fp : TFontParams;
+  h,v : integer;
 const
   AllFontStyles : TFontStyles = [fsBold, fsItalic, fsUnderline, fsStrikeOut];
 begin
@@ -871,6 +872,8 @@ begin
 
   if (ModifyMask = []) or (TextLength = 0) then Exit;
 
+  h:=Self.HorzScrollBar.Position;
+  v:=Self.VertScrollBar.Position;
   allowInternalChange:=(not (tmm_Styles in ModifyMask)) or (AddFontStyle+RemoveFontStyle=AllFontStyles);
 
   if allowInternalChange and (TWSCustomRichMemoClass(WidgetSetClass).isInternalChange(Self, ModifyMask)) then
@@ -883,6 +886,8 @@ begin
     Exit;
   end;
 
+  //todo: this is temporary workaround
+  //      the style changing should not be adjusting the scroll
   Lines.BeginUpdate;
   try
     // manually looping from text ranges and re-applying
@@ -907,7 +912,11 @@ begin
       inc(i, l);
     end;
   finally
-    Lines.EndUpdate
+    // todo: this is a workaround.
+    //  getting position is necessary, so the cached values are refershed
+    if Self.HorzScrollBar.Position<>h then Self.HorzScrollBar.Position:=h;
+    if Self.VertScrollBar.Position<>v then Self.VertScrollBar.Position:=v;
+    Lines.EndUpdate;
   end;
 end;
 

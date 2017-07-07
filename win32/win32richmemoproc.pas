@@ -193,6 +193,9 @@ type
     class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt; var TextLen: Integer): Integer; virtual; overload;
     class function Find(RichEditWnd: THandle; const ANiddle: WideString; const ASearch: TIntSearchOpt): Integer; overload;
     class procedure GetParaRange(RichEditWnd: Handle; TextStart: integer; var para: TParaRange); virtual;
+
+    class procedure GetScroll(RichEditWnd: Handle; out pt: TPoint); virtual;
+    class procedure SetScroll(RichEditWnd: Handle; const pt: TPoint); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
                      
@@ -971,6 +974,16 @@ begin
   para.lengthNoBr:=toend;
   if res>0 then inc(toend); // there's a line break character - add it to the range
   para.length:=toend;
+end;
+
+class procedure TRichEditManager.GetScroll(RichEditWnd: Handle; out pt: TPoint);
+begin
+  SendMessage(RichEditWnd, EM_GETSCROLLPOS, 0, LPARAM(@pt));
+end;
+
+class procedure TRichEditManager.SetScroll(RichEditWnd: Handle; const pt: TPoint);
+begin
+  SendMessage(RichEditWnd, EM_SETSCROLLPOS, 0, LPARAM(@pt));
 end;
 
 function WinInsertImageFromFile (const ARichMemo: TCustomRichMemo; APos: Integer;

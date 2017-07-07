@@ -630,9 +630,11 @@ var
   OrigLen   : Integer;
   NeedLock  : Boolean;
   eventmask : Integer;
+  pt        : TPoint;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then Exit;
 
+  RichEditManager.GetScroll(AWinControl.Handle, pt);
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
   
@@ -646,6 +648,7 @@ begin
   end else 
     RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params);
 
+  RichEditManager.SetScroll(AWinControl.Handle, pt);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 end;
 
@@ -654,12 +657,15 @@ class function TWin32WSCustomRichMemo.GetTextAttributes(const AWinControl: TWinC
 var
   Orig      : TCHARRANGE;
   eventmask : LongWord;
+  pt        : TPoint;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
   InitFontParams(Params);
+
+  RichEditManager.GetScroll(AWinControl.Handle, pt);
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
 
   LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
@@ -670,6 +676,7 @@ begin
   Result := RichEditManager.GetSelectedTextStyle(AWinControl.Handle, Params );
 
   RichEditManager.SetSelRange(AWinControl.Handle, Orig);
+  RichEditManager.SetScroll(AWinControl.Handle, pt);
   UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
 
   RichEditManager.SetEventMask(AWinControl.Handle,eventmask);
@@ -689,8 +696,10 @@ var
   OrigLen   : Integer;
   eventmask : longword;
   NeedLock  : Boolean;
+  pt        : TPoint;
 begin
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
+  RichEditManager.GetScroll(AWinControl.Handle, pt);
   RichEditManager.GetSelection(AWinControl.Handle, OrigStart, OrigLen);
 
   NeedLock := (OrigStart <> TextStart) or (OrigLen <> TextLen);
@@ -703,6 +712,7 @@ begin
   end else
     RichEditManager.SetSelectedTextStyle(AWinControl.Handle, Params, True, AModifyMask);
 
+  RichEditManager.SetScroll(AWinControl.Handle, pt);
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
 end;
 
@@ -743,11 +753,14 @@ class function TWin32WSCustomRichMemo.GetStyleRange(
 var
   Orig      : TCharRange;
   eventmask : longword;
+  pt  : TPoint;
 begin
   if not Assigned(RichEditManager) or not Assigned(AWinControl) then begin
     Result := false;
     Exit;
   end;
+
+  RichEditManager.GetScroll(AWinControl.Handle, pt);
 
   eventmask := RichEditManager.SetEventMask(AWinControl.Handle, 0);
   LockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle);
@@ -761,6 +774,7 @@ begin
   end;
   
   RichEditManager.SetSelRange(AWinControl.Handle, Orig);
+  RichEditManager.SetScroll(AWinControl.Handle, pt);
   UnlockRedraw(TCustomRichMemo(AWinControl), AWinControl.Handle, false);
   
   RichEditManager.SetEventMask(AWinControl.Handle, eventmask);
@@ -1460,10 +1474,10 @@ var
 begin
   if not Assigned(AWinControl) or not (AWinControl.HandleAllocated) or ((DeltaX=0) and (DeltaY=0)) then Exit;
 
-  Windows.SendMessage(AWinControl.Handle, EM_GETSCROLLPOS, 0, LPARAM(@pt));
+  RichEditManager.GetScroll(AWinControl.Handle, pt);
   dec(pt.x,DeltaX);
   dec(pt.y,Deltay);
-  Windows.SendMessage(AWinControl.Handle, EM_SETSCROLLPOS, 0, LPARAM(@pt));
+  RichEditManager.SetScroll(AWinControl.Handle, pt);
 end;
 
 // The function doesn't use Windows 7 (Vista?) animations. And should.

@@ -137,7 +137,8 @@ type
   TLinkAction = (laClick);
 
   TLinkMouseInfo = record
-    button : TMouseButton;
+    Button  : TMouseButton;
+    LinkRef : String;
   end;
 
   TLinkActionEvent = procedure (Sender: TObject;

@@ -198,6 +198,12 @@ type
     class procedure SetScroll(RichEditWnd: Handle; const pt: TPoint); virtual;
   end;
   TRichManagerClass = class of TRichEditManager;
+
+  { TRichEditManagerWinXP }
+
+  TRichEditManagerWinXP = class(TRichEditManager)
+    class procedure SetTextUIStyle(RichEditWnd: Handle; const ui: TTextUIParam); override;
+  end;
                      
 var
   RichEditManager : TRichManagerClass = nil;
@@ -336,6 +342,27 @@ begin
     if Params.HasBkClr then Params.BkColor:=fmt.crBackColor;
     Params.VScriptPos:=EffectsToVScriptPost(fmt.dwEffects);
   end;
+end;
+
+{ TRichEditManagerWinXP }
+
+class procedure TRichEditManagerWinXP.SetTextUIStyle(RichEditWnd: Handle;
+  const ui: TTextUIParam);
+var
+  st  : TSetTextEx;
+  linkrtf : String;
+  txt     : WideString;
+  txtrtf  : String;
+begin
+  if RichEditWnd = 0 then Exit;
+
+  txt := GetTextW(RichEditWnd, true);
+  st.codepage:=CP_UTF8;
+  st.flags:=ST_SELECTION;
+  txtrtf:=UTF8Encode(txt);
+  linkrtf:=Format('{\rtf1{\field{\*\fldinst{ HYPERLINK "%s"}}{\fldrslt{%s}}}}',
+    [ui.linkref, txtrtf]);
+  SendMessage(RichEditWnd, EM_SETTEXTEX, WPARAM(@st), LParam(@linkrtf[1]));
 end;
 
 

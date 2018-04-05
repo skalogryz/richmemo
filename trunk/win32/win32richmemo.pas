@@ -329,6 +329,8 @@ begin
               if isClick then begin
                 FillChar(minfo, sizeof(minfo), 0);
                 minfo.button:=mb;
+                RichEditManager.LinkNotifyToInfo( AWinControl.Handle,
+                  lnk^, minfo );
                 TIntCustomRichMemo(AWinControl).DoLinkAction(laClick, minfo, lnk^.chrg.cpMin, lnk^.chrg.cpMax-lnk^.chrg.cpMin);
               end;
 

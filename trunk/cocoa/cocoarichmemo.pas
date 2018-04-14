@@ -530,7 +530,7 @@ begin
       NSRightTabStopType:  AStopList.Tabs[i].Align:= tabRight;
       NSDecimalTabStopType: AStopList.Tabs[i].Align:= tabDecimal;
     else
-      AStopList.Tabs[i].Align:=taLeft;
+      AStopList.Tabs[i].Align:=tabLeft;
     end;
   end;
 end;

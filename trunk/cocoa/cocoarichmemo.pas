@@ -457,7 +457,6 @@ begin
   par.setParagraphSpacingBefore(AMetric.SpaceBefore);
 
   txt.addAttribute_value_range( NSParagraphStyleAttributeName, par, ParaRange(txt, TextStart, textLen));
-  par.release;
 end;
 
 class procedure TCocoaWSCustomRichMemo.SetParaTabs(
@@ -496,7 +495,6 @@ begin
   end;
   par.setTabStops(tabs);
   txt.addAttribute_value_range( NSParagraphStyleAttributeName, par, ParaRange(txt, TextStart, textLen));
-  par.release;
 end;
 
 class function TCocoaWSCustomRichMemo.GetParaTabs(

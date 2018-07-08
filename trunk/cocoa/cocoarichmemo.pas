@@ -9,7 +9,7 @@ interface
 uses
   CocoaAll, Classes, SysUtils,
   LCLType, Graphics, Controls, StdCtrls,
-  CocoaPrivate, CocoaUtils, CocoaWSCommon,
+  CocoaPrivate, CocoaTextEdits, CocoaUtils, CocoaWSCommon,
   WSRichMemo, RichMemo;
 
 type

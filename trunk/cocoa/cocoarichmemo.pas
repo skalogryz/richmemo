@@ -216,7 +216,7 @@ begin
   txt.setFrame(nr);
   txt.textContainer.setLineFragmentPadding(0);
 
-  txt.callback := TLCLCommonCallback.Create(txt, AWinControl);
+  txt.callback := TLCLCommonCallback.Create(txt, AWinControl, scr);
   ns := NSStringUtf8(AParams.Caption);
   txt.setString(ns);
   ns.release;

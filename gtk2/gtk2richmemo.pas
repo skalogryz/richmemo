@@ -783,7 +783,7 @@ begin
 
   // add border for memo
   gtk_scrolled_window_set_shadow_type(PGtkScrolledWindow(Widget),
-    BorderStyleShadowMap[TCustomControl(AWinControl).BorderStyle]);
+    BorderStyleShadowMap[TCustomMemo(AWinControl).BorderStyle]);
 
   SetMainWidget(Widget, TempWidget);
   GetWidgetInfo(Widget, True)^.CoreWidget := TempWidget;

@@ -798,9 +798,7 @@ begin
     isitalic:=false;
     iscolor:=0;
     while Assigned(rng) do begin
-      ARich.SelStart:=rng.textStart;
-      ARich.SelLength:=rng.textLength;
-      u:=UTF8Decode(ARich.SelText);
+      u:=ARich.GetUText(rng.textStart, rng.textLength);
       RtfOut('\f'+IntToStr(rng.fontId));
       RtfOut('\fs'+IntToStr(rng.font.Size*2));
       if (fsBold in rng.font.Style) then begin

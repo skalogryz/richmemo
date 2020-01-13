@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="5">
+  <Package Version="4">
     <PathDelim Value="\"/>
     <Name Value="richmemopackage"/>
     <Author Value="Dmitry &apos;skalogryz&apos; Boyarintsev"/>
@@ -27,94 +27,94 @@
 "/>
     <License Value="LGPL"/>
     <Version Major="1"/>
-    <Files>
-      <Item>
+    <Files Count="17">
+      <Item1>
         <Filename Value="wsrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="WSRichMemo"/>
-      </Item>
-      <Item>
+      </Item1>
+      <Item2>
         <Filename Value="win32\win32richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="Win32RichMemo"/>
-      </Item>
-      <Item>
+      </Item2>
+      <Item3>
         <Filename Value="win32\win32richmemoproc.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="Win32RichMemoProc"/>
-      </Item>
-      <Item>
+      </Item3>
+      <Item4>
         <Filename Value="richmemofactory.pas"/>
         <UnitName Value="RichMemoFactory"/>
-      </Item>
-      <Item>
+      </Item4>
+      <Item5>
         <Filename Value="richmemopackage.lrs"/>
         <Type Value="LRS"/>
-      </Item>
-      <Item>
+      </Item5>
+      <Item6>
         <Filename Value="carbon\carbonrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="CarbonRichMemo"/>
-      </Item>
-      <Item>
+      </Item6>
+      <Item7>
         <Filename Value="richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="RichMemo"/>
-      </Item>
-      <Item>
+      </Item7>
+      <Item8>
         <Filename Value="gtk2\gtk2richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="gtk2richmemo"/>
-      </Item>
-      <Item>
+      </Item8>
+      <Item9>
         <Filename Value="richmemortf.pas"/>
         <UnitName Value="RichMemoRTF"/>
-      </Item>
-      <Item>
+      </Item9>
+      <Item10>
         <Filename Value="rtfdata.inc"/>
         <Type Value="Include"/>
-      </Item>
-      <Item>
+      </Item10>
+      <Item11>
         <Filename Value="cocoa\cocoarichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="cocoarichmemo"/>
-      </Item>
-      <Item>
+      </Item11>
+      <Item12>
         <Filename Value="richmemoutils.pas"/>
         <UnitName Value="RichMemoUtils"/>
-      </Item>
-      <Item>
+      </Item12>
+      <Item13>
         <Filename Value="richmemohelpers.pas"/>
         <UnitName Value="RichMemoHelpers"/>
-      </Item>
-      <Item>
+      </Item13>
+      <Item14>
         <Filename Value="qt\qtrichmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="qtrichmemo"/>
-      </Item>
-      <Item>
+      </Item14>
+      <Item15>
         <Filename Value="rtfparspre211.pas"/>
         <UnitName Value="RTFParsPre211"/>
-      </Item>
-      <Item>
+      </Item15>
+      <Item16>
         <Filename Value="win32\win32richmemoole.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="Win32RichMemoOle"/>
-      </Item>
-      <Item>
+      </Item16>
+      <Item17>
         <Filename Value="qt5\qt5richmemo.pas"/>
         <AddToUsesPkgSection Value="False"/>
         <UnitName Value="qt5richmemo"/>
-      </Item>
+      </Item17>
     </Files>
-    <RequiredPkgs>
-      <Item>
+    <RequiredPkgs Count="2">
+      <Item1>
         <PackageName Value="LCL"/>
-      </Item>
-      <Item>
+      </Item1>
+      <Item2>
         <PackageName Value="FCL"/>
         <MinVersion Major="1" Valid="True"/>
-      </Item>
+      </Item2>
     </RequiredPkgs>
     <UsageOptions>
       <UnitPath Value="$(PkgOutDir)"/>

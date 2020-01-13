@@ -1086,6 +1086,7 @@ begin
       // depending on the language and search options (to be done)
       // mostly for Arabi and Hebrew languages
       ATextLength:=UTF8Length(ANiddle);
+      Result := (ATextStart >= 0);
     end else begin
       Result:=TWSCustomRichMemoClass(WidgetSetClass).SearchEx(Self, ANiddle, so, ATextStart, ATextLength);
     end;

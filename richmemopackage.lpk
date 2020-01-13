@@ -21,6 +21,9 @@
         <CompilerMessages>
           <IgnoredMessages idx5060="True" idx5057="True" idx5024="True" idx4055="True"/>
         </CompilerMessages>
+        <OtherDefines Count="1">
+          <Define0 Value="RMLCLTRUNK"/>
+        </OtherDefines>
       </Other>
     </CompilerOptions>
     <Description Value="RichMemo control. Implements cross-platfrom RichEdit control.

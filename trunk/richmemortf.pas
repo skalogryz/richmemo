@@ -82,6 +82,7 @@ type
     prm       : TRTFParams;
     lang      : Integer;
     langproc  : TEncConvProc;
+    deflang   : integer;
 
     procedure AddText(const atext: string);
   protected
@@ -92,14 +93,18 @@ type
     procedure classEof;
     procedure doChangePara(aminor, aparam: Integer);
 
+    procedure doDestination(aminor, aparam: Integer);
     procedure doSpecialChar;
     procedure doChangeCharAttr(aminor, aparam: Integer);
+
+    procedure SetLanguage(AlangCode: integer);
 
     function DefaultTextColor: TColor;
     procedure PushText;
   public
     Memo  : TCustomRichMemo;
     constructor Create(AMemo: TCustomRichMemo; AStream: TStream);
+    destructor Destroy; override;
     procedure StartReading;
   end;
 
@@ -338,6 +343,7 @@ begin
   end;
   //writeln('ctrl: ', rtfClass,' ', rtfMajor, ' ', Self.GetRtfText, ' ',rtfMinor,' ', rtfParam);
   case rtfMajor of
+    rtfDestination: doDestination(rtfMinor, rtfParam);
     rtfSpecialChar: doSpecialChar;
     rtfCharAttr: doChangeCharAttr(rtfMinor, rtfParam);
     rtfParAttr: doChangePara(rtfMinor, rtfParam);
@@ -350,25 +356,32 @@ var
 begin
   if not Assigned(prm) then exit;
 
-  //todo:
-  Exit;
   case rtfMajor of
     rtfBeginGroup: begin
       t:=TRTFParams.Create(prm);
       prm:=t;
     end;
     rtfEndGroup: begin
-      t:=prm.prev;
-      prm.Free;
-      prm:=t;
+      if Assigned(prm) then begin
+        t:=prm.prev;
+        prm.Free;
+        prm:=t;
+      end;
     end;
   end;
-  //writeln('group:  ', rtfMajor, ' ',rtfMinor,' ', rtfParam, ' ', GetRtfText);
 end;
 
 procedure TRTFMemoParser.classEof;
 begin
   PushText;
+end;
+
+procedure TRTFMemoParser.doDestination(aminor, aparam: Integer);
+begin
+  case aminor of
+    rtfDefaultLanguage:
+      deflang:=aparam;
+  end;
 end;
 
 procedure TRTFMemoParser.doChangePara(aminor, aparam: Integer);
@@ -394,9 +407,7 @@ begin
       // \slN - surprise! the "line spacing" is actually a multiplier based on the FONT size, not linesize
       // where linesize = fontsize * 1.2
     rtfLanguage: begin
-      lang:=rtfParam;
-      langproc:=nil;
-      LangConvGet(lang, langproc);
+      SetLanguage(rtfParam);
     end;
   end;
 end;
@@ -414,7 +425,11 @@ begin
   case rtfMinor of
     rtfOptDest: SkipGroup;
     rtfLine: AddText(CharLine);
-    rtfPar:  AddText(CharPara);
+    rtfPar:  begin
+      AddText(CharPara);
+      if deflang<>0 then
+        SetLanguage(deflang);
+    end;
     rtfTab:  AddText(CharTab);
   end;
 end;
@@ -479,6 +494,13 @@ begin
   end;
 end;
 
+procedure TRTFMemoParser.SetLanguage(AlangCode: integer);
+begin
+  lang:=AlangCode;
+  langproc:=nil;
+  LangConvGet(lang, langproc);
+end;
+
 function TRTFMemoParser.DefaultTextColor:TColor;
 begin
   Result:=ColorToRGB(Memo.Font.Color);
@@ -523,8 +545,7 @@ begin
 
 //  Memo.GetTextAttributes(selst, font);
   pf:=Fonts[prm.fnum];
-  if Assigned(pf) then
-    prm.fnt.Name:=pf^.rtfFName;
+  if Assigned(pf) then prm.fnt.Name:=pf^.rtfFName;
   //prm.fnt.Size:=round(fsz);
   //prm.fnt.Style:=fst;
   //prm.fnt.Color:=ColorToRGB(fColor);
@@ -542,6 +563,19 @@ begin
   ClassCallBacks[rtfGroup]:=@classGroup;
   ClassCallBacks[rtfUnknown]:=@classUnk;
   ClassCallBacks[rtfEof]:=@classEof;
+end;
+
+destructor TRTFMemoParser.Destroy;
+var
+  t: TRTFParams;
+begin
+  // cleanup
+  while Assigned(prm) do begin
+    t:=prm;
+    prm:=prm.prev;
+    t.Free;
+  end;
+  inherited Destroy;
 end;
 
 procedure TRTFMemoParser.StartReading;

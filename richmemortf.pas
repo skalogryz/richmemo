@@ -84,6 +84,15 @@ type
     langproc  : TEncConvProc;
     deflang   : integer;
 
+    skipNextCh: Boolean; // For a Unicode escape the control word \u is used,
+                         // followed by a 16-bit signed decimal integer giving
+                         // the Unicode UTF-16 code unit number. For the benefit
+                         // of programs without Unicode support, this must be followed
+                         // by the nearest representation of this character in the specified code page.
+                         // For example, \u1576? would give the Arabic letter bāʼ ب, specifying that
+                         // older programs which do not have Unicode support should render it as a
+                         // question mark instead.
+
     procedure AddText(const atext: string);
   protected
     procedure classUnk;
@@ -297,6 +306,7 @@ begin
     SetLength(Ws,1);
     ws[1]:=UnicodeChar(rtfParam);
     AddText( UTF8Encode(ws) );
+    skipNextCh:=true;
   end; 
 end;
 
@@ -320,6 +330,10 @@ var
   bt  : Char;
 begin
   if not Assigned(prm) then exit;
+  if skipNextCh then begin
+    skipNextCh:=false;
+    Exit;
+  end;
 
   txt:=Self.GetRtfText;
 
@@ -734,7 +748,7 @@ begin
       inc(i);
       Break;
     end else if u[i]<#127 then Result:=Result+char(byte(u[i]))
-    else Result:=Result+'\u'+IntToStr(word(u[i]))+' ';
+    else Result:=Result+'\u'+IntToStr(word(u[i]))+' '; // adding a blank "space" character replacement
     inc(i);
   end;
   idx:=i;

@@ -70,6 +70,7 @@ type
 
     prev : TRTFParams;
     constructor Create(aprev: TRTFParams);
+    procedure ResetDefault;
   end;
 
   TRTFMemoParser = class(TRTFParser)
@@ -271,6 +272,19 @@ begin
   end;
 end;
 
+procedure TRTFParams.ResetDefault;
+begin
+  // default values are taken from RTF specs
+  // see section "Paragraph Formatting Properties"
+  pa:=paLeft;
+  pm.FirstLine:=0;
+  pm.HeadIndent:=0;
+  pm.TailIndent:=0;
+  pm.SpaceBefore:=0;
+  pm.SpaceAfter:=0;
+  pm.LineSpacing:=0;
+end;
+
 { TRTFMemoParserr }
 
 procedure TRTFMemoParser.AddText(const atext: string);
@@ -401,9 +415,7 @@ end;
 procedure TRTFMemoParser.doChangePara(aminor, aparam: Integer);
 begin
   case aminor of
-    rtfParDef:begin
-      prm.pa:=paLeft;
-    end;
+    rtfParDef:      prm.ResetDefault; // reset clear formatting
     rtfQuadLeft:    prm.pa:=paLeft;
     rtfQuadRight:   prm.pa:=paRight;
     rtfQuadJust:    prm.pa:=paJustify;
@@ -602,6 +614,7 @@ begin
     prm:=TRTFParams.Create(nil);
     prm.fnt.Size:=12; //\fsN Font size in half-points (the default is 24).
     prm.fnum:=0;
+    prm.ResetDefault;
 
     inherited StartReading;
     PushText;

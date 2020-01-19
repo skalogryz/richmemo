@@ -761,7 +761,7 @@ begin
       inc(i);
       Break;
     end else if u[i]<#127 then Result:=Result+char(byte(u[i]))
-    else Result:=Result+'\u'+IntToStr(word(u[i]))+' '; // adding a blank "space" character replacement
+    else Result:=Result+'\u'+IntToStr(word(u[i]))+'  '; // adding a blank "space" character replacement
     inc(i);
   end;
   idx:=i;

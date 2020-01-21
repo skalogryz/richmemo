@@ -357,6 +357,8 @@ begin
 
       AddText( langproc(bt) );
     end;
+  end else if (length(txt)=2) and (txt[1]='\') and (txt[2] in ['\','{','}']) then begin
+    AddText(txt[2]);
   end else begin
     AddText(txt);
   end;

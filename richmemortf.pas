@@ -750,6 +750,8 @@ begin
   isNewPara:=false;
   while i<=length(u) do begin
     if u[i]='\' then Result:=Result+'\\'
+    else if u[i]='{' then Result:=Result+'\{'
+    else if u[i]='}' then Result:=Result+'\}'
     else if u[i]=#10 then begin
       Result:=Result+'\par ';
       isNewPara:=true;

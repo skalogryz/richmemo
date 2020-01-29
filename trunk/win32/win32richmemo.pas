@@ -347,6 +347,24 @@ begin
   end;
 end;
 
+function KeysToShiftState(Keys: PtrUInt): TShiftState;
+begin
+  Result := [];
+  if Keys and MK_Shift <> 0 then Include(Result, ssShift);
+  if Keys and MK_Control <> 0 then Include(Result, ssCtrl);
+  if Keys and MK_LButton <> 0 then Include(Result, ssLeft);
+  if Keys and MK_RButton <> 0 then Include(Result, ssRight);
+  if Keys and MK_MButton <> 0 then Include(Result, ssMiddle);
+  if Keys and MK_XBUTTON1 <> 0 then Include(Result, ssExtra1);
+  if Keys and MK_XBUTTON2 <> 0 then Include(Result, ssExtra2);
+  if Keys and MK_DOUBLECLICK <> 0 then Include(Result, ssDouble);
+  if Keys and MK_TRIPLECLICK <> 0 then Include(Result, ssTriple);
+  if Keys and MK_QUADCLICK <> 0 then Include(Result, ssQuad);
+
+  if GetKeyState(VK_MENU) < 0 then Include(Result, ssAlt);
+  if (GetKeyState(VK_LWIN) < 0) or (GetKeyState(VK_RWIN) < 0) then Include(Result, ssMeta);
+end;
+
 function RichEditProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
    LParam: Windows.LParam): LResult; stdcall;
 var
@@ -354,6 +372,7 @@ var
   NcHandled  : Boolean; // NCPaint has painted by itself
   r: TRect;
   PrevWndProc: Windows.WNDPROC;
+  P: TPoint;
 begin
   case Msg of
     WM_PAINT : begin
@@ -390,6 +409,27 @@ begin
       end else
         Result:=WindowProc(Window, Msg, WParam, LParam);
       end;
+
+    // The handling is needed, due to LCL scrolling is making everything slow
+    // for whatever reason. (because it doesn't pass the message to WinAPI?)
+    WM_MOUSEWHEEL, WM_MOUSEHWHEEL:
+    begin
+      WindowInfo := GetWin32WindowInfo(Window);
+
+      // WinAPI sends Screen Coordinates, LCL expects client coordinates
+      p := Point(GET_X_LPARAM(LParam), GET_Y_LPARAM(LParam));
+      if Assigned(WindowInfo^.WinControl) then
+        p := WindowInfo^.WinControl.ScreenToClient(p);
+
+      Result := LCLSendMouseWheelMsg(WindowInfo^.WinControl,
+        p.x, p.y,
+        SmallInt(HIWORD(Integer(WParam))),
+        KeysToShiftState(LOWORD(Integer(WParam))));
+
+      // Non zero value is returned, if LCL marked the message as Handeld
+      if Result = 0 then
+        Result := CallDefaultWindowProc(Window, Msg, WParam, LParam);
+    end;
   else
     Result := WindowProc(Window, Msg, WParam, LParam);
   end;

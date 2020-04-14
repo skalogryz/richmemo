@@ -141,8 +141,6 @@ type
     class function GetCanRedo(const AWinControl: TWinControl): Boolean; override;
 
     class procedure ScrollBy(const AWinControl: TWinControl;  DeltaX, DeltaY: integer); override;
-
-    class procedure PaintTo(const AWinControl: TWinControl; ADC: HDC; X, Y: Integer); override;
   end;
 
   { TWin32Inline }
@@ -202,6 +200,9 @@ function GetLangOptions(rm: TCustomRichMemo):  TWinLangOptions; overload;
 procedure SetLangOptions(hnd: THandle; const opts: TWinLangOptions); overload;
 procedure SetLangOptions(rm: TCustomRichMemo; const opts: TWinLangOptions); overload;
 *)
+
+procedure WMPrintRichMemo(const AWinControl: TWinControl; ADC: HDC);
+
 implementation
 
 const
@@ -367,6 +368,68 @@ begin
   if (GetKeyState(VK_LWIN) < 0) or (GetKeyState(VK_RWIN) < 0) then Include(Result, ssMeta);
 end;
 
+
+procedure WMPrintRichMemo(const AWinControl: TWinControl; ADC: HDC);
+var
+  fmt          : TFormatRange;
+  cxPhysOffset : Integer;
+  cyPhysOffset : Integer;
+  cxPhys       : Integer;
+  cyPhys       : Integer;
+  r : TRect;
+  p : POINTL;
+begin
+  // why would WinAPI make things easier if it can make them harder?!
+  // WM_PRINT doesn't seem to be fully functinoal for RICHEDIT
+  // EM_FORMATRANGE needs to be used
+  fmt.hdc:=ADC;
+  fmt.hdcTarget:=ADC;
+
+  p.x:=1;
+  p.y:=1;
+  fmt.chrg.cpMin:=SendMessage(AWinControl.Handle, EM_CHARFROMPOS, 0, LPARAM(@p));
+  fmt.chrg.cpMax:=TCustomRichMemo(AWinControl).GetTextLen;
+
+  case GetDeviceCaps(adc, TECHNOLOGY) of
+    DT_RASDISPLAY, DT_DISPFILE: begin
+      Windows.GetClientRect(AWinControl.Handle, r);
+      r:=Bounds(0,0,AWinControl.Width,AWinControl.Height);
+      //todo: to be properly read from the border settings
+      InflateRect(r, -4, -4);
+      fmt.rcPage.left   := MulDiv(r.Left,  1440, GetDeviceCaps(adc, LOGPIXELSX));
+      fmt.rcPage.top    := MulDiv(r.Top,   1440, GetDeviceCaps(adc, LOGPIXELSY));
+      fmt.rcPage.right  := MulDiv(r.Right, 1440, GetDeviceCaps(adc, LOGPIXELSX));
+      fmt.rcPage.bottom := MulDiv(r.Bottom,1440, GetDeviceCaps(adc, LOGPIXELSY));
+      fmt.rc:=Bounds(
+        MulDiv(2,1440, GetDeviceCaps(adc, LOGPIXELSY)),
+        MulDiv(2,1440, GetDeviceCaps(adc, LOGPIXELSY)),
+        fmt.rcPage.Right-fmt.rcPage.Left, fmt.rcPage.Bottom-fmt.rcPage.top);;
+    end;
+    DT_RASPRINTER,DT_PLOTTER,DT_METAFILE: begin
+      cxPhysOffset := GetDeviceCaps(adc, PHYSICALOFFSETX);
+      cyPhysOffset := GetDeviceCaps(adc, PHYSICALOFFSETY);
+      cxPhys := GetDeviceCaps(adc, PHYSICALWIDTH);
+      cyPhys := GetDeviceCaps(adc, PHYSICALHEIGHT);
+
+      // Set page rect to physical page size in twips.
+      fmt.rcPage.top    := 0;
+      fmt.rcPage.left   := 0;
+      fmt.rcPage.right  := MulDiv(cxPhys, 1440, GetDeviceCaps(adc, LOGPIXELSX));
+      fmt.rcPage.bottom := MulDiv(cyPhys, 1440, GetDeviceCaps(adc, LOGPIXELSY));
+
+      // Set the rendering rectangle to the pintable area of the page.
+      fmt.rc.left   := cxPhysOffset;
+      fmt.rc.right  := cxPhysOffset + cxPhys;
+      fmt.rc.top    := cyPhysOffset;
+      fmt.rc.bottom := cyPhysOffset + cyPhys;
+    end;
+  end;
+  SendMessage(AWinControl.Handle, EM_FORMATRANGE, 1, LPARAM(@fmt));
+
+  // free mem. See MSDN
+  SendMessage(AWinControl.Handle, EM_FORMATRANGE, 0, 0);
+end;
+
 function RichEditProc(Window: HWnd; Msg: UInt; WParam: Windows.WParam;
    LParam: Windows.LParam): LResult; stdcall;
 var
@@ -434,6 +497,13 @@ begin
     end;
   else
     Result := WindowProc(Window, Msg, WParam, LParam);
+  end;
+
+  case msg of
+    WM_PRINT: begin
+      WindowInfo := GetWin32WindowInfo(Window);
+      WMPrintRichMemo(WindowInfo^.WinControl, HDC(WParam));
+    end;
   end;
 end;
 
@@ -1547,69 +1617,6 @@ begin
   dec(pt.x,DeltaX);
   dec(pt.y,Deltay);
   RichEditManager.SetScroll(AWinControl.Handle, pt);
-end;
-
-class procedure TWin32WSCustomRichMemo.PaintTo(const AWinControl: TWinControl;
-  ADC: HDC; X, Y: Integer);
-var
-  fmt          : TFormatRange;
-  cxPhysOffset : Integer;
-  cyPhysOffset : Integer;
-  cxPhys       : Integer;
-  cyPhys       : Integer;
-  xx, yy: integer;
-  r : TRect;
-begin
-  if not AWinControl.HandleAllocated then Exit;
-
-  // why would WinAPI make things easier if it can make them harder?!
-  // WM_PRINT doesn't seem to be fully functinoal for RICHEDIT
-  // EM_FORMATRANGE needs to be used
-  TWin32WSWinControl.PaintTo(AWinControl, ADC, X,Y);
-  fmt.hdc:=ADC;
-  fmt.hdcTarget:=ADC;
-
-  fmt.chrg.cpMin:=CharAtPos(AWinControl,1,1);
-  fmt.chrg.cpMax:=TCustomRichMemo(AWinControl).GetTextLen;
-
-  case GetDeviceCaps(adc, TECHNOLOGY) of
-    DT_RASDISPLAY, DT_DISPFILE: begin
-      Windows.GetClientRect(AWinControl.Handle, r);
-      r:=Bounds(0,0,AWinControl.Width,AWinControl.Height);
-      //todo: to be properly read from the border settings
-      InflateRect(r, -4, -4);
-      fmt.rcPage.left   := MulDiv(r.Left,  1440, GetDeviceCaps(adc, LOGPIXELSX));
-      fmt.rcPage.top    := MulDiv(r.Top,   1440, GetDeviceCaps(adc, LOGPIXELSY));
-      fmt.rcPage.right  := MulDiv(r.Right, 1440, GetDeviceCaps(adc, LOGPIXELSX));
-      fmt.rcPage.bottom := MulDiv(r.Bottom,1440, GetDeviceCaps(adc, LOGPIXELSY));
-      fmt.rc:=Bounds(
-        MulDiv(X+2,1440, GetDeviceCaps(adc, LOGPIXELSY)),
-        MulDiv(Y+2,1440, GetDeviceCaps(adc, LOGPIXELSY)),
-        fmt.rcPage.Right-fmt.rcPage.Left, fmt.rcPage.Bottom-fmt.rcPage.top);;
-    end;
-    DT_RASPRINTER,DT_PLOTTER,DT_METAFILE: begin
-      cxPhysOffset := GetDeviceCaps(adc, PHYSICALOFFSETX);
-      cyPhysOffset := GetDeviceCaps(adc, PHYSICALOFFSETY);
-      cxPhys := GetDeviceCaps(adc, PHYSICALWIDTH);
-      cyPhys := GetDeviceCaps(adc, PHYSICALHEIGHT);
-
-      // Set page rect to physical page size in twips.
-      fmt.rcPage.top    := 0;
-      fmt.rcPage.left   := 0;
-      fmt.rcPage.right  := MulDiv(cxPhys, 1440, GetDeviceCaps(adc, LOGPIXELSX));
-      fmt.rcPage.bottom := MulDiv(cyPhys, 1440, GetDeviceCaps(adc, LOGPIXELSY));
-
-      // Set the rendering rectangle to the pintable area of the page.
-      fmt.rc.left   := cxPhysOffset;
-      fmt.rc.right  := cxPhysOffset + cxPhys;
-      fmt.rc.top    := cyPhysOffset;
-      fmt.rc.bottom := cyPhysOffset + cyPhys;
-    end;
-  end;
-  SendMessage(AWinControl.Handle, EM_FORMATRANGE, 1, LPARAM(@fmt));
-
-  // free mem. See MSDN
-  SendMessage(AWinControl.Handle, EM_FORMATRANGE, 0, 0);
 end;
 
 // The function doesn't use Windows 7 (Vista?) animations. And should.

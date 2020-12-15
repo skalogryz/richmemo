@@ -1062,7 +1062,7 @@ begin
     try
       l := LinkNotify.chrg.cpMax - LinkNotify.chrg.cpMin;
       SetSelection(RichEditWnd, LinkNotify.chrg.cpMin, l);
-      st := TStringStream.Create;
+      st := TStringStream.Create('');
       hp := '';
       try
         SaveRichText(RichEditWnd, st, SFF_SELECTION);

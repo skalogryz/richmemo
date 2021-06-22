@@ -47,6 +47,11 @@ type
   { TWSCustomRichMemo }
 
   TWSCustomRichMemo = class(TWSCustomMemo)
+  protected
+    class function GetListItem(rich: TCustomRichMemo; out bulletText:string;
+      out itemText:string; out pn:TParaNumbering): boolean; virtual;
+    class procedure ClearParagraph(rich: TCustomRichMemo; TextPos: Integer); virtual;
+    class procedure RenumberNextListItems(rich: TCustomRichMemo; TextPos:Integer; ANumber: TIntParaNumbering); virtual;
   published
     //Note: RichMemo cannot use LCL TCustomEdit copy/paste/cut operations
     //      because there's no support for (system native) RICHTEXT clipboard format
@@ -55,7 +60,8 @@ type
     class procedure CopyToClipboard(const AWinControl: TWinControl); virtual;
     class procedure PasteFromClipboard(const AWinControl: TWinControl); virtual;
     class function CanPasteFromClipboard(const AWinControl: TWinControl): Boolean; virtual;
-    
+    class function HandleKeyDown(const AWinControl: TWinControl; key:word): boolean; virtual;
+
     class function GetStyleRange(const AWinControl: TWinControl; TextStart: Integer; var RangeStart, RangeLen: Integer): Boolean; virtual;
     class function GetTextAttributes(const AWinControl: TWinControl; TextStart: Integer;
       var Params: TIntFontParams): Boolean; virtual;
@@ -132,6 +138,57 @@ implementation
 
 { TWSCustomRichMemo }
 
+class function TWSCustomRichMemo.GetListItem(rich: TCustomRichMemo; out
+  bulletText: string; out itemText: string; out pn: TParaNumbering): boolean;
+var
+  rng: TParaRange;
+  i: SizeInt;
+begin
+  bulletText := '';
+  itemText := '';
+  InitParaNumbering(pn{%H-});
+  result := rich.GetParaNumbering(rich.SelStart, pn) and (pn.Style<>pnNone);
+  if not result then
+    exit; // is not a list item
+  GetParaRange(rich, rich.SelStart, rng);
+  bulletText := rich.GetText(rng.start, rng.lengthNoBr);
+  i := pos(#9, bulletText);
+  if i>0 then begin
+    itemText := system.copy(bulletText, i+1, Length(bulletText));
+    SetLength(bulletText, i);
+  end;
+end;
+
+class procedure TWSCustomRichMemo.ClearParagraph(rich: TCustomRichMemo;
+  TextPos: Integer);
+begin
+
+end;
+
+class procedure TWSCustomRichMemo.RenumberNextListItems(rich: TCustomRichMemo;
+  TextPos: Integer; ANumber: TIntParaNumbering);
+var
+  s:string;
+  rng: TParaRange;
+  Pn: TParaNumbering;
+begin
+  if ANumber.Style in [pnNone, pnBullet, pnCustomChar] then
+    exit;
+
+  // Advance to next paragraph
+  GetParaRange(rich, TextPos, rng);
+
+  // limits or current paragraph
+  while rng.LengthNoBr<>rng.Length do begin
+    textPos := rng.start + rng.length; // point to next paragraph
+    GetParaRange(rich, TextPos, rng);
+    if not rich.GetParaNumbering(rng.start, Pn) or (pn.Style<>ANumber.Style) then
+      break;
+    rich.SetParaNumbering(rng.start, rng.lengthNoBr, ANumber);
+    inc(ANumber.NumberStart);
+  end;
+end;
+
 class procedure TWSCustomRichMemo.CutToClipboard(const AWinControl: TWinControl); 
 begin
 
@@ -151,6 +208,48 @@ class function TWSCustomRichMemo.CanPasteFromClipboard(
   const AWinControl: TWinControl): Boolean;
 begin
   Result := true;
+end;
+
+class function TWSCustomRichMemo.HandleKeyDown(const AWinControl: TWinControl;
+  key: word): boolean;
+var
+  rich: TCustomRichMemo;
+  orgPos, newPos: Integer;
+  paraRange: TParaRange;
+  pn: TParaNumbering;
+  bulletText, itemText: string;
+begin
+
+  result := false;
+  rich := TCustomRichMemo(AWinControl);
+  if not rich.HandleAllocated then
+    exit;
+
+  if not GetListItem(rich, bulletText, itemText, pn) then
+    exit;
+
+  case key of
+    VK_RETURN:
+      case pn.Style of
+        pnNumber, pnBullet, pnLowLetter, pnUpLetter, pnLowRoman, pnUpRoman:
+          begin
+            result := true;
+            orgPos := rich.selStart;
+            rich.GetParaRange(orgPos, paraRange);
+            if itemText='' then begin
+              ClearParagraph(Rich, orgPos);
+              newPos := orgPos;
+            end else begin
+              newPos := rich.InDelText(LineEnding, orgPos, 0) + orgPos;
+              inc(pn.NumberStart, 2);
+            end;
+            RenumberNextListItems(Rich, newPos, pn);
+          end;
+      end;
+    VK_BACK:
+      if itemText='' then
+        RenumberNextListItems(Rich, rich.selStart, pn);
+  end;
 end;
 
 class function TWSCustomRichMemo.GetStyleRange(const AWinControl: TWinControl;

@@ -120,9 +120,13 @@ const
     rtfIVersion             = 35;
     rtfIDoccomm             = 36;
 
-    rtfDefaultLanguage      = 37;
+    rtfDefaultLanguage      = 37;   // deflang is not a destination keyword ???
+    rtfPNText               = 38;
+    rtfPN                   = 39;
+    rtfPNTextA              = 40;
+    rtfPNTextB              = 41;
 
-    rtfMaxDestination       = 38    { highest dest + 1 };
+    rtfMaxDestination       = 42    { highest dest + 1 };
 
   rtfFontFamily   = 4;
     rtfFFNil                = 0;
@@ -367,7 +371,7 @@ const
     rtfFieldLocked          = 2;
     rtfFieldPrivate         = 3;
 
-    rtfTOCAttr      = 16;
+  rtfTOCAttr      = 16;
     rtfTOCType              = 0;
     rtfTOCLevel             = 1;
 
@@ -390,6 +394,84 @@ const
     rtfRPosMargH            = 15;
     rtfRPosPageH            = 16;
     rtfRPosColH             = 17;
+
+  rtfPnLevelAttr  = 18;
+    rtfPnLvlN               = 0;
+    rtfPnLvlBlt             = 1;
+    rtfPnLvlBody            = 2;
+    rtfPnLvlCont            = 3;
+
+  rtfPnStyleAttr  = 19;
+    rtfPnStyleCard          = 0;
+    rtfPnStyleDec           = 1;
+    rtfPnStyleUcltr         = 2;
+    rtfPnStyleUcrm          = 3;
+    rtfPnStyleLcltr         = 4;
+    rtfPnStyleLcrm          = 5;
+    rtfPnStyleOrd           = 6;
+    rtfPnStyleOrdT          = 7;
+    rtfPnStyleBidiA         = 8;
+    rtfPnStyleBidiB         = 9;
+    rtfPnStyleAiu           = 10;
+    rtfPnStyleAiuD          = 11;
+    rtfPnStyleAiuEo         = 12;
+    rtfPnStyleAiuEoD        = 13;
+    rtfPnStyleChoSung       = 14;
+    rtfPnStyleCNum          = 15;
+    rtfPnStyleDBnum         = 16;
+    rtfPnStyleDBnumD        = 17;
+    rtfPnStyleDBnumK        = 18;
+    rtfPnStyleDBnumL        = 19;
+    rtfPnStyleDBnumT        = 20;
+    rtfPnStyleDecD          = 21;
+    rtfPnStyleGanada        = 22;
+    rtfPnStyleGbNum         = 23;
+    rtfPnStyleGbNumD        = 24;
+    rtfPnStyleGbNumK        = 25;
+    rtfPnStyleGbNumL        = 26;
+    rtfPnStyleIroha         = 27;
+    rtfPnStyleIrohaD        = 28;
+    rtfPnStyleUlDash        = 29;
+    rtfPnStyleUlDashd       = 30;
+    rtfPnStyleUlDashdD      = 31;
+    rtfPnStyleUlHair        = 32;
+    rtfPnStyleUlTh          = 33;
+    rtfPnStyleUlwave        = 34;
+    rtfPnStyleZodiac        = 35;
+    rtfPnStyleZodiacd       = 36;
+    rtfPnStyleZodiacl       = 37;
+
+  rtfPnChrfmtAttr = 20;
+    rtfPnChrFmtf            = 0;
+    rtfPnChrFmtfs           = 1;
+    rtfPnChrFmtb            = 2;
+    rtfPnChrFmti            = 3;
+    rtfPnChrFmtcaps         = 4;
+    rtfPnChrFmtscaps        = 5;
+    rtfPnChrFmtstrike       = 6;
+    rtfPnChrFmtcf           = 7;
+
+  rtfPnulAttr     = 21;
+    rtfPnUl                 = 0;
+    rtfPnUlD                = 1;
+    rtfPnUlDb               = 2;
+    rtfPnUlNone             = 3;
+    rtfPnUlW                = 4;
+
+  rtfPnFmtAttr    = 22;
+    rtfPnNumonce            = 0;
+    rtfPnAcross             = 1;
+    rtfPnIndent             = 2;
+    rtfPnSp                 = 3;
+    rtfPnPrev               = 4;
+    rtfPnStart              = 5;
+    rtfPnHang               = 6;
+    rtfPnRestart            = 7;
+
+  rtfPnJustAttr   = 23;
+    rtfPnQc                 = 0;
+    rtfPnQl                 = 1;
+    rtfPnQr                 = 2;
 
   rtfBasedOnNone  = 222;  { "no based-on style" }
 
@@ -452,6 +534,21 @@ type
     rtfNextStyle : PRTFStyle;       { next style in style list }
   end;
 
+  TRTFFieldMod = record
+    rtfFieldDiry: boolean;
+    rtfFieldEdit: boolean;
+    rtfFieldLock: boolean;
+    rtfFildPriv: boolean;
+  end;
+
+  PRTFField = ^TRTFField;
+  TRTFField = record
+    valid: boolean;
+    rtfFieldMod: TRTFFieldMod;
+    rtfFieldInst: string;
+    rtfFieldRslt: string;
+  end;
+
 { ---------------------------------------------------------------------
        Control symbol lookup routines
   ---------------------------------------------------------------------}
@@ -470,7 +567,7 @@ type
   ---------------------------------------------------------------------}
 
 const
-  rtfKey : Array [0..287] of TRTFKey =
+  rtfKey : Array [0..357] of TRTFKey =
   (
     ( rtfKMajor: RTFSPECIALCHAR; rtfKMinor : rtfCURHEADPICT; rtfKStr  : 'chpict'; rtfKhash :        0),
     ( rtfKMajor: rtfSpecialChar; rtfKMinor:         rtfCurHeadDate; rtfKstr : 'chdate'; rtfkHash : 0),
@@ -715,6 +812,10 @@ const
     ( rtfKMajor: rtfDestination; rtfKMinor:         rtfIDoccomm; rtfKstr : 'doccomm'; rtfkHash : 0),
 
     ( rtfKMajor: rtfDestination; rtfKMinor:         rtfDefaultLanguage; rtfKstr : 'deflang'; rtfkHash : 0),
+    ( rtfKMajor: rtfDestination; rtfKMinor:         rtfPNText; rtfKstr : 'pntext'; rtfkHash : 0),
+    ( rtfKMajor: rtfDestination; rtfKMinor:         rtfPN; rtfKstr : 'pn'; rtfkHash : 0),
+    ( rtfKMajor: rtfDestination; rtfKMinor:         rtfPNTextB; rtfKstr : 'pntxtb'; rtfkHash : 0),
+    ( rtfKMajor: rtfDestination; rtfKMinor:         rtfPNTextA; rtfKstr : 'pntxta'; rtfkHash : 0),
 
     ( rtfKMajor: rtfTOCAttr; rtfKMinor:     rtfTOCType; rtfKstr : 'tcf'; rtfkHash : 0),
     ( rtfKMajor: rtfTOCAttr; rtfKMinor:     rtfTOCLevel; rtfKstr : 'tcl'; rtfkHash : 0),
@@ -774,6 +875,78 @@ const
     ( rtfKMajor: rtfPosAttr; rtfKMinor:     rtfRPosMargH; rtfKstr : 'phmrg'; rtfkHash : 0),
     ( rtfKMajor: rtfPosAttr; rtfKMinor:     rtfRPosPageH; rtfKstr : 'phpg'; rtfkHash : 0),
     ( rtfKMajor: rtfPosAttr; rtfKMinor:     rtfRPosColH; rtfKstr : 'phcol'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnLevelAttr;  rtfKMinor: rtfPnLvlN; rtfKstr : 'pnlvl'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnLevelAttr;  rtfKMinor: rtfPnLvlBlt; rtfKstr : 'pnlvlblt'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnLevelAttr;  rtfKMinor: rtfPnLvlBody; rtfKstr : 'pnlvlbody'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnLevelAttr;  rtfKMinor: rtfPnLvlCont; rtfKstr : 'pnlvlcont'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleCard; rtfKstr : 'pncard'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDec; rtfKstr : 'pndec'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUcltr; rtfKstr : 'pnucltr'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUcrm; rtfKstr : 'pnucrm'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleLcltr; rtfKstr : 'pnlcltr'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleLcrm; rtfKstr : 'pnlcrm'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleOrd; rtfKstr : 'pnord'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleOrdT; rtfKstr : 'pnordt'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleBidiA; rtfKstr : 'pnbidia'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleBidiB; rtfKstr : 'pnbidib'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleAiu; rtfKstr : 'pnaiu'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleAiuD; rtfKstr : 'pnaiud'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleAiuEo; rtfKstr : 'pnaueo'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleAiuEoD; rtfKstr : 'pnaiueod'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleChoSung; rtfKstr : 'pnchosung'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleCNum; rtfKstr : 'pncnum'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDBnum; rtfKstr : 'pndbnum'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDBnumD; rtfKstr : 'pndbnumd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDBnumK; rtfKstr : 'pndbnumk'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDBnumL; rtfKstr : 'pndbnuml'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDBnumT; rtfKstr : 'pndbnumt'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleDecD; rtfKstr : 'pndecd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleGanada; rtfKstr : 'pnganada'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleGbNum; rtfKstr : 'pngbnum'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleGbNumD; rtfKstr : 'pngbnumd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleGbNumK; rtfKstr : 'pngbnumk'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleGbNumL; rtfKstr : 'pngbnuml'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleIroha; rtfKstr : 'pniroha'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleIrohaD; rtfKstr : 'pnirohad'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlDash; rtfKstr : 'pnuldash'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlDashd; rtfKstr : 'pnuldashd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlDashdD; rtfKstr : 'pnuldashdd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlHair; rtfKstr : 'pnulhair'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlTh; rtfKstr : 'pnulth'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleUlwave; rtfKstr : 'pnulwave'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleZodiac; rtfKstr : 'pnzodiac'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleZodiacd; rtfKstr : 'pnzodiacd'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnStyleAttr;  rtfKMinor: rtfPnStyleZodiacl; rtfKstr : 'pnzodiacl'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtf; rtfKstr : 'pnf'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtfs; rtfKstr : 'pnfs'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtb; rtfKstr : 'pnb'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmti; rtfKstr : 'pni'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtcaps; rtfKstr : 'pncaps'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtscaps; rtfKstr : 'pnscaps'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtstrike; rtfKstr : 'pnstrike'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnChrfmtAttr;  rtfKMinor: rtfPnChrFmtcf; rtfKstr : 'pncf'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnulAttr;      rtfKMinor: rtfPnUl; rtfKstr : 'pnul'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnulAttr;      rtfKMinor: rtfPnUlD; rtfKstr : 'pnuld'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnulAttr;      rtfKMinor: rtfPnUlDb; rtfKstr : 'pnuldb'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnulAttr;      rtfKMinor: rtfPnUlNone; rtfKstr : 'pnulnone'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnulAttr;      rtfKMinor: rtfPnUlW; rtfKstr : 'pnulw'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnNumonce; rtfKstr : 'pnnumonce'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnAcross; rtfKstr : 'pnacross'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnIndent; rtfKstr : 'pnindent'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnSp; rtfKstr : 'pnsp'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnPrev; rtfKstr : 'pnprev'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnStart; rtfKstr : 'pnstart'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnHang; rtfKstr : 'pnhang'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnFmtAttr;     rtfKMinor: rtfPnRestart; rtfKstr : 'pnrestart'; rtfkHash : 0),
+
+    ( rtfKMajor: rtfPnJustAttr;    rtfKMinor: rtfPnQc; rtfKstr : 'pnqc'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnJustAttr;    rtfKMinor: rtfPnQl; rtfKstr : 'pnql'; rtfkHash : 0),
+    ( rtfKMajor: rtfPnJustAttr;    rtfKMinor: rtfPnQr; rtfKstr : 'pnqr'; rtfkHash : 0),
 
     ( rtfKMajor: rtfVersion; rtfKMinor:     -1; rtfKstr : 'rtf'; rtfkHash : 0),
     ( rtfKMajor: rtfDefFont; rtfKMinor:     -1; rtfKstr : 'deff'; rtfkHash : 0),

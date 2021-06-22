@@ -197,6 +197,8 @@ type
     class procedure GetScroll(RichEditWnd: Handle; out pt: TPoint); virtual;
     class procedure SetScroll(RichEditWnd: Handle; const pt: TPoint); virtual;
 
+    class function GetHyperlink(RichEditWnd: Handle; TextStart, TextLen: Integer;
+      out Link: string): Boolean; virtual;
     class function LinkNotifyToInfo(RichEditWnd: Handle; const LinkNotify: TENLINK;
       var LinkInfo: TLinkMouseInfo): Boolean; virtual;
   end;
@@ -260,6 +262,11 @@ implementation
 const
   GlobalRichClass : AnsiString = '';
   UnicodeEnabledOS : Boolean = true; // todo: implement it to work with Windows 9x, if necessary
+
+  RECLS_RICHEDIT50W = 'RichEdit50W';
+  RECLS_RICHEDIT20W = 'RichEdit20W';
+  RECLS_RICHEDIT20A = 'RichEdit20A';
+  RECLS_RICHEDIT    = 'RichEdit';
   
 const
   TwipsInFontSize = 20; // see MSDN for CHARFORMAT Structure CFM_SIZE
@@ -273,13 +280,13 @@ function InitRichEdit: Boolean;
 begin
   if GlobalRichClass = '' then begin
     if LoadLibrary('Msftedit.dll') <> 0 then begin
-      GlobalRichClass := 'RichEdit50W';
+      GlobalRichClass := RECLS_RICHEDIT50W;
     end else if LoadLibrary('RICHED20.DLL') <> 0 then begin
-      if UnicodeEnabledOS then GlobalRichClass := 'RichEdit20W'
+      if UnicodeEnabledOS then GlobalRichClass := RECLS_RICHEDIT20W
       else
-      GlobalRichClass := 'RichEdit20A'
+      GlobalRichClass := RECLS_RICHEDIT20A
     end else if LoadLibrary('RICHED32.DLL') <> 0 then begin
-      GlobalRichClass := 'RichEdit';
+      GlobalRichClass := RECLS_RICHEDIT;
     end;
       
     if not Assigned(RichEditManager) then 
@@ -524,6 +531,13 @@ var
 begin
   if RichEditWnd = 0 then Exit;
 
+  if GetRichEditClass=RECLS_RICHEDIT50W then
+  begin
+    // do it in the WinXP way
+    TRichEditManagerWinXP.SetTextUIStyle(RichEditWnd, ui);
+    Exit;
+  end;
+
   w := SCF_SELECTION;
 
   FillChar(fmt, sizeof(fmt), 0);
@@ -548,6 +562,8 @@ class function TRichEditManager.GetTextUIStyle(RichEditWnd: Handle; var ui: TTex
 var
   w   : WPARAM;
   fmt : TCHARFORMAT2;
+  sr: TCHARRANGE;
+  rangeStart, rangeLen: Integer;
 begin
   Result:=false;
   if RichEditWnd = 0 then Exit;
@@ -561,8 +577,12 @@ begin
 
   SendMessage(RichEditWnd, EM_GETCHARFORMAT, w, PtrInt(@fmt));
   InitTextUIParams(ui);
-  if fmt.dwEffects and CFE_LINK > 0 then
+  if fmt.dwEffects and CFE_LINK > 0 then begin
     Include(ui.features, uiLink);
+    GetSelRange(RichEditWnd, sr);
+    GetStyleRange(RichEditWnd, sr.cpMin, rangeStart, rangeLen);
+    GetHyperlink(RichEditWnd, rangeStart, rangeLen, ui.linkref);
+  end;
   Result:=true;
 end;
 
@@ -1044,50 +1064,62 @@ begin
   SendMessage(RichEditWnd, EM_SETSCROLLPOS, 0, LPARAM(@pt));
 end;
 
+// gets the hyperlink at the TextStart offset and TextLen
+class function TRichEditManager.GetHyperlink(RichEditWnd: Handle; TextStart,
+  TextLen: Integer; out Link: string): Boolean;
+var
+  olds, oldl, hpi, hps: Integer;
+  st: TStringStream;
+  hp: String;
+begin
+  Link := '';
+
+  GetSelection(RichEditWnd, olds, oldl);
+  try
+    SetSelection(RichEditWnd, TextStart, TextLen);
+    st := TStringStream.Create('');
+    hp := '';
+    try
+      // Rich Edit 3.0 and later: we can retrieve the text in UTF8 encoding
+      // ref: https://docs.microsoft.com/en-us/windows/win32/controls/em-streamout
+      hpi := SFF_SELECTION;
+      if GetRichEditClass=RECLS_RICHEDIT50W then
+        hpi := hpi or Integer(CP_UTF8 shl 16) or SF_USECODEPAGE;
+      SaveRichText(RichEditWnd, st, hpi);
+      hp := st.DataString;
+    finally
+      st.Free;
+    end;
+    hpi := Pos('HYPERLINK', hp);
+    result := (hpi>0);
+    if result then begin
+      inc(hpi, length('HYPERLINK'));
+      while (hpi <= length(hp)) and not (hp[hpi] in ['"','}']) do inc(hpi);
+      if (hpi <= length(hp)) and (hp[hpi]='"') then begin
+        inc(hpi);
+        hps:=hpi;
+        while (hpi <= length(hp)) and (hp[hpi] <> '"') do
+          inc(hpi);
+        //todo: if GetRichEditClass is not RECLS_RICHEDIT50W, convert RTF chars into UTF8
+        Link := Copy(hp, hps, hpi-hps);
+      end;
+    end;
+  finally
+    SetSelection(RichEditWnd, olds, oldl);
+  end;
+end;
+
 class function TRichEditManager.LinkNotifyToInfo(RichEditWnd: Handle;
   const LinkNotify: TENLINK; var LinkInfo: TLinkMouseInfo): Boolean;
 var
-  gt : GETTEXTEX;
-  l  : integer;
-  olds, oldl : integer;
-  st : TStringStream;
   evmsk : Integer;
-  hp : string;
-  hpi : integer;
-  hps : integer;
 begin
   evmsk := SetEventMask(RichEditWnd, 0);
   try
-    GetSelection(RichEditWnd, olds, oldl);
-    try
-      l := LinkNotify.chrg.cpMax - LinkNotify.chrg.cpMin;
-      SetSelection(RichEditWnd, LinkNotify.chrg.cpMin, l);
-      st := TStringStream.Create('');
-      hp := '';
-      try
-        SaveRichText(RichEditWnd, st, SFF_SELECTION);
-        hp := st.DataString;
-      finally
-        st.Free;
-      end;
-      hpi := Pos('HYPERLINK', hp);
-      if (hpi>0) then begin
-        inc(hpi, length('HYPERLINK'));
-        while (hpi <= length(hp)) and not (hp[hpi] in ['"','}']) do inc(hpi);
-        if (hpi <= length(hp)) and (hp[hpi]='"') then begin
-          inc(hpi);
-          hps:=hpi;
-          while (hpi <= length(hp)) and (hp[hpi] <> '"') do
-            inc(hpi);
-          //todo: convert RTF chars into UTF8
-          LinkInfo.LinkRef := Copy(hp, hps, hpi-hps);
-        end;
-        Result := true;
-      end else
-        Result :=TRichEditManagerWinXP.LinkNotifyToInfo(RichEditWnd, LinkNotify, LinkInfo);
-    finally
-      SetSelection(RichEditWnd, olds, oldl);
-    end;
+    with LinkNotify.chrg do
+      result := GetHyperLink(RichEditWnd, cpMin, cpMax-cpMin, LinkInfo.LinkRef);
+    if not result then
+      Result :=TRichEditManagerWinXP.LinkNotifyToInfo(RichEditWnd, LinkNotify, LinkInfo);
   finally
     SetEventMask(RichEditWnd, evmsk);
   end;

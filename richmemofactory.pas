@@ -29,7 +29,9 @@ uses
   {$endif}
   {$ifdef LCLCocoa},CocoaRichMemo{$endif}
   {$ifdef LCLQt},QtRichMemo{$endif}
-  {$ifdef LCLQt5},Qt5RichMemo{$endif}
+  {$ifdef LCLQt5}
+  ,RichMemoRTF, Qt5RichMemo
+  {$endif}
   ;
 
 function RegisterCustomRichMemo: Boolean;
@@ -50,7 +52,11 @@ begin
   {$endif}
   {$ifdef LCLCocoa}RegisterWSComponent(TCustomRichMemo, TCocoaWSCustomRichMemo);{$endif}
   {$ifdef LCLQt}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
-  {$ifdef LCLQt5}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
+  {$ifdef LCLQt5}
+  RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);
+  RegisterRTFLoader;
+  RegisterRTFSaver;
+  {$endif}
   {$ifdef NoRichMemo}RegisterWSComponent(TCustomRichMemo, TWSCustomRichMemo);{$endif}
 end;
 

@@ -61,9 +61,6 @@ type
     procedure ReadStyleSheet ;
     procedure ReadInfoGroup ;
     procedure ReadPictGroup ;
-    function  CheckCM (Aclass, major: Integer) : Boolean;
-    function  CheckCMM (Aclass, major, minor : Integer) : Boolean;
-    function  CheckMM (major, minor : Integer) : Boolean;
     procedure Real_RTFGetToken;
     function  GetChar : Integer;
     procedure Lookup (S : String);
@@ -75,6 +72,10 @@ type
     procedure SetDestinationCallback (ADestination : Integer; Acallback : TRTFFuncPtr);
     function  GetDestinationCallback (Adestination : Integer) : TRTFFuncPtr ;
     procedure SetStream (Astream : TStream);
+  protected
+    function  CheckCM (Aclass, major: Integer) : Boolean;
+    function  CheckCMM (Aclass, major, minor : Integer) : Boolean;
+    function  CheckMM (major, minor : Integer) : Boolean;
   public
     constructor Create (AStream : TStream);
     destructor  Destroy; override;
@@ -84,7 +85,7 @@ type
     procedure ResetParser;
     procedure RouteToken;
     procedure SkipGroup;
-    procedure StartReading;
+    procedure StartReading; virtual;
     procedure SetReadHook (Hook : TRTFFuncPtr);
     procedure UngetToken;
     procedure SetToken (Aclass, major, minor, param : Integer; text : string);
@@ -641,15 +642,14 @@ begin
       Error ('FTErr - missing font number');
     fp^.rtfFNum := rtfParam;
 
-    { Read optionalcommands. Recognize only fontfamily}
-    GetToken;
-    if not CheckCM (rtfControl, rtfFontFamily) then
-      error ('FTErr - missing font family ');
-    fp^.rtfFFamily := rtfMinor;
-
     { Read optional commands/groups. Recognize none at this point..}
     GetToken;
     while (rtfclass=rtfcontrol) or ((rtfclass=rtfgroup) or (rtfclass=rtfunknown)) do begin
+
+      { Read optionalcommands. Recognize only fontfamily}
+      if CheckCM (rtfControl, rtfFontFamily) then
+        fp^.rtfFFamily := rtfMinor;
+
       if rtfclass=rtfgroup then SkipGroup;
       GetToken
     end;
@@ -667,6 +667,14 @@ begin
 
     { Read alternate font}
     if (old=0) then begin { need to see "End;" here }
+      if CheckCM (rtfGroup, rtfBeginGroup) then begin
+        SkipGroup;
+        GetToken;
+      end;
+      // we have to see ';' here, eat it.
+      if (rtfClass<>rtfText) or (rtfMajor <> ord(';')) then
+        Error ('FTErr - missing ;');
+
       GetToken;
       if not CheckCM (rtfGroup, rtfEndGroup) then
         Error ('FTErr - missing }');

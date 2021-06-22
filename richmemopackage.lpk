@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
-  <Package Version="4">
+  <Package Version="5">
     <PathDelim Value="\"/>
     <Name Value="richmemopackage"/>
-    <Author Value="Dmitry 'skalogryz' Boyarintsev"/>
+    <Author Value="Dmitry &apos;skalogryz&apos; Boyarintsev"/>
     <CompilerOptions>
       <Version Value="11"/>
       <PathDelim Value="\"/>
@@ -21,8 +21,11 @@
         <CompilerMessages>
           <IgnoredMessages idx5060="True" idx5057="True" idx5024="True" idx4055="True"/>
         </CompilerMessages>
-        <OtherDefines Count="1">
+        <CustomOptions Value="-dRMLCLTRUNK
+-dRMQT5_NOTEXTFORMATS"/>
+        <OtherDefines Count="2">
           <Define0 Value="RMLCLTRUNK"/>
+          <Define1 Value="RMQT5_NOTEXTFORMATS"/>
         </OtherDefines>
       </Other>
     </CompilerOptions>
@@ -106,6 +109,7 @@
         <UnitName Value="qt5richmemo"/>
       </Item16>
     </Files>
+    <CompatibilityMode Value="True"/>
     <RequiredPkgs Count="2">
       <Item1>
         <PackageName Value="LCL"/>

@@ -59,6 +59,17 @@ const
   OneHalfLineSpacing = DefLineSpacing * 1.5;
   DoubleLineSpacing  = DefLineSpacing * 2.0;
 
+// TODO: List metrics used in GTK, need adjustments as probably screen dpi
+// will have some effect, finally make constants only in GTK
+const
+  RichListMargin: Integer = 7; // 25
+  RichListIndent: Integer = 20; // 14
+  RichListTabWidth: Integer = 20; // 14
+
+const
+  PageDPI       = 72; // not expected to be changed
+  ScreenDPI     : Integer = 96; // todo: might change, should be received dynamically
+
 
 type
   TParaNumStyle   = (pnNone, pnBullet, pnNumber, pnLowLetter
@@ -183,6 +194,7 @@ type
     fOnLinkAction       : TLinkActionEvent;
     fZoomFactor         : Double;
   private
+    fFastLoad: boolean;
     procedure InlineInvalidate(handler: TRichMemoInline);
 
     //todo: PrintMeasure doesn't work propertly
@@ -207,6 +219,7 @@ type
     function GetCanRedo: Boolean; virtual;
 
     function isValidCharOfs(TextStart: integer): Boolean;
+    procedure KeyDown(var Key: Word; Shift: TShiftState); override;
   public
     constructor Create(AOwner: TComponent); override;
     procedure CopyToClipboard; override;
@@ -241,6 +254,7 @@ type
       const ParaMetric: TParaMetric);
 
     procedure SetLink(TextStart, TextLength: Integer; AIsLink: Boolean; const ALinkRef: String = ''); virtual;
+    function GetLink(TextStart: Integer; out ALinkRef: string): boolean; virtual;
     function isLink(TextStart: Integer): Boolean; virtual;
 
     function LoadRichText(Source: TStream): Boolean; virtual;
@@ -268,6 +282,7 @@ type
     property OnPrintAction: TPrintActionEvent read fOnPrintAction write fOnPrintAction;
     property OnLinkAction: TLinkActionEvent read fOnLinkAction write fOnLinkAction;
     property CanRedo: Boolean read GetCanRedo;
+    property FastLoad: boolean read fFastLoad write fFastLoad;
   end;
   
   { TRichMemo }
@@ -358,8 +373,10 @@ procedure InitPrintParams(var prm: TPrintParams);
 
 procedure InitTextUIParams(var prm: TTextUIParam);
 
+procedure DumpMemo(memo: TCustomRichMemo);
+
 var
-  RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream): Boolean = nil;
+  RTFLoadStream : function (AMemo: TCustomRichMemo; Source: TStream; fastLoad:boolean=false): Boolean = nil;
   RTFSaveStream : function (AMemo: TCustomRichMemo; Dest: TStream): Boolean = nil;
 
 implementation
@@ -369,7 +386,7 @@ uses
 
 procedure InitFontParams(out p: TFontParams);
 begin
-  FillChar(p, SizeOf(p), 0);
+  FillChar(p{%H-}, SizeOf(p), 0);
 end;
 
 function GetFontParams(styles: TFontStyles): TFontParams; overload;
@@ -896,6 +913,7 @@ begin
   try
     // manually looping from text ranges and re-applying
     // all the style. changing only the ones that in the mask
+    initialize(p);
     i := TextStart;
     j := TextStart + TextLength;
     while i < j do begin
@@ -950,6 +968,7 @@ var
   ui : TTextUIParam;
 begin
   if HandleAllocated then begin
+    initialize(ui);
     TWSCustomRichMemoClass(WidgetSetClass).GetTextUIParams(Self, TextStart, ui);
     if AIsLink then begin
       Include(ui.features, uiLink);
@@ -960,10 +979,27 @@ begin
   end;
 end;
 
+function TCustomRichMemo.GetLink(TextStart: Integer; out ALinkRef: string
+  ): boolean;
+var
+  ui: TTextUIParam;
+begin
+  result := HandleAllocated;
+  if result then begin
+    initialize(ui);
+    result := TWSCustomRichMemoClass(WidgetsetClass).GetTextUIParams(Self, TextStart, ui);
+    if result then begin
+      result := uiLink in ui.features;
+      ALinkRef := ui.linkref;
+    end;
+  end;
+end;
+
 function TCustomRichMemo.isLink(TextStart: Integer): Boolean;
 var
   ui : TTextUIParam;
 begin
+  initialize(ui);
   Result:=HandleAllocated and TWSCustomRichMemoClass(WidgetSetClass).GetTextUIParams(Self, TextStart, ui);
   if Result then Result:=uiLink in ui.features;
 end;
@@ -977,7 +1013,7 @@ begin
       Self.Lines.BeginUpdate;
       try
         Self.Lines.Clear;
-        Result:=RTFLoadStream(Self, Source);
+        Result:=RTFLoadStream(Self, Source, fFastLoad);
       finally
         Self.Lines.EndUpdate;
       end;
@@ -1040,6 +1076,8 @@ var
   utxt : UnicodeString;
 begin
   Result:='';
+  txt:='';
+  utxt:='';
   if not HandleAllocated then HandleNeeded;
   if HandleAllocated and not TWSCustomRichMemoClass(WidgetSetClass).GetSubText(Self, TextStart, TextLength, false, isu, txt, utxt) then
     Exit;
@@ -1053,7 +1091,9 @@ var
   txt  : String;
   utxt : UnicodeString;
 begin
-    Result:='';
+  Result:='';
+  txt:='';
+  utxt:='';
   if not HandleAllocated then HandleNeeded;
   if HandleAllocated and not TWSCustomRichMemoClass(WidgetSetClass).GetSubText(Self, TextStart, TextLength, false, isu, txt, utxt) then
     Exit;
@@ -1133,6 +1173,16 @@ begin
   Result := (TextStart >= 0) and (TextStart <= GetTextLen);
 end;
 
+procedure TCustomRichMemo.KeyDown(var Key: Word; Shift: TShiftState);
+begin
+  if (SelLength=0) and (key in [VK_RETURN,VK_TAB,VK_BACK]) and (Shift=[]) then
+    if TWSCustomRichMemoClass(WidgetSetClass).HandleKeyDown(Self, key) then begin
+      key := VK_UNKNOWN;
+      exit;
+    end;
+  inherited KeyDown(Key, Shift);
+end;
+
 function TCustomRichMemo.PrintMeasure(const params: TPrintParams; var est: TPrintMeasure): Boolean;
 begin
   if not Assigned(Printer) then begin
@@ -1153,6 +1203,78 @@ procedure TCustomRichMemo.Redo;
 begin
   if HandleAllocated then
     TWSCustomRichMemoClass(WidgetSetClass).Redo(Self);
+end;
+
+procedure DumpMemo(memo: TCustomRichMemo);
+var
+  offset, rangeStart, rangelen: Integer;
+  pn: TParaNumbering;
+  indent, num: Integer;
+  s, aLinkRef: string;
+  textParams: TFontParams;
+
+  procedure Log(fmt:string; args: array of const);
+  begin
+    WriteLn(StringOfChar(' ', indent*2),format(fmt, args));
+  end;
+  procedure LogEnter(fmt:string; args: array of const);
+  begin
+    if fmt<>'' then
+      Log(fmt, args);
+    inc(indent);
+  end;
+  procedure LogExit(fmt:string; args: array of const);
+  begin
+    dec(indent);
+    if fmt<>'' then
+      log(fmt, args);
+  end;
+  function ToStrSpecial(s:string): string;
+   var
+     i: Integer;
+   begin
+     result := '';
+     for i:=1 to Length(s) do begin
+       if s[i] in [#0..#31,#128..#255] then
+         //result += format('#%d(%:0.2x)',[ord(s[i])])
+         result += format('#%d',[ord(s[i])])
+       else
+         result += s[i];
+     end;
+   end;
+begin
+  indent := 0;
+  offset := 0;
+  num    := 0;
+  while memo.GetStyleRange(offset, rangeStart, rangelen) do begin
+    inc(num);
+    WriteLn;
+    LogEnter('Range:%-3d Offset %d start=%d len=%d', [num, offset, rangeStart, rangeLen]);
+    if Memo.GetParaNumbering(offset, pn) and (pn.Style<>pnNone) then begin
+      WriteStr(s, pn.Style);
+      Log('List %s: numberStart=%d',[s, pn.NumberStart]);
+    end;
+
+    memo.GetTextAttributes(rangeStart, textParams);
+
+    with textParams do begin
+      WriteStr(s, VScriptPos);
+      Log('Text Attributes: Font="%s" Size=%d Color=%s Style=%s backClr?=%s bkColor=%s scrPos=%s',
+        [Name, Size, ColorToString(Color), Dbgs(Style), BoolToStr(HasBkClr,true),
+         ColorToString(BkColor), s]);
+    end;
+
+    if memo.GetLink(rangeStart, aLinkRef) then
+      Log('Link: Yes %s',[aLinkRef])
+    else
+      log('Link: No',[]);
+
+    s := memo.GetText(rangeStart, rangeLen);
+    Log('Text: len=%d "%s"',[ Length(s), ToStrSpecial(s)]);
+    LogExit('', []);
+    offset := rangeStart + rangelen;
+  end;
+
 end;
 
 end.

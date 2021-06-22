@@ -55,6 +55,8 @@ type
 
   TWin32WSCustomRichMemo = class(TWSCustomRichMemo)
   published
+    class function HandleKeyDown(const AWinControl: TWinControl; key:word): boolean; override;
+
     class function GetText(const AWinControl: TWinControl; var AText: String): Boolean; override;
     class function GetTextLen(const AWinControl: TWinControl; var ALength: Integer): Boolean; override;
 
@@ -457,6 +459,11 @@ begin
         Windows.CallWindowProcW(PrevWndProc, Window, Msg, WParam, LParam);
         GetWin32WindowInfo(Window)^.TrackValid:=false;
       end;
+
+      WindowInfo := GetWin32WindowInfo(Window);
+      if WindowInfo^.WinControl is TCustomRichMemo then
+        if (WindowInfo^.WinControl as TCustomRichMemo).ReadOnly then HideCaret(Window);
+
     end;
       //When theming is enabled, and the component should have a border around it,
     WM_NCPAINT: begin
@@ -590,6 +597,12 @@ begin
 end;
 
 { TWin32WSCustomRichMemo }
+
+class function TWin32WSCustomRichMemo.HandleKeyDown(
+  const AWinControl: TWinControl; key: word): boolean;
+begin
+  Result := false;
+end;
 
 class function TWin32WSCustomRichMemo.GetText(const AWinControl: TWinControl;
   var AText: String): Boolean;

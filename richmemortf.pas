@@ -8,7 +8,7 @@ uses
   Classes, SysUtils, LCLProc, LCLIntf, LConvEncoding, Graphics,
   RichMemo, RTFParsPre211;
 
-function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream): Boolean;
+function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream; fastLoad:boolean=false): Boolean;
 procedure RegisterRTFLoader;
 
 type
@@ -34,6 +34,151 @@ procedure RegisterRTFSaver;
 implementation
 uses LazUTF8;
 
+type
+
+  { TRTFParams }
+
+  TRTFParams = class(TObject)
+  public
+    fnt  : TFontParams;
+    pm   : TParaMetric;
+    pa   : TParaAlignment;
+    fnum : Integer; // font index in the font table
+    pn   : TParaNumbering;
+
+    prev : TRTFParams;
+    tabs : TTabStopList;
+    constructor Create(aprev: TRTFParams);
+    procedure ResetDefault;
+    procedure AddTab(AOffset: double; ta: TTabAlignment);
+    function  Equal(prm: TRTFParams): boolean;
+  end;
+
+  TParaNumberingType = (pntNone, pntNumeric, pntBullet);
+  TParaNumberingStyle = ( pnsCard, pnsDec, pnsUcltr, pnsUcrm, pnsLcltr, pnsLcrm,
+                          pnsOrd, pnsOrdt, pnsBidia, pnsBidib, pnsAiu, pnsAiud,
+                          pnsAiueo, pnsAiueod, pnsChosung, pnsCnum, pnsDbnum,
+                          pnsDbnumd, pnsDbnumk, pnsDbnuml, pnsDbnumt, pnsDecd,
+                          pnsGanada, pnsGbnum, pnsGbnumd, pnsGbnumk, pnsGbnuml,
+                          pnsIroha, pnsIrohad, pnsZodiac, pnsZodiacd, pnsZodiacl );
+  TParaNumberingUnderlineStyle = (
+                          pnulNone, pnulSimple, pnulThick, pnulHair, pnulDouble, pnulWave,
+                          pnulWord, pnulDot, pnulDash, pnulDashDot, pnulDashDotDash );
+  TParaNumberingJust = (pnjl, pnjc, pnjr);
+
+  TRTFInteger = record
+    modified: boolean;
+    Value: Integer;
+  end;
+
+  TRTFBoolean = record
+    modified: boolean;
+    value: Boolean;
+  end;
+
+  TRTFParaNumbering = record
+    valid: boolean;
+    level: Integer;
+    aType: TParaNumberingType;
+    style: TParaNumberingStyle;
+    just: TParaNumberingJust;
+    underlineStyle: TParaNumberingUnderlineStyle;
+    hang: boolean;
+    aIndex: Integer;
+    BeforeText: string;
+    AfterText: string;
+    skipNumbering: boolean;
+    indent: TRTFInteger;
+    fontNum: TRTFInteger;
+    fontSize: TRTFInteger;
+    fontColor: TRTFInteger;
+    bold: TRTFBoolean;
+    italic: TRTFBoolean;
+    caps: TRTFBoolean;
+    smallcaps: TRTFBoolean;
+    strike: TRTFBoolean;
+  end;
+
+  TChunkType = (ctEmpty, ctText, ctPnStart, ctPnItem, ctPnEnd);
+
+  TChunk = record
+    typ: TChunkType;
+    prm: TRTFParams;
+    Text: string;
+    Link: string;
+  end;
+
+  TRTFChunkArray = array of TChunk;
+
+  { TRTFMemoParser }
+
+  TRTFMemoParser = class(TRTFParser)
+  private
+    defColor : TColor;
+    txtbuf   : String; // keep it UTF8 encoded!
+    txtlen    : Integer;
+
+    HLFromCTable : Boolean;
+
+    prm       : TRTFParams;
+    lang      : Integer;
+    langproc  : TEncConvProc;
+    deflang   : integer;
+
+    skipNextCh: Boolean; // For a Unicode escape the control word \u is used,
+                         // followed by a 16-bit signed decimal integer giving
+                         // the Unicode UTF-16 code unit number. For the benefit
+                         // of programs without Unicode support, this must be followed
+                         // by the nearest representation of this character in the specified code page.
+                         // For example, \u1576? would give the Arabic letter bāʼ ب, specifying that
+                         // older programs which do not have Unicode support should render it as a
+                         // question mark instead.
+    procedure AddText(const atext: string);
+  protected
+    procedure classUnk;
+    procedure classText;
+    procedure classControl;
+    procedure classGroup;
+    procedure classEof;
+    procedure destinationPn;
+    procedure destinationField;
+    procedure doChangePara(aminor, aparam: Integer);
+
+    procedure doDestination(aminor, aparam: Integer);
+    procedure doSpecialChar;
+    procedure doChangeCharAttr(aminor, aparam: Integer);
+    procedure SetLanguage(AlangCode: integer);
+
+    function DefaultTextColor: TColor;
+    procedure PushText;
+  private
+    fFastLoad: boolean;
+    fLastParaNumStyle: TParaNumStyle;
+    paraNum   : TRTFParaNumbering;
+    pnListStarted, pnItemStarted: boolean;
+    chunks: TRTFChunkArray;
+    Field     : TRTFField;
+    procedure LoadFromChunks;
+    procedure Consolidate;
+    {$IFDEF DEBUG}
+    procedure DumpChunks(msg:string);
+    {$ENDIF}
+    function  GetHyperlink(out alinkref: string): boolean;
+    function  GetParaNumbering: TParaNumbering;
+    function  NewChunk: Integer;
+    procedure ParaNumberingStart(newList:boolean);
+  protected
+    procedure doParagraph; virtual;
+    procedure doPnItemStart(newList:boolean);
+    procedure doPnListEnded;
+  public
+    Memo  : TCustomRichMemo;
+    constructor Create(AMemo: TCustomRichMemo; AStream: TStream; withFastLoad:boolean=false);
+    destructor Destroy; override;
+
+    procedure StartReading; override;
+  end;
+
 var
   LangConvTable : array of record lang: integer; proc: TEncConvProc end;
   LangCount     : Integer = 0;
@@ -56,70 +201,6 @@ begin
   inc(LangCount);
 end;
 
-type
-  { TRTFMemoParser }
-
-  { TRTFParams }
-
-  TRTFParams = class(TObject)
-  public
-    fnt  : TFontParams;
-    pm   : TParaMetric;
-    pa   : TParaAlignment;
-    fnum : Integer; // font index in the font table
-
-    prev : TRTFParams;
-    tabs : TTabStopList;
-    constructor Create(aprev: TRTFParams);
-    procedure ResetDefault;
-    procedure AddTab(AOffset: double; ta: TTabAlignment);
-  end;
-
-  TRTFMemoParser = class(TRTFParser)
-  private
-    txtbuf   : String; // keep it UTF8 encoded!
-    txtlen    : Integer;
-
-    HLFromCTable : Boolean;
-
-    prm       : TRTFParams;
-    lang      : Integer;
-    langproc  : TEncConvProc;
-    deflang   : integer;
-
-    skipNextCh: Boolean; // For a Unicode escape the control word \u is used,
-                         // followed by a 16-bit signed decimal integer giving
-                         // the Unicode UTF-16 code unit number. For the benefit
-                         // of programs without Unicode support, this must be followed
-                         // by the nearest representation of this character in the specified code page.
-                         // For example, \u1576? would give the Arabic letter bāʼ ب, specifying that
-                         // older programs which do not have Unicode support should render it as a
-                         // question mark instead.
-
-    procedure AddText(const atext: string);
-  protected
-    procedure classUnk;
-    procedure classText;
-    procedure classControl;
-    procedure classGroup;
-    procedure classEof;
-    procedure doChangePara(aminor, aparam: Integer);
-
-    procedure doDestination(aminor, aparam: Integer);
-    procedure doSpecialChar;
-    procedure doChangeCharAttr(aminor, aparam: Integer);
-
-    procedure SetLanguage(AlangCode: integer);
-
-    function DefaultTextColor: TColor;
-    procedure PushText;
-  public
-    Memo  : TCustomRichMemo;
-    constructor Create(AMemo: TCustomRichMemo; AStream: TStream);
-    destructor Destroy; override;
-    procedure StartReading;
-  end;
-
 function LangConvGet(lang: Integer; var convproc: TEncConvProc): Boolean;
 var
   i  : integer;
@@ -135,6 +216,10 @@ end;
 
 procedure LangConvInit;
 begin
+
+  if LangCount>0 then
+    exit;
+
   LangConvAdd(1052, @CP1250ToUTF8); // Albanian
   LangConvAdd(1050, @CP1250ToUTF8); // Croatian
   LangConvAdd(1029, @CP1250ToUTF8); // Czech
@@ -258,7 +343,31 @@ begin
   LangConvAdd(1066, @CP1258ToUTF8); // vietnam
 end;
 
-{ TRTFParams }
+function CharToByte(const ch: AnsiChar): Byte;
+begin
+  Result:=0;
+  if ch in ['0'..'9'] then Result:=byte(ch)-byte('0')
+  else if ch in ['a'..'f'] then Result:=byte(ch)-byte('a')+10
+  else if ch in ['A'..'F'] then Result:=byte(ch)-byte('A')+10
+end;
+
+function RTFCharToByte(const s: string): byte; inline;
+begin
+  // \'hh 	A hexadecimal value, based on the specified character set (may be used to identify 8-bit values).
+  Result:=(CharToByte(s[3]) shl 4) or (CharToByte(s[4]));
+end;
+
+operator := (right: Integer) res: TRTFInteger;
+begin
+  res.modified := true;
+  res.value := right;
+end;
+
+operator := (right: boolean) res: TRTFBoolean;
+begin
+  res.modified := true;
+  res.value := right;
+end;
 
 constructor TRTFParams.Create(aprev: TRTFParams);
 begin
@@ -269,8 +378,9 @@ begin
     pa:=prev.pa;
     fnum:=prev.fnum;
   end else begin
-    InitFontParams(fnt);
-    InitParaMetric(pm)
+    FillChar(fnt, SizeOf(fnt), 0);
+    FillChar(pm, sizeof(pm), 0);
+    pm.LineSpacing:=DefLineSpacing;
   end;
 end;
 
@@ -286,6 +396,7 @@ begin
   pm.SpaceAfter:=0;
   pm.LineSpacing:=0;
   tabs.Count:=0;
+  pn.Style:=pnNone;
 end;
 
 procedure TRTFParams.AddTab(AOffset: double; ta: TTabAlignment);
@@ -297,6 +408,38 @@ begin
   tabs.Tabs[tabs.Count].Offset:=AOffset;
   tabs.Tabs[tabs.Count].Align:=ta;
   inc(tabs.Count);
+end;
+
+function TRTFParams.Equal(prm: TRTFParams): boolean;
+begin
+  result := false;
+
+  if pn.Style<>prm.pn.Style then
+    exit;
+
+  if pa<>prm.pa then
+    exit;
+
+  if (fnt.Name<>prm.fnt.Name) or
+     (fnt.Size<>prm.fnt.Size) or
+     (fnt.Color<>prm.fnt.Color) or
+     (fnt.Style<>prm.fnt.Style) or
+     (fnt.VScriptPos<>prm.fnt.VScriptPos) or
+     (fnt.HasBkClr<>prm.fnt.HasBkClr) or
+     (fnt.BkColor<>prm.fnt.BkColor)
+  then
+    exit;
+
+  if (pm.LineSpacing<>prm.pm.LineSpacing) or
+     (pm.FirstLine<>prm.pm.FirstLine) or
+     (pm.HeadIndent<>prm.pm.HeadIndent) or
+     (pm.SpaceAfter<>prm.pm.SpaceAfter) or
+     (pm.SpaceBefore<>prm.pm.SpaceBefore) or
+     (pm.TailIndent<>prm.pm.TailIndent)
+  then
+    exit;
+
+  result := true;
 end;
 
 { TRTFMemoParserr }
@@ -331,25 +474,11 @@ begin
     Exit;
   end;
   if (length(txt)>2) and (txt[1]='\') and (txt[2]='u') and (txt[3] in ['0'..'9']) then begin
-    SetLength(Ws,1);
+    SetLength(Ws{%H-},1);
     ws[1]:=UnicodeChar(rtfParam);
     AddText( UTF8Encode(ws) );
     skipNextCh:=true;
-  end; 
-end;
-
-function CharToByte(const ch: AnsiChar): Byte;
-begin
-  Result:=0;
-  if ch in ['0'..'9'] then Result:=byte(ch)-byte('0')
-  else if ch in ['a'..'f'] then Result:=byte(ch)-byte('a')+10
-  else if ch in ['A'..'F'] then Result:=byte(ch)-byte('A')+10
-end;
-
-function RTFCharToByte(const s: string): byte; inline;
-begin
-  // \'hh 	A hexadecimal value, based on the specified character set (may be used to identify 8-bit values).
-  Result:=(CharToByte(s[3]) shl 4) or (CharToByte(s[4]));
+  end;
 end;
 
 procedure TRTFMemoParser.classText;
@@ -420,12 +549,332 @@ begin
   PushText;
 end;
 
-procedure TRTFMemoParser.doDestination(aminor, aparam: Integer);
-begin
-  case aminor of
-    rtfDefaultLanguage:
-      deflang:=aparam;
+procedure TRTFMemoParser.destinationPn;
+var
+  level: Integer;
+  gotPnTextA, gotPnTextB: boolean;
+  pn: TRTFParaNumbering;
+
+  procedure NotifyPnItem(firstItem: boolean);
+  begin
+    if paraNum.valid then begin
+      Inc(paraNum.aIndex);
+      ParaNumberingStart(firstItem);
+    end;
   end;
+
+begin
+
+  (*
+  <pn>          '{\*' \pnseclvlN <pndesc> '}' |
+                '{' \pntext <char> '}' '{\*' \pn <pnlevel> <pndesc> '}'
+
+  <pnlevel>     \pnlvlN | \pnlvlblt | \pnlvlbody | \pnlvlcont
+
+  <pndesc>      <pnnstyle> & <pnchrfmt> & <pntxtb> & <pntxta> & <pnfmt>
+
+  <pnnstyle>    \pncard | \pndec | \pnucltr | \pnucrm | \pnlcltr | \pnlcrm | \pnord | \pnordt |
+                \pnbidia | \pnbidib | \pnaiu | \pnaiud | \pnaiueo | \pnaiueod | \pnchosung |
+                \pncnum | \pndbnum | \pndbnumd | \pndbnumk | \pndbnuml | \pndbnumt |
+                \pndecd | \pnganada | \pngbnum | \pngbnumd | \pngbnumk | \pngbnuml |
+                \pniroha | \pnirohad | \pnuldash | \pnuldashd | \pnuldashdd | \pnulhair |
+                \pnulth | \pnulwave | \pnzodiac | \pnzodiacd | \pnzodiacl
+
+  <pnchrfmt>    \pnf? & \pnfs? & \pnb? & \pni? & \pncaps? & \pnscaps? & <pnul>? & \pnstrike? & \pncf?
+
+  <pnul>        \pnul | \pnuld | \pnuldb | \pnulnone | \pnulw
+
+  <pnfmt>       \pnnumonce? & \pnacross? & \pnindent? & \pnsp? & \pnprev? & <pnjust>? &
+                \pnstart? & \pnhang? & \pnrestart?
+
+  <pnjust>      \pnqc | \pnql | \pnqr
+
+  <pntxtb>      '{' \pntxtb #PCDATA '}'
+  <pntxta>      '{' \pntxta #PCDATA '}'
+  *)
+
+  // simply discard 'pntext' group, as the spect states: "it is the responsibility
+  // of RTF readers that understand the '{\*' \pn ... '}' destination to ignore
+  // the \pntext group".
+  SkipGroup;
+
+  // now we are within a {\*\pn paragraph numeric definition group
+  level := 0;
+
+  Fillchar(pn{%H-}, sizeof(pn), 0);
+
+  gotPnTextA := false;
+  gotPnTextB := false;
+
+  // now process {\*\pn
+  while GetToken<>rtfEOF do begin
+
+    case rtfClass of
+
+      rtfGroup:
+        case rtfMajor of
+          rtfEndGroup:
+            begin
+              dec(level);
+              if level=0 then begin
+                RouteToken;
+                break;
+              end;
+            end;
+          rtfBeginGroup: inc(level);
+        end;
+
+      rtfControl:
+        case rtfMajor of
+          rtfSpecialChar:
+            case rtfMinor of
+              rtfOptDest:
+                continue;
+              rtfPar:
+                begin
+                  if level=0 then
+                    NotifyPnItem(false);
+                  RouteToken;
+                  exit;
+                end;
+            end;
+
+          rtfDestination:
+            case rtfMinor of
+              rtfPN:
+                begin
+                  pn.valid:=true;
+                  continue;
+                end;
+              rtfPNTextB:
+                begin
+                  gotPnTextB:=true;
+                  gotPnTextA:=false;
+                  continue;
+                end;
+              rtfPNTextA:
+                begin
+                  gotPnTextB:=false;
+                  gotPnTextA:=true;
+                  continue;
+                end;
+            end;
+
+          rtfPnLevelAttr:
+            begin
+              case rtfMinor of
+                rtfPnLvlN:
+                  begin
+                    pn.aType := pntNumeric;
+                    pn.level := rtfParam;
+                  end;
+                rtfPnLvlBlt:
+                  begin
+                    pn.aType := pntBullet;
+                    pn.level := 9;
+                  end;
+                rtfPnLvlBody:
+                  begin
+                    pn.aType := pntNumeric;
+                    pn.level := 10;
+                  end;
+                rtfPnLvlCont: pn.skipNumbering := not pn.skipNumbering;
+              end;
+              continue;
+            end;
+
+          rtfPnStyleAttr:
+            begin
+              case rtfMinor of
+                rtfPnStyleCard:     pn.style := pnsCard;
+                rtfPnStyleDec:      pn.style := pnsDec;
+                rtfPnStyleUcltr:    pn.style := pnsUcltr;
+                rtfPnStyleUcrm:     pn.style := pnsUcrm;
+                rtfPnStyleLcltr:    pn.style := pnsLcltr;
+                rtfPnStyleLcrm:     pn.style := pnsLcrm;
+                rtfPnStyleOrd:      pn.style := pnsOrd;
+                rtfPnStyleOrdT:     pn.style := pnsOrdt;
+                rtfPnStyleBidiA:    pn.style := pnsBidia;
+                rtfPnStyleBidiB:    pn.style := pnsBidib;
+                rtfPnStyleAiu:      pn.style := pnsAiu;
+                rtfPnStyleAiuD:     pn.style := pnsAiud;
+                rtfPnStyleAiuEo:    pn.style := pnsAiueo;
+                rtfPnStyleAiuEoD:   pn.style := pnsAiueod;
+                rtfPnStyleChoSung:  pn.style := pnsChosung;
+                rtfPnStyleCNum:     pn.style := pnsCnum;
+                rtfPnStyleDBnum:    pn.style := pnsDbnum;
+                rtfPnStyleDBnumD:   pn.style := pnsDbnumd;
+                rtfPnStyleDBnumK:   pn.style := pnsDbnumk;
+                rtfPnStyleDBnumL:   pn.style := pnsDbnuml;
+                rtfPnStyleDBnumT:   pn.style := pnsDbnumt;
+                rtfPnStyleDecD:     pn.style := pnsDecd;
+                rtfPnStyleGanada:   pn.style := pnsGanada;
+                rtfPnStyleGbNum:    pn.style := pnsGbnum;
+                rtfPnStyleGbNumD:   pn.style := pnsGbnumd;
+                rtfPnStyleGbNumK:   pn.style := pnsGbnumk;
+                rtfPnStyleGbNumL:   pn.style := pnsGbnuml;
+                rtfPnStyleIroha:    pn.style := pnsIroha;
+                rtfPnStyleIrohaD:   pn.style := pnsIrohad;
+                rtfPnStyleZodiac:   pn.style := pnsZodiac;
+                rtfPnStyleZodiacd:  pn.style := pnsZodiacd;
+                rtfPnStyleZodiacl:  pn.style := pnsZodiacl;
+
+                rtfPnStyleUlDash:   pn.underlineStyle := pnulDash;
+                rtfPnStyleUlDashd:  pn.underlineStyle := pnulDashDot;
+                rtfPnStyleUlDashdD: pn.underlineStyle := pnulDashDotDash;
+                rtfPnStyleUlHair:   pn.underlineStyle := pnulHair;
+                rtfPnStyleUlTh:     pn.underlineStyle := pnulThick;
+                rtfPnStyleUlwave:   pn.underlineStyle := pnulWave;
+              end;
+              continue;
+            end;
+
+          rtfPnChrfmtAttr:
+            begin
+              case rtfMinor of
+                rtfPnChrFmtf:       pn.fontNum := rtfParam;
+                rtfPnChrFmtfs:      pn.fontSize := round(rtfParam/2);
+                rtfPnChrFmtb:       pn.bold := rtfParam=1;
+                rtfPnChrFmti:       pn.italic := rtfParam=1;
+                rtfPnChrFmtcaps:    pn.caps := rtfParam=1;
+                rtfPnChrFmtscaps:   pn.smallcaps := rtfParam=1;
+                rtfPnChrFmtstrike:  pn.strike := rtfParam=1;
+                rtfPnChrFmtcf:      pn.fontColor := rtfParam;
+              end;
+              continue;
+            end;
+
+          rtfPnulAttr:
+            begin
+              case rtfMinor of
+                rtfPnUl:      pn.underlineStyle := pnulSimple;
+                rtfPnUlD:     pn.underlineStyle := pnulDot;
+                rtfPnUlDb:    pn.underlineStyle := pnulDouble;
+                rtfPnUlNone:  pn.underlineStyle := pnulNone;
+                rtfPnUlW:     pn.underlineStyle := pnulWord;
+              end;
+              continue;
+            end;
+
+          rtfPnFmtAttr:
+            begin
+              case rtfMinor of
+                rtfPnIndent:  pn.indent := rtfParam;
+                rtfPnStart:   pn.aIndex := rtfParam - 1;
+                rtfPnHang:    pn.hang   := true;
+                //rtfPnNumonce: WriteLn('pnnumonce');
+                //rtfPnAcross:  WriteLn('pnacross');
+                //rtfPnSp:      WriteLn('pnsp');
+                //rtfPnPrev:    WriteLn('pnprev');
+                //rtfPnRestart: WriteLn('pnrestart');
+              end;
+              continue;
+            end;
+
+          rtfPnJustAttr:
+            begin
+              case rtfMinor of
+                rtfPnQc: pn.just := pnjc;
+                rtfPnQl: pn.just := pnjl;
+                rtfPnQr: pn.just := pnjr;
+              end;
+              continue;
+            end;
+
+        end;  // rtfControl: case rtfMajor of
+
+      rtfText:
+        begin
+          if level=0 then begin
+            // found text without {\*\pn, list item has started
+            NotifyPnItem(false);
+            RouteToken;
+            exit;
+          end;
+          if gotPnTextA or gotPnTextB then begin
+            if gotPnTextA then pn.AfterText := pn.AfterText + chr(rtfMajor);
+            if gotPnTextB then pn.BeforeText := pn.BeforeText + chr(rtfMajor);
+            continue;
+          end;
+        end;
+
+    end;  // case rtfclass of
+
+    // route everything else
+    RouteToken;
+  end;
+
+  if pn.valid then begin
+    if paraNum.valid and (pn.aType=paraNum.aType) and (pn.style=paraNum.style) then
+      pn.valid := false // same type and style than existing pn, notify item
+    else
+      paraNum := pn;
+  end;
+
+  NotifyPnItem(pn.valid);
+end;
+
+procedure TRTFMemoParser.destinationField;
+var
+  level: Integer = 1;
+  gotFieldinst: boolean = false;
+  gotFieldrslt: Boolean = false;
+  content: string;
+begin
+  (*
+  <field>      '{' \field <fieldmod>? <fieldinst> <fieldrslt> '}'
+  <fieldmod>    \flddirty? & \fldedit? & \fldlock? & \fldpriv?
+  <fieldinst>   '{\*' \fldinst <para>+ <fldalt>? '}'
+  <fldalt>      \fldalt
+  <fieldrslt>   '{' \fldrslt <para>+ '}'
+  *)
+
+  content := '';
+  Field.valid:= true;
+  Initialize(Field);
+  while true do begin
+    GetToken;
+    if CheckCM(rtfGroup, rtfEndGroup) then begin
+      if gotFieldinst then begin
+        gotFieldinst := false;
+        Field.rtfFieldInst := content;
+        content := '';
+      end;
+      if gotFieldrslt then begin
+        gotFieldrslt := false;
+        Field.rtfFieldRslt := content;
+        content := '';
+      end;
+      dec(level);
+      if level=0 then begin
+        RouteToken;
+        break;
+      end;
+    end else
+    if CheckCM(rtfGroup, rtfBeginGroup) then begin
+      inc(level);
+    end else
+    if CheckCMM(rtfControl, rtfSpecialChar, rtfOptDest) then begin
+      continue;
+    end else
+    if CheckCMM(rtfControl, rtfDestination, rtfFieldInst) then begin
+      gotFieldinst := true;
+    end else
+    if CheckCMM(rtfControl, rtfDestination, rtfFieldResult) then begin
+      gotFieldrslt := true;
+    end else
+    if rtfClass=rtfText then begin
+      content := content + chr(rtfMajor);
+      if gotFieldInst or not gotFieldRslt then
+        continue;
+    end;
+    RouteToken;
+  end;
+
+  // syntetize a token which would triggger field result expression
+  SetToken(rtfControl, rtfUnknown, rtfUnknown, rtfNoParam, '');
+  RouteToken;
+  Field.valid:= false;
 end;
 
 procedure TRTFMemoParser.doChangePara(aminor, aparam: Integer);
@@ -462,6 +911,14 @@ begin
   end;
 end;
 
+procedure TRTFMemoParser.doDestination(aminor, aparam: Integer);
+begin
+  case aminor of
+    rtfDefaultLanguage:
+      deflang:=aparam;
+  end;
+end;
+
 procedure TRTFMemoParser.doSpecialChar;
 const
   {$ifdef MSWINDOWS}
@@ -475,11 +932,13 @@ begin
   case rtfMinor of
     rtfOptDest: SkipGroup;
     rtfLine: AddText(CharLine);
-    rtfPar:  begin
-      AddText(CharPara);
-      if deflang<>0 then
-        SetLanguage(deflang);
-    end;
+    rtfPar:
+      begin
+        AddText(CharPara);
+        doParagraph;
+        if deflang<>0 then
+          SetLanguage(deflang);
+      end;
     rtfTab:  AddText(CharTab);
   end;
 end;
@@ -551,9 +1010,208 @@ begin
   LangConvGet(lang, langproc);
 end;
 
-function TRTFMemoParser.DefaultTextColor:TColor;
+function TRTFMemoParser.DefaultTextColor: TColor;
 begin
-  Result:=ColorToRGB(Memo.Font.Color);
+  Result:=ColorToRGB(defColor);
+end;
+
+procedure TRTFMemoParser.LoadFromChunks;
+var
+  offset, i, len: Integer;
+begin
+  offset := 0;
+  for i:=0 to Length(Chunks)-1 do begin
+
+    case Chunks[i].typ of
+      ctpnItem:;
+      ctPnStart, ctPnEnd:
+        begin
+          Memo.SelStart := MaxInt;
+          Memo.SetParaNumbering(Memo.SelStart, 0, Chunks[i].prm.pn);
+        end;
+      else
+        begin
+          len := UTF8Length(Chunks[i].Text);
+          memo.SelStart := MaxInt;
+          offset := memo.SelStart;
+          Memo.InDelText(Chunks[i].Text, offset, 0);
+          Memo.SetParaMetric(offset, len, Chunks[i].prm.pm);
+          if Chunks[i].prm.tabs.Count>0 then
+            Memo.SetParaTabs(offset, len, Chunks[i].prm.tabs);
+          Memo.SetTextAttributes(offset, len, Chunks[i].prm.fnt);
+          if Chunks[i].Link<>'' then
+            Memo.SetLink(offset, len, true, Chunks[i].Link);
+        end;
+    end;
+
+  end;
+end;
+
+procedure TRTFMemoParser.Consolidate;
+var
+  track: array of boolean;
+  i, last: Integer;
+begin
+
+  {$IFDEF DEBUG}
+  DumpChunks('Before consolidate');
+  {$ENDIF}
+
+  last := 0;
+  SetLength(track{%H-}, length(chunks));
+  track[0] := false;
+  for i:=1 to Length(chunks)-1 do begin
+    // todo: this comparison should be made in the type of chunk[]
+    if (Chunks[i].typ=Chunks[last].typ) and
+       (Chunks[i].Link=Chunks[last].Link) and
+       (Chunks[i].prm.Equal(Chunks[Last].prm)) then
+    begin
+      Chunks[last].Text := Chunks[last].Text + Chunks[i].Text;
+      Chunks[i].prm.Free;
+      Track[i] := true
+    end else begin
+      last := i;
+      Track[i] := false;
+    end;
+  end;
+
+  last := 0;
+  i := length(track)-1;
+  while i>=0 do begin
+    if Track[i] then begin
+      //if i=0 then Error('Error, first element should not be deleted');
+      inc(last)
+    end else if (last>0) then begin
+      delete(chunks, i+1, last);
+      last := 0;
+    end;
+    dec(i);
+  end;
+
+  {$IFDEF DEBUG}
+  DumpChunks('After consolidate');
+  {$ENDIF}
+
+end;
+
+{$IFDEF DEBUG}
+procedure TRTFMemoParser.DumpChunks(msg: string);
+var
+  i, Offset: Integer;
+  len: PtrInt;
+  s: string;
+begin
+  Offset := 0;
+  WriteLn;
+  WriteLn(msg,' found: ', Length(Chunks),' Chunks');
+  for i:=0 to Length(Chunks)-1 do begin
+    with Chunks[i] do begin
+      WriteStr(s, Typ);
+      len := UTF8Length(Text);
+      WriteLn;
+      WriteLn(' Chunk: ', i);
+      WriteLn('  Type: ', s);
+      WriteLn('Offset: ', offset);
+      WriteLn('   Len: ', len);
+      WriteLn('  Text: ', DbgStr(Text));
+      WriteLn('  Link: ', Link);
+      Write  ('  Font: ', prm.fnt.Name,',',prm.fnt.Size,',',ColorToString(prm.fnt.Color));
+      if fsBold in prm.fnt.Style then Write(' bold');
+      if fsItalic in prm.fnt.Style then Write(' italic');
+      if fsUnderline in prm.fnt.Style then Write(' underline');
+      WriteLn;
+      Write('Alignment: ');
+      case prm.pa of
+        paLeft: WriteLn('Left');
+        paRight: WriteLn('Right');
+        paCenter: WriteLn('Center');
+        paJustify: WriteLn('Justify');
+      end;
+      WriteLn('ParMetric:');
+      WriteLn('  FirstLine: ', FloatToStr(prm.pm.FirstLine));
+      WriteLn(' TailIndent: ', FloatToStr(prm.pm.TailIndent));
+      WriteLn(' HeadIndent: ', FloatToStr(prm.pm.HeadIndent));
+      WriteLn('SpaceBefore: ', FloatToStr(prm.pm.SpaceBefore));
+      WriteLn(' SpaceAfter: ', FloatToStr(prm.pm.SpaceAfter));
+      WriteLn('LineSpacing: ', FloatToStr(prm.pm.LineSpacing));
+      WriteStr(s, prm.pn.Style);
+      WriteLn('Para Numbering: ',s);
+      WriteLn('     indent: ', FloatToStr(prm.pn.Indent));
+      WriteLn(' CustomChar: ', prm.pn.CustomChar);
+      WriteLn('NumberStart: ', prm.pn.NumberStart);
+      WriteLn('    SepChar: ', prm.pn.SepChar);
+      WriteLn('ForceNewNum: ', prm.pn.ForceNewNum);
+      offset := offset + len;
+    end;
+  end;
+end;
+{$ENDIF}
+
+function TRTFMemoParser.GetHyperlink(out alinkref: string): boolean;
+var
+  p: SizeInt;
+begin
+  result := (Field.valid);
+  if result then begin
+    p := pos('HYPERLINK', Field.rtfFieldInst);
+    result := p>0;
+    if result then begin
+      aLinkref := Trim(copy(Field.rtfFieldInst, p + 9, Length(Field.rtfFieldInst)));
+      p := 1;
+      if (aLinkRef<>'') and (aLinkref[p] in ['"','''']) then Delete(aLinkRef, p, 1);
+      p := Length(aLinkref);
+      if (aLinkRef<>'') and (aLinkref[p] in ['"','''']) then Delete(aLinkRef, p, 1);
+    end;
+  end;
+end;
+
+// Converts parsed record paraNum into hi level TParaNumbering
+function TRTFMemoParser.GetParaNumbering: TParaNumbering;
+begin
+  InitParaNumbering(result);
+  case paraNum.aType of
+    pntNumeric:
+      begin
+        case paraNum.style of
+          pnsLcltr: result.Style := pnLowLetter;  // Lowercase alphabetical numbering (a, b, c).
+          pnsUcltr: result.Style := pnUpLetter;   // Uppercase alphabetical numbering (A, B, C).
+          pnsLcrm:  result.Style := pnLowRoman;   // Lowercase Roman numbering (i, ii, iii).
+          pnsUcrm:  result.Style := pnUpRoman;    // Uppercase Roman numbering (I, II, III).
+          else      result.Style := pnNumber;     // Decimal numbering (1, 2, 3).
+        end;
+        result.NumberStart := paraNum.aIndex;
+        if paraNum.AfterText<>'' then
+          result.SepChar := paraNum.AfterText[1];
+      end
+    else
+      result.Style := pnBullet;
+  end;
+  result.Indent:= paraNum.indent.Value;
+end;
+
+function TRTFMemoParser.NewChunk: Integer;
+begin
+  result := Length(chunks);
+  SetLength(Chunks, result + 1);
+  Chunks[result].typ := ctEmpty;
+  Chunks[result].prm := TRTFParams.Create(nil);
+end;
+
+procedure TRTFMemoParser.ParaNumberingStart(newList: boolean);
+begin
+  if txtlen>0 then
+    pushText;
+
+  doPnItemStart(newList);
+end;
+
+procedure TRTFMemoParser.doParagraph;
+begin
+  if pnListStarted and not pnItemStarted then begin
+    doPnListEnded;
+    pnListStarted := false;
+  end;
+  pnItemStarted := false;
 end;
 
 procedure TRTFMemoParser.PushText;
@@ -562,16 +1220,46 @@ var
   pf    : PRTFFONT;
   selst : Integer;
   b     : string;
+  i     : Integer;
 begin
+
   if not Assigned(prm) then exit;
+
   if txtlen=0 then Exit;
 
   b:=Copy(txtbuf, 1, txtlen);
+
   len:=UTF8Length(b);
 
-  txtlen:=0;
-  txtbuf:='';
-  if len=0 then Exit;
+  txtLen := 0;
+  txtBuf := '';
+  if Length(b)=0 then Exit;
+
+  if fFastLoad then begin
+
+    i := NewChunk;
+    Chunks[i].typ := ctText;
+    Chunks[i].Text := b;
+
+    if Assigned(prm) then begin
+      Chunks[i].prm.fnt := prm.fnt;
+      Chunks[i].prm.pm := prm.pm;
+      Chunks[i].prm.pm.FirstLine += Chunks[i].prm.pm.HeadIndent;
+      Chunks[i].prm.pa := prm.pa;
+      Chunks[i].prm.tabs := prm.tabs;
+    end;
+
+    pf:=Fonts[prm.fnum];
+    if Assigned(pf) then
+      Chunks[i].prm.fnt.Name:=pf^.rtfFName;
+
+    if Field.valid then begin
+      if GetHyperlink(b) then
+        Chunks[i].Link := b;
+    end;
+
+    exit;
+  end;
 
   Memo.SelStart:=MaxInt;
   selst:=Memo.SelStart;
@@ -605,28 +1293,93 @@ begin
   //prm.fnt.HasBkClr:=hasbk;
   //prm.fnt.BkColor:=bcolor;
   Memo.SetTextAttributes(selst, len, prm.fnt);
+
+  if Field.valid then begin
+    if GetHyperlink(b) then
+      Memo.SetLink(selst, len, true, b);
+  end;
 end;
 
-constructor TRTFMemoParser.Create(AMemo:TCustomRichMemo;AStream:TStream);
+procedure TRTFMemoParser.doPnItemStart(newList: boolean);
+var
+  n: TParaNumbering;
+  i: Integer;
 begin
-  inherited Create(AStream);
-  Memo:=AMemo;
+  if not fFastLoad then begin
+    if newList then begin
+      n := GetParaNumbering;
+      Memo.SelStart := MaxInt;
+      Memo.SetParaNumbering(Memo.SelStart, 0, n);
+      fLastParaNumStyle := n.Style;
+    end;
+  end else begin
+    n := GetParaNumbering;
+    i := NewChunk;
+    Chunks[i].prm.pn := n;
+    if newList then begin
+      Chunks[i].typ := ctPnStart;
+      pnListStarted := true;
+    end else
+      Chunks[i].typ := ctPnItem;
+    pnItemStarted := true;
+  end;
+end;
+
+procedure TRTFMemoParser.doPnListEnded;
+var
+  n: TParaNumbering;
+  i: Integer;
+begin
+  if not fFastLoad then begin;
+    if paraNum.valid then begin
+      InitParaNumbering(n);
+      n.Style := pnNone;
+      Memo.SelStart := MaxInt;
+      Memo.SetParaNumbering(Memo.SelStart, 0, n);
+    end;
+  end else begin
+    paraNum.valid := false;
+    InitParaNumbering(n);
+    n.Style:=pnNone;
+    i := NewChunk;
+    Chunks[i].typ := ctPnEnd;
+    Chunks[i].prm.pn := n;
+  end;
+end;
+
+constructor TRTFMemoParser.Create(AMemo: TCustomRichMemo; AStream: TStream;
+  withFastLoad: boolean);
+begin
+  inherited create(AStream);
+  defColor := clBlack;
+  fFastLoad := withFastLoad;
+
   ClassCallBacks[rtfText]:=@classText;
   ClassCallBacks[rtfControl]:=@classControl;
   ClassCallBacks[rtfGroup]:=@classGroup;
   ClassCallBacks[rtfUnknown]:=@classUnk;
   ClassCallBacks[rtfEof]:=@classEof;
+
+  DestinationCallBacks[rtfField ] := @destinationField;
+  DestinationCallBacks[rtfPNText] := @destinationPn;
+  Memo:=AMemo;
 end;
 
 destructor TRTFMemoParser.Destroy;
 var
   t: TRTFParams;
+  i: Integer;
 begin
   // cleanup
   while Assigned(prm) do begin
     t:=prm;
     prm:=prm.prev;
     t.Free;
+  end;
+  for i:=0 to Length(chunks)-1 do begin
+    chunks[i].prm.Free;
+    chunks[i].Text:='';
+    chunks[i].Link:='';
   end;
   inherited Destroy;
 end;
@@ -653,6 +1406,11 @@ begin
       prm:=t;
     end;
 
+    if fFastLoad then begin
+      Consolidate;
+      LoadFromChunks;
+    end;
+
     Memo.SelStart:=0;
     Memo.SelLength:=0;
   finally
@@ -660,14 +1418,15 @@ begin
   end;
 end;
 
-function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream): Boolean;
+function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream;
+  fastLoad: boolean): Boolean;
 var
   p   : TRTFMemoParser;
 begin
   Result:=Assigned(ARich) and Assigned(Source);
   if not Result then Exit;
 
-  p:=TRTFMemoParser.Create(ARich, Source);
+  p:=TRTFMemoParser.Create(ARich, Source, fastLoad);
   try
     p.StartReading;
   finally
@@ -682,7 +1441,7 @@ begin
   LangConvInit;
 end;
 
-function SaveStream(ARich: TcustomRichMemo; Dst: TStream): Boolean;
+function SaveStream(ARich: TCustomRichMemo; Dst: TStream): Boolean;
 var
   p : TSaveParams;
 begin
@@ -705,6 +1464,8 @@ type
     colorId    : Integer;
     textStart  : Integer;
     textLength : Integer;
+    paraNum    : TParaNumbering;
+    linkRef    : string;
     next       : TStyleRange;
   end;
 
@@ -768,7 +1529,8 @@ begin
   // {\f0\fswiss\fcharset0 Arial;}
 end;
 
-function GetRTFWriteText(const u: UnicodeString; var idx : integer; var isNewPara: Boolean): string;
+function GetRTFWriteText(const u: UnicodeString; var idx : integer; var isNewPara: Boolean;
+  addpar:boolean=true): string;
 var
   i : integer;
 begin
@@ -780,12 +1542,12 @@ begin
     else if u[i]='{' then Result:=Result+'\{'
     else if u[i]='}' then Result:=Result+'\}'
     else if u[i]=#10 then begin
-      Result:=Result+'\par ';
+      if addpar then Result:=Result+'\par';
       isNewPara:=true;
       inc(i);
       Break;
     end else if u[i]=#13 then begin
-      Result:=Result+'\par ';
+      if addpar then Result:=Result+'\par';
       isNewPara:=true;
       inc(i);
       Break;
@@ -796,14 +1558,18 @@ begin
   idx:=i;
 end;
 
-procedure IntSaveStream(ARich: TCustomRichMemo; SaveParams: TSaveParams; Dst: TStream);
+procedure IntSaveStream(ARich: TcustomRichMemo; SaveParams: TSaveParams;
+  Dst: TStream);
+type
+  TOutType=(otIgnore, otText, otControl, otGroup);
+
 var
   ofs     : Integer;
   needlen : Integer;
   endless : Boolean;
   root    : TStyleRange; // first in the list
   last    : TStyleRange; // last in the list
-  rng     : TStyleRange; // temproray
+  rng     : TStyleRange; // temporary
   st, len : Integer;
   u       : UnicodeString;
   fontTable  : TStringList;
@@ -811,18 +1577,138 @@ var
   i         : Integer;
   isnewpara : Boolean;
   s         : string;
+  aLinkRef  : string;
+  ispn      : boolean;
+  paraIndex : Integer;
 
   isbold    : Boolean;
   isitalic  : Boolean;
   isuline   : Boolean;
   issupersub: Boolean;
   isColor   : integer;
+  outType   : TOutType;
 
-  pm : TParaMetric;
+  pm: TParaMetric;
+  pn: TParaNumbering;
 
-  procedure RtfOut(const s: string);
+  procedure RtfOut(s: string; outt:TOutType=otControl);
   begin
+    if (outType=otControl) and (outt=otText) then
+      s := ' '+s;
     Dst.Write(s[1], length(s));
+    outType := outt;
+  end;
+
+  procedure AddRange;
+  begin
+    if not Assigned(root) then root:=rng;
+    if Assigned(last) then last.next:=rng;
+    last:=rng;
+  end;
+
+  procedure doPnText;
+  begin
+    case pn.style of
+      pnNumber:
+        RtfOut(format('{\pntext\f%d %d%s\tab}',[1, pn.NumberStart, UTF8Encode(pn.SepChar)[1]]), otGroup);
+      pnBullet:
+        RtfOut(format('{\pntext\f%d%s\tab}',[2, '\''B7']), otGroup);
+      pnLowLetter, pnLowRoman, pnUpLetter, pnUpRoman:
+        begin
+        end;
+    end;
+    if not ispn then begin
+      case pn.Style of
+        pnNumber:
+          RtfOut(format('{\*\pn\pnlvlbody\pnf%d\pnindent%d\pnstart%d\pndec{\pntxta%s}}',[1,180,pn.NumberStart,pn.SepChar]), otGroup);
+        pnBullet:
+          RtfOut(format('{\*\pn\pnlvlblt\pnf%d\pnindent%d{\pntxtb%s}}',[2,180, '\''B7']), otGroup);
+      end;
+      ispn := true;
+    end;
+  end;
+
+  procedure doFormatting;
+  begin
+    rtfOut('\f'+IntToStr(rng.fontId));
+    rtfOut('\fs'+IntToStr(rng.font.Size*2));
+    if (fsBold in rng.font.Style) then begin
+      RtfOut('\b');
+      isbold:=true;
+    end else begin
+      if isbold then rtfOut('\b0');
+      isbold:=false;
+    end;
+    if (fsUnderline in rng.font.Style) then begin
+      rtfOut('\ul');
+      isuline:=true
+    end else begin
+      if isuline then rtfOut('\ulnone');
+      isuline:=false;
+    end;
+    if isColor<>rng.colorId then begin
+      rtfOut('\cf'+IntToStR(rng.colorId));
+      isColor:=rng.ColorId;
+    end;
+    if (fsItalic in rng.font.Style) then begin
+      rtfOut('\i');
+      isitalic:=true;
+    end else begin
+      if isitalic then rtfOut('\i0');
+      isitalic:=false;
+    end;
+    if rng.font.VScriptPos=vpSuperScript then begin
+      rtfOut('\super');
+      issupersub:=true;
+    end;
+    if rng.font.VScriptPos=vpSubScript then begin
+      rtfOut('\sub');
+      issupersub:=true;
+    end;
+    if rng.font.VScriptPos=vpNormal then begin
+      if issupersub then rtfOut('\nosupersub');
+      issupersub:=false;
+    end;
+  end;
+
+  procedure doHeader;
+  var
+    j: Integer;
+  begin
+    PrepareFontTable(root, fontTable);
+    PrepareColorTable(root, colorTable);
+
+    RtfOut('{\rtf1\ansi\ansicp1252\deff0\deflan1033');
+
+    // start of RTF
+    if fontTable.Count>0 then begin
+      // at least on font should be present anyway.
+      RtfOut('{\fonttbl');
+      for j:=0 to fontTable.Count-1 do begin
+        // setting font id, charset to 0 and name
+        RtfOut('{\f'+IntToStR(j)+'\fcharset0 '+fontTable[j]+';}');
+      end;
+      RtfOut('}'+lineending);
+    end;
+    if colorTable.Count>1 then begin
+      RtfOut('{\colortbl');
+      for j:=0 to colorTable.Count-1 do begin
+        RtfOut( colortable[j] );
+        RtfOut( ';');
+      end;
+      RtfOut('}'+lineending);
+    end;
+    RtfOut('{\*\generator TRichMemo 1.0.0}'+Lineending);
+  end;
+
+  procedure doEndParagraph;
+  begin
+    if ispn and (paraIndex>0) then begin
+      rtfOut('\pard');
+      ispn := false;
+    end;
+    rtfOut('\par');
+    RtfOut(lineEnding, otIgnore); // prettifier
   end;
 
 begin
@@ -834,6 +1720,17 @@ begin
   endless:=needlen<0;
 
   while ARich.GetStyleRange(ofs, st, len) do begin
+
+    if ARich.GetParaNumbering(ofs, pn) and (pn.Style<>pnNone) then begin
+      rng := TStyleRange.Create;
+      rng.paraNum := pn;
+      if pn.Style=pnBullet then
+        rng.font.Name:='Symbol'
+      else
+        rng.font.Name:='Arial'; // TODO: make an option in richmemo
+      AddRange;
+    end;
+
     rng:=TStyleRange.Create;
     rng.textStart:=st;
     if not endless then begin
@@ -842,13 +1739,15 @@ begin
       dec(needLen, len);
     end else
       rng.textLength:=len;
-    ARich.GetTextAttributes(ofs, rng.font);
 
-    if not Assigned(root) then root:=rng;
-    if Assigned(last) then last.next:=rng;
-    last:=rng;
+    ARich.GetTextAttributes(st, rng.font);
 
-    inc(ofs, len);
+    if ARich.GetLink(st, aLinkRef) then
+      rng.linkRef := aLinkRef;
+
+    AddRange;
+
+    ofs := st + len;
     if not endless and (needLen<=0) then break;
   end;
 
@@ -864,104 +1763,78 @@ begin
   fontTable:=TStringList.Create;
   colorTable:=TStringList.Create;
   try
-    PrepareFontTable(root, fontTable);
-    PrepareColorTable(root, colorTable);
 
-    RtfOut('{\rtf1\ansi\ansicp1252\deff0\deflan1033');
-
-    // start of RTF
-    if fontTable.Count>0 then begin
-      // at least on font should be present anyway.
-      RtfOut('{\fonttbl');
-      for i:=0 to fontTable.Count-1 do begin
-        // setting font id, charset to 0 and name
-        RtfOut('{\f'+IntToStR(i)+'\fcharset0 '+fontTable[i]+';}');
-      end;
-      RtfOut('}');
-    end;
-    if colorTable.Count>1 then begin
-      RtfOut('{\colortbl');
-      for i:=0 to colorTable.Count-1 do begin
-        RtfOut( colortable[i] );
-        RtfOut( ';');
-      end;
-      RtfOut('}');
-    end;
+    doHeader;
 
     isnewpara := true;
     rng:=root;
     isbold:=false;
     isitalic:=false;
     issupersub:=false;
+    isuline:=false;
     iscolor:=0;
+    ispn:=false;
+    paraIndex := 0;
+
     while Assigned(rng) do begin
-      u:=ARich.GetUText(rng.textStart, rng.textLength);
-      RtfOut('\f'+IntToStr(rng.fontId));
-      RtfOut('\fs'+IntToStr(rng.font.Size*2));
-      if (fsBold in rng.font.Style) then begin
-        RtfOut('\b');
-        isbold:=true;
-      end else begin
-        if isbold then RtfOut('\b0');
-        isbold:=false;
-      end;
-      if (fsUnderline in rng.font.Style) then begin
-        RtfOut('\ul');
-        isuline:=true
-      end else begin
-        if isuline then RtfOut('\ulnone');
-        isuline:=false;
-      end;
-      if isColor<>rng.colorId then begin
-        RtfOut('\cf'+IntToStR(rng.colorId));
-        isColor:=rng.ColorId;
-      end;
-      if (fsItalic in rng.font.Style) then begin
-        RtfOut('\i');
-        isitalic:=true;
-      end else begin
-        if isitalic then RtfOut('\i0');
-        isitalic:=false;
+
+      if rng.paraNum.Style<>pnNone then begin
+        if ispn and (pn.Style<>rng.paraNum.Style) then
+          ispn := false; // pn style changed, new pn header needed
+        pn := rng.paraNum;
+        doPnText;
+        rng:=rng.next;
+        paraIndex := 0;
+        continue;
       end;
 
-      if rng.font.VScriptPos=vpSuperScript then begin
-        RtfOut('\super');
-        issupersub:=true;
-      end;
-      if rng.font.VScriptPos=vpSubScript then begin
-        RtfOut('\sub');
-        issupersub:=true;
-      end;
-      if rng.font.VScriptPos=vpNormal then begin
-        if issupersub then RtfOut('\nosupersub');
-        issupersub:=false;
+      u := ARich.GetUText(rng.textStart, rng.textLength);
+
+      i := 1;
+      if rng.linkRef<>'' then begin
+        RtfOut('{\field ');
+        RtfOut(format('{\*\fldinst HYPERLINK "%s"}',[rng.linkRef]));
+        RtfOut(format('{\fldrslt{%s}}}',[GetRTFWriteText(u, i, isnewpara)]));
+        rng:=rng.next;
+        continue;
       end;
 
-      RtfOut(' ');
+      doFormatting;
 
-      i:=1;
       while i<=length(u) do begin
+
         if isNewPara then begin
-          ARich.GetParaMetric(i+rng.textStart, pm);
-          RtfOut('\pard');
-          case ARich.GetParaAlignment(i+rng.TextStart) of
-            paRight:   RtfOut('\qr');
-            paCenter:  RtfOut('\qc');
-            paJustify: RtfOut('\qj');
+
+          case ARich.GetParaAlignment(i-1+rng.TextStart) of
+            paRight:   rtfOut('\qr');
+            paCenter:  rtfOut('\qc');
+            paJustify: rtfOut('\qj');
           else
           end;
-          RtfOut('\li'+IntToStr(round(pm.HeadIndent*20)));
-          if pm.FirstLine-pm.HeadIndent<>0 then
-            RtfOut('\fi'+IntToStr(round((pm.FirstLine-pm.HeadIndent)*20)));
-          if pm.TailIndent<>0 then RtfOut('\ri'+IntToStr(round(pm.TailIndent*20)));
-          if pm.SpaceAfter<>0 then RtfOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
-          if pm.SpaceBefore<>0 then RtfOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
-          if pm.LineSpacing<>0 then RtfOut('\sl'+IntToStr(round(pm.LineSpacing*200))+'\slmult1');
-          RtfOut(' ');
+
+          if not ispn then begin
+            ARich.GetParaMetric(i-1+rng.textStart, pm);
+            if pm.HeadIndent<>0 then rtfOut('\li'+IntToStr(round(pm.HeadIndent*20)));
+            if pm.FirstLine-pm.HeadIndent<>0 then
+              rtfOut('\fi'+IntToStr(round((pm.FirstLine-pm.HeadIndent)*20)));
+            if pm.TailIndent<>0 then rtfOut('\ri'+IntToStr(round(pm.TailIndent*20)));
+            if pm.SpaceAfter<>0 then rtfOut('\sa'+IntToStr(round(pm.SpaceAfter*20)));
+            if pm.SpaceBefore<>0 then rtfOut('\sb'+IntToStr(round(pm.SpaceBefore*20)));
+            if pm.LineSpacing<>0 then rtfOut('\sl'+IntToStr(round(pm.LineSpacing*200))+'\slmult1');
+          end;
+
         end;
-        s:=GetRTFWriteText(u, i, isnewpara);
-        RtfOut(s);
+
+        s:=GetRTFWriteText(u, i, isnewpara, false);
+        RtfOut(s, otText);
+
+        if isnewpara then begin
+          doEndParagraph;
+          inc(paraIndex);
+        end;
+
       end;
+
       rng:=rng.next;
     end;
 

@@ -141,6 +141,8 @@ type
     class function GetCanRedo(const AWinControl: TWinControl): Boolean; override;
 
     class procedure ScrollBy(const AWinControl: TWinControl;  DeltaX, DeltaY: integer); override;
+
+    class procedure SetTransparentBackground(const AWinControl: TWinControl; ATransparent: Boolean); override;
   end;
 
   { TWin32Inline }
@@ -1617,6 +1619,24 @@ begin
   dec(pt.x,DeltaX);
   dec(pt.y,Deltay);
   RichEditManager.SetScroll(AWinControl.Handle, pt);
+end;
+
+class procedure TWin32WSCustomRichMemo.SetTransparentBackground(
+  const AWinControl: TWinControl; ATransparent: Boolean);
+var
+  l  : Windows.Long;
+  nl : Windows.Long;
+begin
+  if not Assigned(AWinControl) or not (AWinControl.HandleAllocated) then Exit;
+
+  // Make sure there's TImage resides on the same form as RichMemo
+  l := GetWindowLong(AWinControl.Handle, GWL_EXSTYLE);
+  if ATransparent then
+    nl := l or WS_EX_TRANSPARENT
+  else
+    nl := l and not WS_EX_TRANSPARENT;
+  if nl <> l then
+    SetWindowLong(AWinControl.Handle, GWL_EXSTYLE, nl);
 end;
 
 // The function doesn't use Windows 7 (Vista?) animations. And should.

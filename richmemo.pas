@@ -270,7 +270,7 @@ type
     property OnPrintAction: TPrintActionEvent read fOnPrintAction write fOnPrintAction;
     property OnLinkAction: TLinkActionEvent read fOnLinkAction write fOnLinkAction;
     property CanRedo: Boolean read GetCanRedo;
-    property Transparent: Boolean read fTransparent write SetTransparent;
+    property Transparent: Boolean read fTransparent write SetTransparent default false;
   end;
   
   { TRichMemo }

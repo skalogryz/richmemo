@@ -12,7 +12,7 @@ function MVCParserLoadStream(ARich: TCustomRichMemo; Source: TStream): Boolean;
 procedure RegisterRTFLoader;
 
 type
-  TEncConvProc = function (const s: string; SetTargetCodePage: Boolean = False): string;
+  TEncConvProc = function (const s: string): string;
 
 //todo: rewrite! it's not language based but fontchar-set based
 procedure LangConvAdd(lang: Integer; convproc: TEncConvProc);

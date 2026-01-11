@@ -53,9 +53,9 @@ type
     sellen : integer; // selection length
   end;
 
-// no sanity check is done in these functions
-procedure MakeBackup(te: TQtTextEdit; out backup: TEditorState);
-procedure ApplyBackup(te: TQtTextEdit; const backup: TEditorState);
+  // no sanity check is done in these functions
+  procedure MakeBackup(te: TQtTextEdit; out backup: TEditorState);
+  procedure ApplyBackup(te: TQtTextEdit; const backup: TEditorState);
 
 implementation
 
@@ -93,7 +93,7 @@ begin
   QtTextEdit.setTabChangesFocus(not TCustomMemo(AWinControl).WantTabs);
   QtTextEdit.AttachEvents;
 
-  Result := TLCLIntfHandle(QtTextEdit);
+  Result := TLCLHandle(QtTextEdit);
 end;
 
 class procedure TQtWSCustomRichMemo.SetParaAlignment(
@@ -120,10 +120,6 @@ begin
   te.setSelection(ss, sl);
 end;
 
-const
-  QNormal = 50;
-  QBold   = 75;
-
 class function TQtWSCustomRichMemo.GetTextAttributes(
   const AWinControl: TWinControl; TextStart: Integer; var Params: TIntFontParams
   ): Boolean;
@@ -133,6 +129,7 @@ var
   ws : WideString;
   clr: TQColor;
   bck : TEditorState;
+  qfh : QFontH;
 begin
   InitFontParams(Params);
   if not WSCheckHandleAllocated(AWinControl, 'GetTextAttributes') then begin
@@ -147,16 +144,30 @@ begin
 
   te.setSelection(TextStart, 1);
 
-  //todo!
   ws:='';
   QTextEdit_fontFamily(w, @ws);
-  if ws<>'' then Params.Name:=UTF8Encode(ws);
 
-  Params.Size:=round(QTextEdit_fontPointSize(w));
-  if QTextEdit_fontWeight(w)>=QBold then Include(Params.Style, fsBold);
-  if QTextEdit_fontItalic(w) then Include(Params.Style, fsItalic);
-  if QTextEdit_fontUnderline(w) then Include(Params.Style, fsUnderline);
+  //  if no text formats entered, the default edit control holds the format
+  if ws='' then
+    begin
+      qfh:=QFont_Create();
+      QApplication_font(qfh, w);
+      QFont_family(qfh, @ws);
+      Params.Size := QFont_pointSize(qfh);
+      if QFont_weight(qfh)>=Ord(QFontBold) then Include(Params.Style, fsBold);
+      if QFont_italic(qfh) then Include(Params.Style, fsItalic);
+      if QFont_underline(qfh) then Include(Params.Style, fsUnderline);
+      QFont_Destroy(qfh);
+    end
+  else
+    begin
+      Params.Size:=round(QTextEdit_fontPointSize(w));
+      if QTextEdit_fontWeight(w)>=Ord(QFontBold) then Include(Params.Style, fsBold);
+      if QTextEdit_fontItalic(w) then Include(Params.Style, fsItalic);
+      if QTextEdit_fontUnderline(w) then Include(Params.Style, fsUnderline);
+    end;
 
+  Params.Name:=UTF8Encode(ws);
   FillChar(clr, sizeof(clr), 0);
   QTextEdit_textColor(w, @clr);
   TQColorToColorRef(clr, TColorRef(params.Color));
@@ -164,8 +175,11 @@ begin
   FillChar(clr, sizeof(clr), 0);
   QTextEdit_textBackgroundColor(w, @clr);
   TQColorToColorRef(clr, TColorRef(params.BkColor));
-  //todo!
-  params.HasBkClr:=false;
+
+  FillChar(clr, sizeof(clr), 0);
+  QTextEdit_textBackgroundColor(w, @clr);
+  TQColorToColorRef(clr, TColorRef(Params.BkColor));
+  Params.HasBkClr:=Params.BkColor > 0;
 
   ApplyBackup(te, bck);
 
@@ -182,10 +196,7 @@ var
   ws : WideString;
   clr: TQColor;
 const
-  QNormal = 50;
-  QBold   = 75;
-const
-  QIsBold: array [Boolean] of integer = (QNormal, QBold);
+  QIsBold: array [Boolean] of Integer = (Ord(QFontNormal), Ord(QFontBold));
 begin
   if not WSCheckHandleAllocated(AWinControl, 'SetTextAttributes') then
     Exit;
@@ -207,15 +218,11 @@ begin
   ColorRefToTQColor(Params.Color, clr);
   QTextEdit_setTextColor(w, @clr);
 
-  //todo:
-  {
-  if not Params.HasBkClr then begin
-    ColorRefToTQColor(Params.BkColor, clr);
-    clr.Alpha:=0;
-  end else
-    ColorRefToTQColor(Params.BkColor, clr);
-  QTextEdit_setTextBackgroundColor(w, @clr);
-  }
+  if Params.HasBkClr then
+    begin
+      ColorRefToTQColor(Params.BkColor, clr);
+      QTextEdit_setTextBackgroundColor(w, @clr);
+    end;
 
   te.setSelection(ss, sl);
 end;
@@ -228,7 +235,7 @@ var
   ws : Widestring;
   fl : QTextDocumentFindFlags;
 begin
-  if not WSCheckHandleAllocated(AWinControl, 'SetParaAlignment') then
+  if not WSCheckHandleAllocated(AWinControl, 'Search') then
     Exit;
   te:=TQtTextEdit(AWinControl.Handle);
   w:=QTextEditH(te.Widget);
@@ -265,28 +272,28 @@ class function TQtWSCustomRichMemo.GetStyleRange(
 var
   te : TQtTextEdit;
   bck : TEditorState;
-  al : QtAlignment;
   qcur : QTextCursorH;
   qblck : QTextBlockH;
-  qbfmt : QTextBlockFormatH;
-  i   : integer;
-  cnt : integer;
+  i   : Integer;
+  cnt : Integer;
   rng : array of TTextRange;
-  blckofs: integer;
+  blckofs: Integer;
 begin
   if not WSCheckHandleAllocated(AWinControl, 'GetStyleRange') then begin
     Result:=false;
     Exit;
   end;
 
+  //  only returns within blocks (paragraphs).  Does not search prev/next block.
   RangeStart:=TextStart;
-  RangeLen:=1;
-  Result:=true;
+  RangeLen:=0;
+  Result:=false;
+  rng:=nil;
   {$ifndef RMQT5_TEXTFORMATS}
   Exit;
   {$else}
-  te:=TQtTextEdit(AWinControl.Handle);
 
+  te:=TQtTextEdit(AWinControl.Handle);
   MakeBackup(te, bck);
   qcur := QTextCursor_Create();
   qblck := QTextBlock_Create();
@@ -297,11 +304,13 @@ begin
 
     cnt := QTextBlock_textFormatsCount(qblck);
     SetLength(rng, cnt);
+    QTextBlock_textFormatsRanges(qblck, PTextRangeArray(@rng[0]), cnt);
+
     if cnt>0 then begin
       blckofs := QTextBlock_position(qblck);
-      textStart := textStart - blckofs;
+      TextStart := TextStart - blckofs;
       for i:=0 to cnt-1 do begin
-        if (textStart >= rng[i].start) and (textStart<rng[i].start+rng[i].length) then
+        if (TextStart >= rng[i].start) and (TextStart<rng[i].start+rng[i].length) then
         begin
           RangeStart := rng[i].start + blckofs;
           RangeLen := rng[i].length;
@@ -309,6 +318,7 @@ begin
         end;
       end;
     end;
+    Result:=true;
   finally
     QTextBlock_Destroy(qblck);
     QTextCursor_Destroy(qcur);
@@ -322,7 +332,7 @@ class procedure TQtWSCustomRichMemo.SetTransparentBackground(
 var
   te : TQtTextEdit;
 begin
-  if not WSCheckHandleAllocated(AWinControl, 'GetStyleRange') then
+  if not WSCheckHandleAllocated(AWinControl, 'SetTransparentBackground') then
     Exit;
   te:=TQtTextEdit(AWinControl.Handle);
   QWidget_setAutoFillBackground(te.viewportWidget, not ATransparent);

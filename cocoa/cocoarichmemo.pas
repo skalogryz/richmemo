@@ -419,8 +419,12 @@ var
   rng : NSRange;
 const
   TxtAlign : array [TIntParaAlignment] of integer = (
+  {$ifdef CPUAARCH64}
+   NSLeftTextAlignment, 2, 1, NSJustifiedTextAlignment  // got reversed in OS11
+  {$else}
    NSLeftTextAlignment,  NSRightTextAlignment, NSCenterTextAlignment, NSJustifiedTextAlignment
-  );
+  {$endif}
+   );
 begin
   txt:=MemoTextView(AWinControl);
   if not Assigned(txt) then Exit;

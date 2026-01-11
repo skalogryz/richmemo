@@ -11,6 +11,7 @@ interface
 {$ifdef LCLCocoa}{$undef NoRichMemo}{$endif}
 {$ifdef LCLQt}{$undef NoRichMemo}{$endif}
 {$ifdef LCLQt5}{$undef NoRichMemo}{$endif}
+{$ifdef LCLQt6}{$undef NoRichMemo}{$endif}
 
 uses
   WSLCLClasses,
@@ -30,6 +31,7 @@ uses
   {$ifdef LCLCocoa},CocoaRichMemo{$endif}
   {$ifdef LCLQt},QtRichMemo{$endif}
   {$ifdef LCLQt5},Qt5RichMemo{$endif}
+  {$ifdef LCLQt6},Qt6RichMemo{$endif}
   ;
 
 function RegisterCustomRichMemo: Boolean;
@@ -51,6 +53,7 @@ begin
   {$ifdef LCLCocoa}RegisterWSComponent(TCustomRichMemo, TCocoaWSCustomRichMemo);{$endif}
   {$ifdef LCLQt}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
   {$ifdef LCLQt5}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
+  {$ifdef LCLQt6}RegisterWSComponent(TCustomRichMemo, TQtWSCustomRichMemo);{$endif}
   {$ifdef NoRichMemo}RegisterWSComponent(TCustomRichMemo, TWSCustomRichMemo);{$endif}
 end;
 

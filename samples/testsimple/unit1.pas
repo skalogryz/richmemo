@@ -16,6 +16,7 @@ type
   TForm1 = class(TForm)
     Button1: TButton;
     Button10: TButton;
+    Button11: TButton;
     Button2: TButton;
     Button3: TButton;
     Button4: TButton;
@@ -24,6 +25,7 @@ type
     Button7: TButton;
     Button8: TButton;
     Button9: TButton;
+    ColorDialog1: TColorDialog;
     Label3: TLabel;
     StartIdent: TFloatSpinEdit;
     FontDialog1: TFontDialog;
@@ -35,7 +37,6 @@ type
     OffsetIdent: TFloatSpinEdit;
     procedure Button10Click(Sender: TObject);
     procedure Button11Click(Sender: TObject);
-    procedure Button12Click(Sender: TObject);
     procedure Button1Click(Sender: TObject);
     procedure Button2Click(Sender: TObject);
     procedure Button3Click(Sender: TObject);
@@ -74,6 +75,9 @@ begin
   RichMemo1.GetTextAttributes(RichMemo1.SelStart, fp);
   fp.Color := clRed;
   fp.Style := [fsBold];
+  fp.Name:='Arial';
+  fp.Size:=12;
+
   RichMemo1.SetTextAttributes(RichMemo1.SelStart, RichMemo1.SelLength, fp);
 end;
 
@@ -83,11 +87,19 @@ begin
 end;
 
 procedure TForm1.Button11Click(Sender: TObject);
+var
+  fp   :  TFontParams;
 begin
-end;
-
-procedure TForm1.Button12Click(Sender: TObject);
-begin
+  if RichMemo1.SelLength > 0 then
+    begin
+      if ColorDialog1.Execute then
+        begin
+          RichMemo1.GetTextAttributes(RichMemo1.SelStart, fp);
+          fp.BkColor:=ColorDialog1.Color;
+          fp.HasBkClr:=true;
+          RichMemo1.SetTextAttributes(RichMemo1.SelStart, RichMemo1.SelLength, fp);
+        end;
+    end;
 end;
 
 procedure TForm1.Button2Click(Sender: TObject);
@@ -95,10 +107,12 @@ var
   prm : TFontParams;
 begin
   if RichMemo1.GetTextAttributes( RichMemo1.SelStart, prm) then begin
-    RichMemo1.Lines.Add('name   '+ prm.Name);
-    RichMemo1.Lines.Add('size   '+ IntToStr(prm.Size));
-    RichMemo1.Lines.Add('color  '+ IntToHex(Integer(prm.Color), 8));
-    RichMemo1.Lines.Add('style  '+ IntToHex(Integer(prm.Style), 8));
+    RichMemo1.Lines.Add('name     '+ prm.Name);
+    RichMemo1.Lines.Add('size     '+ IntToStr(prm.Size));
+    RichMemo1.Lines.Add('color    '+ IntToHex(Integer(prm.Color), 8));
+    RichMemo1.Lines.Add('style    '+ IntToHex(Integer(prm.Style), 8));
+    if prm.HasBkClr then
+      RichMemo1.Lines.Add('backclr  '+ IntToHex(Integer(prm.BkColor), 8));
   end else
     RichMemo1.Lines.Add('failed');
 end;
